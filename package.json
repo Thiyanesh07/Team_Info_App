@@ -1,0 +1,9 @@
+{
+  "name": "team-info-app-railway-forwarder",
+  "version": "1.0.0",
+  "description": "Root package manager to forward Railway deployments to the backend directory",
+  "scripts": {
+    "postinstall": "npm install --prefix backend",
+    "start": "npm start --prefix backend"
+  }
+}
