@@ -50,8 +50,13 @@ const googleSignIn = async (req, res) => {
 
     const { email, name, picture } = payload;
 
-    // Validate domain
-    if (!isValidDomain(email)) {
+    // Check super admin email
+    const isSuperAdmin =
+      process.env.SUPER_ADMIN_EMAIL &&
+      email.toLowerCase() === process.env.SUPER_ADMIN_EMAIL.toLowerCase();
+
+    // Validate domain (super admin can bypass domain restriction)
+    if (!isSuperAdmin && !isValidDomain(email)) {
       const domains = process.env.ALLOWED_DOMAINS || 'college.edu';
       return res.status(400).json({
         success: false,
@@ -61,9 +66,6 @@ const googleSignIn = async (req, res) => {
 
     // Find user by email
     let user = await prisma.user.findUnique({ where: { email } });
-    
-    // Check super admin email
-    const isSuperAdmin = process.env.SUPER_ADMIN_EMAIL && email.toLowerCase() === process.env.SUPER_ADMIN_EMAIL.toLowerCase();
 
     if (!user) {
       // Only auto-create account for super admin
