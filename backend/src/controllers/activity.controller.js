@@ -1,11 +1,21 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-/** GET /api/activities - Get current user's activities, optionally filtered by date */
+/** GET /api/activities - Get activities (own for member, any for leader, all for admin) */
 const getMyActivities = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-    const where = { userId: req.user.id };
+    const { userId, startDate, endDate } = req.query;
+    const where = {};
+
+    // Determine whose activities to fetch
+    if (req.user.role === 'ADMIN') {
+      if (userId) where.userId = userId;
+      // else where is empty -> all users
+    } else if (['CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'].includes(req.user.role)) {
+      where.userId = userId || req.user.id;
+    } else {
+      where.userId = req.user.id;
+    }
 
     if (startDate && endDate) {
       where.date = { gte: new Date(startDate), lte: new Date(endDate) };
@@ -14,10 +24,13 @@ const getMyActivities = async (req, res) => {
     }
 
     const activities = await prisma.dailyActivity.findMany({
-      where, orderBy: { date: 'desc' },
+      where,
+      include: { user: { select: { id: true, name: true, profileImageUrl: true } } },
+      orderBy: { date: 'desc' },
     });
     res.json({ success: true, data: activities });
   } catch (error) {
+    console.error('GetMyActivities error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch activities' });
   }
 };

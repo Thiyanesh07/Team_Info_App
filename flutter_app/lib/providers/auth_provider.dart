@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import 'package:team_info_app/core/constants/api_constants.dart';
@@ -79,22 +81,40 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     try {
       // Initialize GoogleSignIn
-      await GoogleSignIn.instance.initialize(
-        clientId: kIsWeb && _googleWebClientId.isNotEmpty
-            ? _googleWebClientId
-            : null,
-        serverClientId: _googleServerClientId.isNotEmpty
-            ? _googleServerClientId
-            : _googleServerClientIdFallback,
-      );
+      await GoogleSignIn.instance
+          .initialize(
+            clientId: kIsWeb && _googleWebClientId.isNotEmpty
+                ? _googleWebClientId
+                : null,
+            serverClientId: _googleServerClientId.isNotEmpty
+                ? _googleServerClientId
+                : _googleServerClientIdFallback,
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => throw TimeoutException(
+              'Google Sign-In initialization timed out',
+            ),
+          );
 
       // Prompt user to sign in
       late final GoogleSignInAccount account;
       try {
-        account = await GoogleSignIn.instance.authenticate(
-          scopeHint: ['email'],
-        );
+        account = await GoogleSignIn.instance
+            .authenticate(scopeHint: ['email'])
+            .timeout(
+              const Duration(seconds: 45),
+              onTimeout: () =>
+                  throw TimeoutException('Google account selection timed out'),
+            );
       } catch (e) {
+        if (e is TimeoutException) {
+          state = state.copyWith(
+            status: AuthStatus.error,
+            errorMessage: 'Google Sign-In timed out. Please try again.',
+          );
+          return;
+        }
         // User canceled the sign-in flow
         state = state.copyWith(
           status: AuthStatus.unauthenticated,
@@ -114,12 +134,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return;
       }
 
+      // Render free instances can be cold; ping health once before auth request.
+      try {
+        await _api.get('/health').timeout(const Duration(seconds: 25));
+      } catch (_) {}
+
       // Send the ID token to our backend
-      final response = await _api.post(
-        ApiConstants.googleLogin,
-        body: {'idToken': auth.idToken},
-        withAuth: false,
-      );
+      final response = await _api
+          .post(
+            ApiConstants.googleLogin,
+            body: {'idToken': auth.idToken},
+            withAuth: false,
+          )
+          .timeout(
+            const Duration(seconds: 90),
+            onTimeout: () => ApiResponse(
+              success: false,
+              message:
+                  'Server is waking up. Please try again in 10-20 seconds.',
+            ),
+          );
 
       if (response.success && response.data != null) {
         await _api.saveToken(response.data['token']);
@@ -135,6 +169,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
       }
     } catch (error) {
+      if (error is TimeoutException) {
+        state = state.copyWith(
+          status: AuthStatus.error,
+          errorMessage: 'Sign-In timed out. Check your internet and try again.',
+        );
+        return;
+      }
       // Removed debug prints
       state = state.copyWith(
         status: AuthStatus.error,

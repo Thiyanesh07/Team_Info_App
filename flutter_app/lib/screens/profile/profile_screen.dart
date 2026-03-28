@@ -6,6 +6,7 @@ import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/providers/auth_provider.dart';
 import 'package:team_info_app/models/user_model.dart';
 import 'package:team_info_app/screens/profile/edit_profile_screen.dart';
+import 'package:team_info_app/screens/skills/skills_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -86,15 +87,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Skills
-            if (user.primarySkills.isNotEmpty)
-              _SkillSection('Primary Skills', user.primarySkills, AppColors.primary),
-            if (user.secondarySkills.isNotEmpty)
-              _SkillSection('Secondary Skills', user.secondarySkills, AppColors.secondary),
-            if (user.specialSkills.isNotEmpty)
-              _SkillSection('Special Skills', user.specialSkills, AppColors.accent),
-            if (user.programmingLangs.isNotEmpty)
-              _SkillSection('Languages', user.programmingLangs, AppColors.warning),
+            // Skills Portfolio
+            _InfoSection(
+              title: 'Skills Portfolio',
+              children: [
+                _buildSkillsPreview(context, user),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SkillsScreen())),
+                    icon: const Icon(Icons.bolt_rounded, size: 18),
+                    label: const Text('Manage Portfolio Cards'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
 
             // Social Links
             if (_hasSocialLinks(user)) ...[
@@ -186,31 +195,39 @@ class _StatChip extends StatelessWidget {
   }
 }
 
-class _SkillSection extends StatelessWidget {
-  final String title;
+  Widget _buildSkillsPreview(BuildContext context, UserModel user) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (user.primarySkills.isNotEmpty) _SkillRow('Primary', user.primarySkills, AppColors.primary),
+        if (user.secondarySkills.isNotEmpty) _SkillRow('Secondary', user.secondarySkills, AppColors.secondary),
+        if (user.programmingLangs.isNotEmpty) _SkillRow('Langs', user.programmingLangs, AppColors.warning),
+      ],
+    );
+  }
+}
+
+class _SkillRow extends StatelessWidget {
+  final String label;
   final List<String> skills;
   final Color color;
-  const _SkillSection(this.title, this.skills, this.color);
+  const _SkillRow(this.label, this.skills, this.color);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-          const SizedBox(height: 8),
+          Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+          const SizedBox(height: 4),
           Wrap(
             spacing: 6, runSpacing: 6,
             children: skills.map((s) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: color.withAlpha(20),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: color.withAlpha(50)),
-              ),
-              child: Text(s, style: GoogleFonts.inter(fontSize: 12, color: color, fontWeight: FontWeight.w500)),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(color: color.withAlpha(20), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withAlpha(50))),
+              child: Text(s, style: GoogleFonts.inter(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
             )).toList(),
           ),
         ],

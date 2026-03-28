@@ -1,0 +1,686 @@
+{
+  "info": {
+    "_postman_id": "c6ad2f8a-0f39-4acd-91ea-7c1fb0c5f2e1",
+    "name": "Team Info App API",
+    "description": "Ready-to-import Postman collection for Team Info App backend (health, auth, users, tasks, projects, analytics).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('baseUrl')) {",
+          "  pm.collectionVariables.set('baseUrl', 'https://team-info-app.onrender.com/api');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://team-info-app.onrender.com/api" },
+    { "key": "token", "value": "" },
+    { "key": "googleIdToken", "value": "" },
+    { "key": "targetUserId", "value": "" },
+    { "key": "taskId", "value": "" },
+    { "key": "personalProjectId", "value": "" },
+    { "key": "teamProjectId", "value": "" },
+    { "key": "projectUpdateId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET Health",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST Google Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 2xx or expected auth error', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 400, 401, 403]);",
+                  "});",
+                  "let json;",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "if (pm.response.code === 200 && json && json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "  if (pm.environment) pm.environment.set('token', json.data.token);",
+                  "  if (json.data.user && json.data.user.id) {",
+                  "    pm.collectionVariables.set('targetUserId', json.data.user.id);",
+                  "    if (pm.environment) pm.environment.set('targetUserId', json.data.user.id);",
+                  "  }",
+                  "  console.log('Token saved to collection/environment variables');",
+                  "} else {",
+                  "  console.log('Token not saved. Response code:', pm.response.code);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idToken\": \"{{googleIdToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/google",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "google"]
+            }
+          }
+        },
+        {
+          "name": "GET Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "PUT Update FCM Token",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcmToken\": \"sample-fcm-token\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/fcm-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "fcm-token"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "GET All Users (Leader)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "GET User By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{targetUserId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{targetUserId}}"]
+            }
+          }
+        },
+        {
+          "name": "PUT Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"department\": \"CSE\",\n  \"year\": \"4\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "profile"]
+            }
+          }
+        },
+        {
+          "name": "PUT Assign Role (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"MEMBER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{targetUserId}}/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{targetUserId}}", "role"]
+            }
+          }
+        },
+        {
+          "name": "POST Create User (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"new.user@bitsathy.ac.in\",\n  \"name\": \"New User\",\n  \"role\": \"MEMBER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "create"]
+            }
+          }
+        },
+        {
+          "name": "DELETE User (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{targetUserId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{targetUserId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "GET My Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/my",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "my"]
+            }
+          }
+        },
+        {
+          "name": "GET Assigned Tasks (Leader)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/assigned",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "assigned"]
+            }
+          }
+        },
+        {
+          "name": "GET All Tasks (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "all"]
+            }
+          }
+        },
+        {
+          "name": "POST Create Task (Leader)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json;",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "if (pm.response.code >= 200 && pm.response.code < 300 && json && json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('taskId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"API Test Task\",\n  \"description\": \"Created from Postman\",\n  \"assignedToId\": \"{{targetUserId}}\",\n  \"priority\": \"MEDIUM\",\n  \"dueDate\": \"2026-12-31T23:59:59.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks"]
+            }
+          }
+        },
+        {
+          "name": "PUT Update Task",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"API Test Task Updated\",\n  \"priority\": \"HIGH\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{taskId}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH Task Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{taskId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "POST Task Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reportText\": \"Completed first milestone\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{taskId}}", "reports"]
+            }
+          }
+        },
+        {
+          "name": "GET Task Reports",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{taskId}}", "reports"]
+            }
+          }
+        },
+        {
+          "name": "DELETE Task",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "{{taskId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "Personal Projects",
+          "item": [
+            {
+              "name": "GET My Personal Projects",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/personal-projects",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["personal-projects"]
+                }
+              }
+            },
+            {
+              "name": "GET User Personal Projects (Leader)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/personal-projects/user/{{targetUserId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["personal-projects", "user", "{{targetUserId}}"]
+                }
+              }
+            },
+            {
+              "name": "POST Create Personal Project",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "let json;",
+                      "try { json = pm.response.json(); } catch (e) {}",
+                      "if (pm.response.code >= 200 && pm.response.code < 300 && json && json.data && json.data.id) {",
+                      "  pm.collectionVariables.set('personalProjectId', json.data.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Team Info Mobile App\",\n  \"description\": \"Flutter based app\",\n  \"skillsUsed\": [\"Flutter\", \"Dart\"]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/personal-projects",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["personal-projects"]
+                }
+              }
+            },
+            {
+              "name": "PUT Update Personal Project",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"description\": \"Updated description from Postman\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/personal-projects/{{personalProjectId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["personal-projects", "{{personalProjectId}}"]
+                }
+              }
+            },
+            {
+              "name": "DELETE Personal Project",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/personal-projects/{{personalProjectId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["personal-projects", "{{personalProjectId}}"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Team Projects",
+          "item": [
+            {
+              "name": "GET Team Projects",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/team-projects",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["team-projects"]
+                }
+              }
+            },
+            {
+              "name": "GET Team Project By Id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/team-projects/{{teamProjectId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["team-projects", "{{teamProjectId}}"]
+                }
+              }
+            },
+            {
+              "name": "POST Create Team Project (Leader)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "let json;",
+                      "try { json = pm.response.json(); } catch (e) {}",
+                      "if (pm.response.code >= 200 && pm.response.code < 300 && json && json.data && json.data.id) {",
+                      "  pm.collectionVariables.set('teamProjectId', json.data.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"projectName\": \"Team Productivity Suite\",\n  \"domain\": \"Web\",\n  \"problemStatement\": \"Track team progress\",\n  \"solution\": \"Dashboard + APIs\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/team-projects",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["team-projects"]
+                }
+              }
+            },
+            {
+              "name": "PUT Update Team Project (Leader)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/team-projects/{{teamProjectId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["team-projects", "{{teamProjectId}}"]
+                }
+              }
+            },
+            {
+              "name": "POST Assign Team Members (Admin/Captain)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"memberIds\": [\"{{targetUserId}}\"]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/team-projects/{{teamProjectId}}/members",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["team-projects", "{{teamProjectId}}", "members"]
+                }
+              }
+            },
+            {
+              "name": "DELETE Team Project (Admin/Captain)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/team-projects/{{teamProjectId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["team-projects", "{{teamProjectId}}"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Project Updates",
+          "item": [
+            {
+              "name": "GET Project Updates",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/project-updates/{{teamProjectId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["project-updates", "{{teamProjectId}}"]
+                }
+              }
+            },
+            {
+              "name": "POST Create Project Update",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "let json;",
+                      "try { json = pm.response.json(); } catch (e) {}",
+                      "if (pm.response.code >= 200 && pm.response.code < 300 && json && json.data && json.data.id) {",
+                      "  pm.collectionVariables.set('projectUpdateId', json.data.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"updateText\": \"Completed authentication module\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/project-updates/{{teamProjectId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["project-updates", "{{teamProjectId}}"]
+                }
+              }
+            },
+            {
+              "name": "DELETE Project Update",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/project-updates/{{projectUpdateId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["project-updates", "{{projectUpdateId}}"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "GET Weekly Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/weekly",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "weekly"]
+            }
+          }
+        },
+        {
+          "name": "GET Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/leaderboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "leaderboard"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

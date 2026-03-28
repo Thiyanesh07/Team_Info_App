@@ -56,98 +56,55 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Activity', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+        title: Text('Activities', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+        centerTitle: true,
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'add_activity_fab',
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddActivityDialog(context),
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Log Activity'),
+        backgroundColor: AppColors.primary,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _activities.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.timeline_rounded, size: 64, color: AppColors.textMuted.withAlpha(100)),
-                      const SizedBox(height: 16),
-                      Text('No activities logged', style: GoogleFonts.inter(fontSize: 18, color: AppColors.textSecondary)),
-                      const SizedBox(height: 4),
-                      Text('Start tracking your work!', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted)),
-                    ],
-                  ),
-                ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-                 .moveY(begin: -5, end: 5, duration: 2.seconds, curve: Curves.easeInOut)
+              ? _emptyState()
               : RefreshIndicator(
                   onRefresh: _loadActivities,
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     itemCount: _activities.length,
-                    itemBuilder: (_, i) {
-                      final a = _activities[i];
-                      final color = _typeColor(a.type);
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.cardDark,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.divider),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: color.withAlpha(30),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(_typeIcon(a.type), color: color, size: 22),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(a.customType ?? a.type,
-                                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
-                                  if (a.description?.isNotEmpty == true)
-                                    Text(a.description!, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
-                                      maxLines: 2),
-                                  const SizedBox(height: 4),
-                                  Text(_formatTimeRange(a.startTime, a.endTime),
-                                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted)),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: AppColors.textMuted, size: 20),
-                              onPressed: () async {
-                                await _api.delete('${ApiConstants.activities}/${a.id}');
-                                _loadActivities();
-                              },
-                            ),
-                          ],
-                        ),
-                      ).animate().fade(duration: 400.ms, delay: (i * 100).ms).slideY(begin: 0.1, end: 0, curve: Curves.easeOut);
-                    },
+                    itemBuilder: (_, i) => _ActivityCard(
+                      activity: _activities[i],
+                      color: _typeColor(_activities[i].type),
+                      icon: _typeIcon(_activities[i].type),
+                      onDelete: () => _deleteActivity(_activities[i].id),
+                    ).animate().fade(delay: (i * 80).ms, duration: 400.ms).slideX(begin: 0.05, end: 0),
                   ),
                 ),
     );
   }
 
-  String _formatTimeRange(String start, String end) {
-    try {
-      final s = DateTime.parse(start);
-      final e = DateTime.parse(end);
-      final diff = e.difference(s);
-      return '${DateFormat.jm().format(s)} - ${DateFormat.jm().format(e)} (${diff.inHours}h ${diff.inMinutes % 60}m)';
-    } catch (_) {
-      return '$start - $end';
-    }
+  Widget _emptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.timeline_rounded, size: 80, color: AppColors.textMuted.withAlpha(50)),
+          const SizedBox(height: 16),
+          Text('No Activities Logged', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white)),
+          const SizedBox(height: 8),
+          Text('Log your first daily action!', style: GoogleFonts.inter(color: AppColors.textMuted)),
+        ],
+      ).animate().fade(duration: 600.ms).scale(duration: 600.ms, curve: Curves.easeOutBack),
+    );
+  }
+
+  Future<void> _deleteActivity(String id) async {
+    final res = await _api.delete('${ApiConstants.activities}/$id');
+    if (res.success) _loadActivities();
   }
 
   void _showAddActivityDialog(BuildContext context) {
@@ -160,70 +117,68 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: AppColors.cardDark,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => StatefulBuilder(
         builder: (context, setDialogState) => Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Log Activity', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
-              const SizedBox(height: 16),
+              Text('Log Daily Action', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+              const SizedBox(height: 20),
               // Type selector
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'LEARNING', label: Text('Learning')),
-                  ButtonSegment(value: 'PROJECT', label: Text('Project')),
-                  ButtonSegment(value: 'OTHERS', label: Text('Others')),
-                ],
-                selected: {selectedType},
-                onSelectionChanged: (v) => setDialogState(() => selectedType = v.first),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: ['LEARNING', 'PROJECT', 'OTHERS'].map((t) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(t, style: const TextStyle(fontSize: 11)),
+                      selected: selectedType == t,
+                      onSelected: (val) if (val) setDialogState(() => selectedType = t),
+                      selectedColor: _typeColor(t).withAlpha(50),
+                      labelStyle: TextStyle(color: selectedType == t ? _typeColor(t) : Colors.white60),
+                    ),
+                  )).toList(),
+                ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               if (selectedType == 'OTHERS')
-                TextField(controller: customTypeC, decoration: const InputDecoration(hintText: 'Custom Type'),
-                  style: const TextStyle(color: Colors.white)),
+                TextField(controller: customTypeC, decoration: const InputDecoration(hintText: 'What kind of activity?')),
               if (selectedType == 'OTHERS') const SizedBox(height: 12),
-              TextField(controller: descC, decoration: const InputDecoration(hintText: 'Description'),
-                style: const TextStyle(color: Colors.white), maxLines: 2),
-              const SizedBox(height: 14),
+              TextField(controller: descC, decoration: const InputDecoration(hintText: 'What did you achieve?'), maxLines: 3),
+              const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final t = await showTimePicker(context: context, initialTime: startTime);
-                        if (t != null) setDialogState(() => startTime = t);
-                      },
-                      icon: const Icon(Icons.access_time, size: 16),
-                      label: Text('Start: ${startTime.format(context)}'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final t = await showTimePicker(context: context, initialTime: endTime);
-                        if (t != null) setDialogState(() => endTime = t);
-                      },
-                      icon: const Icon(Icons.access_time, size: 16),
-                      label: Text('End: ${endTime.format(context)}'),
-                    ),
-                  ),
+                  Expanded(child: _TimePickerButton(
+                    label: 'Start', time: startTime,
+                    onTap: () async {
+                      final t = await showTimePicker(context: context, initialTime: startTime);
+                      if (t != null) setDialogState(() => startTime = t);
+                    },
+                  )),
+                  const SizedBox(width: 12),
+                  Expanded(child: _TimePickerButton(
+                    label: 'End', time: endTime,
+                    onTap: () async {
+                      final t = await showTimePicker(context: context, initialTime: endTime);
+                      if (t != null) setDialogState(() => endTime = t);
+                    },
+                  )),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 28),
               SizedBox(
-                width: double.infinity, height: 48,
+                width: double.infinity, height: 54,
                 child: ElevatedButton(
                   onPressed: () async {
                     final now = DateTime.now();
                     final start = DateTime(now.year, now.month, now.day, startTime.hour, startTime.minute);
                     final end = DateTime(now.year, now.month, now.day, endTime.hour, endTime.minute);
 
-                    await _api.post(ApiConstants.activities, body: {
+                    final res = await _api.post(ApiConstants.activities, body: {
                       'type': selectedType,
                       'customType': customTypeC.text.isNotEmpty ? customTypeC.text : null,
                       'description': descC.text,
@@ -231,15 +186,114 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                       'endTime': end.toIso8601String(),
                       'date': DateTime(now.year, now.month, now.day).toIso8601String(),
                     });
-                    if (!context.mounted) return;
-                    Navigator.pop(context);
-                    if (mounted) _loadActivities();
+                    if (!mounted) return;
+                    if (res.success) {
+                      Navigator.pop(context);
+                      _loadActivities();
+                    }
                   },
-                  child: const Text('Log Activity'),
+                  child: const Text('Confirm Activity'),
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivityCard extends StatelessWidget {
+  final DailyActivity activity;
+  final Color color;
+  final IconData icon;
+  final VoidCallback onDelete;
+
+  const _ActivityCard({required this.activity, required this.color, required this.icon, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final startTime = _formatTime(activity.startTime);
+    final endTime = _formatTime(activity.endTime);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color.withAlpha(25), borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(activity.customType ?? activity.type,
+                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                if (activity.description?.isNotEmpty == true) ...[
+                  const SizedBox(height: 4),
+                  Text(activity.description!, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary, height: 1.4)),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.schedule_rounded, size: 14, color: AppColors.textMuted),
+                    const SizedBox(width: 6),
+                    Text('$startTime - $endTime', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.textMuted),
+            onPressed: onDelete,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTime(String iso) {
+    try {
+      final dt = DateTime.parse(iso);
+      return DateFormat.jm().format(dt);
+    } catch (_) {
+      return iso;
+    }
+  }
+}
+
+class _TimePickerButton extends StatelessWidget {
+  final String label;
+  final TimeOfDay time;
+  final VoidCallback onTap;
+  const _TimePickerButton({required this.label, required this.time, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(color: AppColors.surfaceLight.withAlpha(100), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text(time.format(context), style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w700)),
+          ],
         ),
       ),
     );

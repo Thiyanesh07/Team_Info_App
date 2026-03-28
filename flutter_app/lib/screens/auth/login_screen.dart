@@ -20,7 +20,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   void initState() {
     super.initState();
     _animController = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1200),
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
     );
     _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
@@ -44,10 +45,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
     ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.status == AuthStatus.error && next.errorMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.errorMessage!), backgroundColor: AppColors.error),
+        if (!mounted) return;
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(next.errorMessage!),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 5),
+          ),
         );
-        ref.read(authProvider.notifier).clearError();
       }
     });
 
@@ -55,7 +62,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [Color(0xFF0F0E17), Color(0xFF1A1040), Color(0xFF0F0E17)],
           ),
         ),
@@ -70,26 +78,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   children: [
                     // Logo
                     Container(
-                      width: 90, height: 90,
+                      width: 90,
+                      height: 90,
                       decoration: BoxDecoration(
                         gradient: AppColors.primaryGradient,
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
                             color: AppColors.primary.withAlpha(80),
-                            blurRadius: 30, spreadRadius: 5,
+                            blurRadius: 30,
+                            spreadRadius: 5,
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.groups_rounded, size: 45, color: Colors.white),
+                      child: const Icon(
+                        Icons.groups_rounded,
+                        size: 45,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 32),
-                    Text('Welcome',
-                      style: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white),
+                    Text(
+                      'Welcome',
+                      style: GoogleFonts.inter(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    Text('Sign in to your team account',
-                      style: GoogleFonts.inter(fontSize: 16, color: AppColors.textSecondary),
+                    Text(
+                      'Sign in to your team account',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 60),
 
@@ -98,25 +121,55 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton.icon(
-                        onPressed: authState.status == AuthStatus.loading ? null : _handleGoogleSignIn,
+                        onPressed: authState.status == AuthStatus.loading
+                            ? null
+                            : _handleGoogleSignIn,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black87,
                           elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                         icon: authState.status == AuthStatus.loading
                             ? const SizedBox(
-                                width: 24, height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
                               )
-                            : const Icon(Icons.g_mobiledata, size: 36, color: Colors.deepOrange),
+                            : const Icon(
+                                Icons.g_mobiledata,
+                                size: 36,
+                                color: Colors.deepOrange,
+                              ),
                         label: authState.status == AuthStatus.loading
                             ? const SizedBox.shrink()
-                            : Text('Sign in with Google', style: GoogleFonts.inter(
-                                fontSize: 16, fontWeight: FontWeight.w600)),
+                            : Text(
+                                'Sign in with Google',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
+                    if (authState.status == AuthStatus.error &&
+                        authState.errorMessage != null) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        authState.errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

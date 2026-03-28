@@ -1,11 +1,25 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-/** GET /api/personal-projects - Get current user's projects */
+/** GET /api/personal-projects - Get projects (own for member, any for leader, all for admin) */
 const getMyProjects = async (req, res) => {
   try {
+    const { userId } = req.query;
+    const where = {};
+
+    // Admin can see everything, Leader can see specified userId, Member only see their own
+    if (req.user.role === 'ADMIN') {
+      if (userId) where.userId = userId;
+      // else where is empty -> all projects
+    } else if (['CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'].includes(req.user.role)) {
+      where.userId = userId || req.user.id;
+    } else {
+      where.userId = req.user.id;
+    }
+
     const projects = await prisma.personalProject.findMany({
-      where: { userId: req.user.id },
+      where,
+      include: { user: { select: { id: true, name: true, profileImageUrl: true } } },
       orderBy: { createdAt: 'desc' },
     });
     res.json({ success: true, data: projects });
@@ -54,7 +68,7 @@ const updateProject = async (req, res) => {
   try {
     const project = await prisma.personalProject.findUnique({ where: { id: req.params.id } });
     if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
-    if (project.userId !== req.user.id) {
+    if (project.userId !== req.user.id && req.user.role !== 'ADMIN') {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 

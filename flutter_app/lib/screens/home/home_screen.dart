@@ -6,9 +6,16 @@ import 'package:team_info_app/providers/auth_provider.dart';
 import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:team_info_app/services/api_service.dart';
 import 'package:team_info_app/models/app_models.dart';
+import 'package:team_info_app/models/user_model.dart';
 import 'package:team_info_app/screens/analytics/analytics_screen.dart';
 import 'package:team_info_app/screens/admin/user_management_screen.dart';
+import 'package:team_info_app/screens/activity/activity_screen.dart';
+import 'package:team_info_app/screens/projects/projects_screen.dart';
+import 'package:team_info_app/screens/hackathons/hackathons_screen.dart';
+import 'package:team_info_app/screens/learning/learning_screen.dart';
+import 'package:team_info_app/screens/skills/skills_screen.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'dart:ui';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -19,16 +26,40 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _api = ApiService();
   WeeklyAnalytics? _analytics;
+  List<UserModel> _teamMembers = [];
+  UserModel? _selectedUser;
   bool _loading = true;
+  bool _loadingMembers = false;
 
   @override
   void initState() {
     super.initState();
+    _loadAll();
+  }
+
+  Future<void> _loadAll() async {
+    final user = ref.read(authProvider).user;
+    if (user?.role.canManageUsers == true) {
+      _loadTeamMembers();
+    }
     _loadAnalytics();
   }
 
+  Future<void> _loadTeamMembers() async {
+    setState(() => _loadingMembers = true);
+    final res = await _api.get(ApiConstants.users);
+    if (res.success && mounted) {
+      setState(() {
+        _teamMembers = (res.data as List).map((e) => UserModel.fromJson(e)).toList();
+        _loadingMembers = false;
+      });
+    }
+  }
+
   Future<void> _loadAnalytics() async {
-    final res = await _api.get(ApiConstants.weeklyAnalytics);
+    setState(() => _loading = true);
+    final queryParams = _selectedUser != null ? {'userId': _selectedUser!.id} : <String, String>{};
+    final res = await _api.get(ApiConstants.weeklyAnalytics, queryParams: queryParams);
     if (res.success && res.data != null && mounted) {
       setState(() { _analytics = WeeklyAnalytics.fromJson(res.data); _loading = false; });
     } else if (mounted) {
@@ -42,180 +73,187 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (user == null) return const SizedBox();
 
     return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadAnalytics,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
+      backgroundColor: AppColors.background,
+      body: Stack(
+        children: [
+          // Background Gradient Orbs
+          Positioned(top: -100, right: -100, child: _GradientOrb(color: AppColors.primary.withAlpha(40), size: 300)),
+          Positioned(bottom: -50, left: -100, child: _GradientOrb(color: AppColors.secondary.withAlpha(30), size: 400)),
+          
+          SafeArea(
+            child: RefreshIndicator(
+              onRefresh: _loadAnalytics,
+              color: AppColors.primary,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: AppColors.surfaceLight,
-                      backgroundImage: user.profileImageUrl != null
-                          ? NetworkImage(user.profileImageUrl!) : null,
-                      child: user.profileImageUrl == null
-                          ? Text(user.name[0].toUpperCase(),
-                              style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.primary))
-                          : null,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Hello, ${user.name.split(' ').first}! 👋',
-                            style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
-                          Text(user.role.displayName,
-                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                    ),
-                    if (user.role.canManageUsers)
-                      IconButton(
-                        icon: const Icon(Icons.admin_panel_settings, color: AppColors.secondary),
-                        onPressed: () => Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => const UserManagementScreen())),
-                      ),
+                    // Header Area
+                    _buildHeader(user),
+                    const SizedBox(height: 32),
+
+                    // Admin View Selector
+                    if (user.role.canManageUsers) ...[
+                      _buildAdminSelector(),
+                      const SizedBox(height: 28),
+                    ],
+
+                    // Main Stats Section
+                    _buildSectionTitle(_selectedUser == null ? 'My Performance' : '${_selectedUser!.name.split(' ').first}\'s Performance'),
+                    const SizedBox(height: 16),
+                    _buildStatsGrid(),
+                    const SizedBox(height: 28),
+
+                    // Activity Section
+                    _buildActivitySummary(context),
+                    const SizedBox(height: 32),
+
+                    // Quick Actions
+                    _buildSectionTitle('Quick Actions'),
+                    const SizedBox(height: 16),
+                    _buildQuickActions(context),
+                    const SizedBox(height: 40),
                   ],
-                ).animate().fade(duration: 500.ms).slideY(begin: -0.2, end: 0, duration: 500.ms, curve: Curves.easeOut),
-                const SizedBox(height: 28),
-
-                // Quick Stats
-                Text('Weekly Overview', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white))
-                    .animate().fade(delay: 100.ms).slideX(begin: -0.1, end: 0),
-                const SizedBox(height: 16),
-
-                if (_loading)
-                  const Center(child: CircularProgressIndicator())
-                else ...[
-                  // Stats Grid
-                  Row(
-                    children: [
-                      Expanded(child: _StatCard(
-                        icon: Icons.access_time_rounded, label: 'Total Hours',
-                        value: '${_analytics?.totalHours ?? 0}h',
-                        gradient: const [Color(0xFF6C63FF), Color(0xFF9C27B0)],
-                      )),
-                      const SizedBox(width: 12),
-                      Expanded(child: _StatCard(
-                        icon: Icons.school_rounded, label: 'Learning',
-                        value: '${_analytics?.learningHours ?? 0}h',
-                        gradient: const [Color(0xFF03DAC6), Color(0xFF00BFA5)],
-                      )),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(child: _StatCard(
-                        icon: Icons.code_rounded, label: 'Projects',
-                        value: '${_analytics?.projectHours ?? 0}h',
-                        gradient: const [Color(0xFFFF6584), Color(0xFFFF4081)],
-                      )),
-                      const SizedBox(width: 12),
-                      Expanded(child: _StatCard(
-                        icon: Icons.trending_up_rounded, label: 'Consistency',
-                        value: '${_analytics?.consistencyScore ?? 0}%',
-                        gradient: const [Color(0xFFFF9800), Color(0xFFFF6D00)],
-                      )),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Activity Summary
-                  _SectionCard(
-                    title: 'Activity Summary',
-                    trailing: TextButton(
-                      onPressed: () => Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const AnalyticsScreen())),
-                      child: Text('View All', style: GoogleFonts.inter(color: AppColors.primary)),
-                    ),
-                    children: [
-                      _InfoRow('Active Days', '${_analytics?.activeDays ?? 0}/7 days'),
-                      _InfoRow('Best Day', _analytics?.bestDay ?? 'N/A'),
-                      _InfoRow('Best Day Hours', '${_analytics?.bestDayHours ?? 0}h'),
-                      _InfoRow('Total Activities', '${_analytics?.totalActivities ?? 0}'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Quick Actions
-                  Text('Quick Actions', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10, runSpacing: 10,
-                    children: [
-                      _QuickAction(icon: Icons.add_task, label: 'Log Activity', color: AppColors.primary,
-                        onTap: () {}).animate().scale(delay: 400.ms, duration: 300.ms, curve: Curves.easeOutBack),
-                      _QuickAction(icon: Icons.folder_open, label: 'My Projects', color: AppColors.secondary,
-                        onTap: () {}).animate().scale(delay: 500.ms, duration: 300.ms, curve: Curves.easeOutBack),
-                      _QuickAction(icon: Icons.emoji_events, label: 'Hackathons', color: AppColors.accent,
-                        onTap: () {}).animate().scale(delay: 600.ms, duration: 300.ms, curve: Curves.easeOutBack),
-                      _QuickAction(icon: Icons.school, label: 'Learning', color: AppColors.warning,
-                        onTap: () {}).animate().scale(delay: 700.ms, duration: 300.ms, curve: Curves.easeOutBack),
-                    ],
-                  ),
-                ],
-              ],
+                ),
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
-}
 
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final List<Color> gradient;
+  Widget _buildHeader(UserModel user) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(colors: [AppColors.primary, AppColors.secondary]),
+          ),
+          child: CircleAvatar(
+            radius: 28,
+            backgroundColor: AppColors.cardDark,
+            backgroundImage: user.profileImageUrl != null ? NetworkImage(user.profileImageUrl!) : null,
+            child: user.profileImageUrl == null
+                ? Text(user.name[0].toUpperCase(), style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white))
+                : null,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Hi, ${user.name.split(' ').first}! ✨',
+                style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
+              const SizedBox(height: 2),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withAlpha(30),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.primary.withAlpha(50)),
+                ),
+                child: Text(user.role.displayName,
+                  style: GoogleFonts.inter(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+              ),
+            ],
+          ),
+        ),
+        if (user.role.canManageUsers)
+          _HeaderAction(
+            icon: Icons.admin_panel_settings_outlined,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementScreen())),
+          ),
+      ],
+    ).animate().fade(duration: 600.ms).slideY(begin: -0.1, end: 0);
+  }
 
-  const _StatCard({required this.icon, required this.label, required this.value, required this.gradient});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildAdminSelector() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [gradient[0].withAlpha(30), gradient[1].withAlpha(15)]),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: gradient[0].withAlpha(50)),
+        color: AppColors.cardDark.withAlpha(150),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.divider),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Icon(icon, color: gradient[0], size: 24),
-          const SizedBox(height: 12),
-          Text(value, style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-          const SizedBox(height: 4),
-          Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
+          const Icon(Icons.people_outline, color: AppColors.textMuted, size: 20),
+          const SizedBox(width: 12),
+          Text('Viewing Data For:', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary)),
+          const Spacer(),
+          DropdownButton<UserModel?>(
+            value: _selectedUser,
+            hint: const Text('My Stats', style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600)),
+            dropdownColor: AppColors.cardDark,
+            underline: const SizedBox(),
+            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary),
+            items: [
+              const DropdownMenuItem(value: null, child: Text('My Stats', style: TextStyle(color: AppColors.primary))),
+              ..._teamMembers.map((m) => DropdownMenuItem(value: m, child: Text(m.name, style: const TextStyle(fontSize: 13, color: Colors.white)))),
+            ],
+            onChanged: (v) {
+              setState(() => _selectedUser = v);
+              _loadAnalytics();
+            },
+          ),
         ],
       ),
-    ).animate().fade(duration: 400.ms).slideY(begin: 0.1, end: 0, curve: Curves.easeOut);
+    ).animate().fade(delay: 200.ms).slideX(begin: 0.1, end: 0);
   }
-}
 
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final Widget? trailing;
-  final List<Widget> children;
+  Widget _buildSectionTitle(String title) {
+    return Text(title, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white));
+  }
 
-  const _SectionCard({required this.title, this.trailing, required this.children});
+  Widget _buildStatsGrid() {
+    if (_loading) {
+      return const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()));
+    }
+    
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 1.1,
+      children: [
+        _StatCard(
+          icon: Icons.timer_outlined, label: 'Total Hours',
+          value: '${_analytics?.totalHours.toStringAsFixed(1) ?? 0}h',
+          color: const Color(0xFF6366F1), delay: 0,
+        ),
+        _StatCard(
+          icon: Icons.auto_graph_rounded, label: 'Learning',
+          value: '${_analytics?.learningHours.toStringAsFixed(1) ?? 0}h',
+          color: const Color(0xFF10B981), delay: 100,
+        ),
+        _StatCard(
+          icon: Icons.layers_outlined, label: 'Projects',
+          value: '${_analytics?.projectHours.toStringAsFixed(1) ?? 0}h',
+          color: const Color(0xFFEC4899), delay: 200,
+        ),
+        _StatCard(
+          icon: Icons.bolt_rounded, label: 'Consistency',
+          value: '${_analytics?.consistencyScore ?? 0}%',
+          color: const Color(0xFFF59E0B), delay: 300,
+        ),
+      ],
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildActivitySummary(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.cardDark.withAlpha(180),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.divider),
       ),
       child: Column(
@@ -223,32 +261,114 @@ class _SectionCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
-              trailing ?? const SizedBox.shrink(),
+              Text('Weekly Insight', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+              TextButton(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsScreen())),
+                child: Text('Analytics', style: GoogleFonts.inter(color: AppColors.primary, fontWeight: FontWeight.w600)),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
-          ...children,
+          const SizedBox(height: 16),
+          _MetricRow('Active Days', '${_analytics?.activeDays ?? 0} / 7', Icons.calendar_today_rounded),
+          _MetricRow('Peak Performance', _analytics?.bestDay ?? 'N/A', Icons.star_outline_rounded),
+          _MetricRow('Avg. Intensity', '${((_analytics?.totalHours ?? 0) / 7).toStringAsFixed(1)}h/day', Icons.speed_rounded),
+          _MetricRow('Logged Actions', '${_analytics?.totalActivities ?? 0}', Icons.history_edu_rounded),
         ],
       ),
-    ).animate().fade(delay: 200.ms, duration: 400.ms).slideY(begin: 0.1, end: 0, curve: Curves.easeOut);
+    ).animate().fade(delay: 500.ms).slideY(begin: 0.1, end: 0);
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return Wrap(
+      spacing: 12, runSpacing: 12,
+      children: [
+        _QuickAction(
+          icon: Icons.add_task_rounded, label: 'Log Activity', color: AppColors.primary,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityScreen())),
+        ),
+        _QuickAction(
+          icon: Icons.work_outline_rounded, label: 'Projects', color: AppColors.secondary,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProjectsScreen())),
+        ),
+        _QuickAction(
+          icon: Icons.emoji_events_outlined, label: 'Hackathons', color: AppColors.accent,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HackathonsScreen())),
+        ),
+        _QuickAction(
+          icon: Icons.bolt_rounded, label: 'Skills', color: AppColors.primary,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SkillsScreen())),
+        ),
+        _QuickAction(
+          icon: Icons.school_outlined, label: 'Learning', color: AppColors.warning,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LearningScreen())),
+        ),
+      ],
+    ).animate().fade(delay: 700.ms).slideY(begin: 0.2, end: 0);
   }
 }
 
-class _InfoRow extends StatelessWidget {
+class _StatCard extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
-  const _InfoRow(this.label, this.value);
+  final Color color;
+  final int delay;
+
+  const _StatCard({required this.icon, required this.label, required this.value, required this.color, required this.delay});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: color.withAlpha(15),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: color.withAlpha(40)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: color.withAlpha(30), shape: BoxShape.circle),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(value, style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fade(delay: delay.ms, duration: 500.ms).slideY(begin: 0.2, end: 0, curve: Curves.easeOut);
+  }
+}
+
+class _MetricRow extends StatelessWidget {
+  final String label, value;
+  final IconData icon;
+  const _MetricRow(this.label, this.value, this.icon);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary)),
-          Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+          Icon(icon, size: 18, color: AppColors.textMuted),
+          const SizedBox(width: 12),
+          Text(label, style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary)),
+          const Spacer(),
+          Text(value, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
         ],
       ),
     );
@@ -265,25 +385,60 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return SizedBox(
+      width: (MediaQuery.of(context).size.width - 52) / 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          decoration: BoxDecoration(
+            color: AppColors.cardDark.withAlpha(150),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.divider),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 22),
+              const SizedBox(width: 12),
+              Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderAction extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _HeaderAction({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        width: (MediaQuery.of(context).size.width - 60) / 2,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        decoration: BoxDecoration(
-          color: color.withAlpha(20),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withAlpha(50)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 10),
-            Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
-          ],
-        ),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(color: AppColors.cardDark, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
+        child: Icon(icon, color: Colors.white70, size: 22),
       ),
+    );
+  }
+}
+
+class _GradientOrb extends StatelessWidget {
+  final Color color;
+  final double size;
+  const _GradientOrb({required this.color, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size, height: size,
+      decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [color, color.withAlpha(0)])),
     );
   }
 }

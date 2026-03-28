@@ -46,18 +46,6 @@ const updateProfile = async (req, res) => {
       primarySkills, secondarySkills, specialSkills, programmingLangs,
       linkedinUrl, githubUrl, leetcodeUrl, twitterUrl } = req.body;
 
-    // Validate skill limits (max 2 per category)
-    const MAX_SKILLS = 2;
-    const skillFields = { primarySkills, secondarySkills, specialSkills, programmingLangs };
-    for (const [field, value] of Object.entries(skillFields)) {
-      if (Array.isArray(value) && value.length > MAX_SKILLS) {
-        return res.status(400).json({
-          success: false,
-          message: `Maximum ${MAX_SKILLS} ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} allowed`,
-        });
-      }
-    }
-
     const user = await prisma.user.update({
       where: { id: req.user.id },
       data: {
@@ -149,4 +137,40 @@ const deleteUser = async (req, res) => {
   }
 };
 
-module.exports = { getAllUsers, getUserById, updateProfile, assignRole, createUser, deleteUser };
+/** PUT /api/users/:id - Admin: update any user */
+const adminUpdateUser = async (req, res) => {
+  try {
+    const { name, regNo, department, year, mobile, cgpa, role,
+      primarySkills, secondarySkills, specialSkills, programmingLangs,
+      linkedinUrl, githubUrl, leetcodeUrl, twitterUrl } = req.body;
+
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: {
+        ...(name && { name }),
+        ...(regNo !== undefined && { regNo }),
+        ...(department !== undefined && { department }),
+        ...(year !== undefined && { year }),
+        ...(mobile !== undefined && { mobile }),
+        ...(cgpa !== undefined && { cgpa: cgpa ? parseFloat(cgpa) : null }),
+        ...(role && { role }),
+        ...(primarySkills && { primarySkills }),
+        ...(secondarySkills && { secondarySkills }),
+        ...(specialSkills && { specialSkills }),
+        ...(programmingLangs && { programmingLangs }),
+        ...(linkedinUrl !== undefined && { linkedinUrl }),
+        ...(githubUrl !== undefined && { githubUrl }),
+        ...(leetcodeUrl !== undefined && { leetcodeUrl }),
+        ...(twitterUrl !== undefined && { twitterUrl }),
+      },
+      select: userSelect,
+    });
+
+    res.json({ success: true, message: 'User updated successfully', data: user });
+  } catch (error) {
+    console.error('AdminUpdateUser error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update user' });
+  }
+};
+
+module.exports = { getAllUsers, getUserById, updateProfile, assignRole, createUser, deleteUser, adminUpdateUser };
