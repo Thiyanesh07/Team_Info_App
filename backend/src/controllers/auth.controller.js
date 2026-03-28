@@ -29,6 +29,7 @@ const generateToken = (userId) => {
  * POST /api/auth/google
  */
 const googleSignIn = async (req, res) => {
+  console.log('[DEBUG] googleSignIn called');
   try {
     const { idToken } = req.body;
     

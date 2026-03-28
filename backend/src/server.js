@@ -52,6 +52,12 @@ app.use(express.urlencoded({ extended: true }));
 // ROUTES
 // ──────────────────────────────────────
 
+
+app.use((req, res, next) => {
+  console.log(`[DEBUG] ${req.method} ${req.url}`);
+  next();
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
