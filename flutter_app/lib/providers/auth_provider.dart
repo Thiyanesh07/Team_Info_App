@@ -12,7 +12,7 @@ const String _googleServerClientId = String.fromEnvironment(
   'GOOGLE_SERVER_CLIENT_ID',
 );
 const String _googleServerClientIdFallback =
-    '638705857828-b3mamn6rlq4bcsi3bs9nki0gn5hu8i9c.apps.googleusercontent.com';
+    '638705857828-3r7ammk6lbimalqlcb5spbaesma7tse4.apps.googleusercontent.com';
 
 // ─── Auth State ──────────────────────────────
 enum AuthStatus { initial, loading, authenticated, unauthenticated, error }
