@@ -4,6 +4,7 @@
   "description": "Root package manager to forward Railway deployments to the backend directory",
   "scripts": {
     "postinstall": "npm install --prefix backend",
+    "build": "npm run build --prefix backend",
     "start": "npm start --prefix backend"
   }
 }
