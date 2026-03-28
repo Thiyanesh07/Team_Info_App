@@ -11,6 +11,8 @@ const String _googleWebClientId = String.fromEnvironment(
 const String _googleServerClientId = String.fromEnvironment(
   'GOOGLE_SERVER_CLIENT_ID',
 );
+const String _googleServerClientIdFallback =
+    '638705857828-b3mamn6rlq4bcsi3bs9nki0gn5hu8i9c.apps.googleusercontent.com';
 
 // ─── Auth State ──────────────────────────────
 enum AuthStatus { initial, loading, authenticated, unauthenticated, error }
@@ -83,7 +85,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
             : null,
         serverClientId: _googleServerClientId.isNotEmpty
             ? _googleServerClientId
-            : null,
+            : _googleServerClientIdFallback,
       );
 
       // Prompt user to sign in
@@ -137,7 +139,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(
         status: AuthStatus.error,
         errorMessage:
-            'Google Sign-In Error: \${error.toString().split("\\n").first}',
+            'Google Sign-In Error: ${error.toString().split("\n").first}',
       );
     }
   }
