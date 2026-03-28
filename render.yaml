@@ -9,6 +9,8 @@ services:
   envVars:
   - key: DATABASE_URL
     sync: false
+  - key: GOOGLE_CLIENT_ID
+    sync: false
   - key: JWT_SECRET
     sync: false
   region: singapore

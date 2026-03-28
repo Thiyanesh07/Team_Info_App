@@ -38,11 +38,10 @@ const googleSignIn = async (req, res) => {
 
     let payload;
     try {
-      const ticket = await client.verifyIdToken({
-        idToken,
-        // Audience should be provided in production to prevent token spoofing
-        // audience: process.env.GOOGLE_CLIENT_ID, 
-      });
+      const verifyOptions = process.env.GOOGLE_CLIENT_ID
+        ? { idToken, audience: process.env.GOOGLE_CLIENT_ID }
+        : { idToken };
+      const ticket = await client.verifyIdToken(verifyOptions);
       payload = ticket.getPayload();
     } catch (error) {
       console.error('Google token verification failed:', error);

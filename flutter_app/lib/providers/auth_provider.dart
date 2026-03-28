@@ -1,8 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:team_info_app/models/user_model.dart';
 import 'package:team_info_app/services/api_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+
+const String _googleWebClientId = String.fromEnvironment(
+  'GOOGLE_WEB_CLIENT_ID',
+);
+const String _googleServerClientId = String.fromEnvironment(
+  'GOOGLE_SERVER_CLIENT_ID',
+);
 
 // ─── Auth State ──────────────────────────────
 enum AuthStatus { initial, loading, authenticated, unauthenticated, error }
@@ -20,7 +28,12 @@ class AuthState {
     this.errorMessage,
   });
 
-  AuthState copyWith({AuthStatus? status, UserModel? user, String? token, String? errorMessage}) {
+  AuthState copyWith({
+    AuthStatus? status,
+    UserModel? user,
+    String? token,
+    String? errorMessage,
+  }) {
     return AuthState(
       status: status ?? this.status,
       user: user ?? this.user,
@@ -65,29 +78,37 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       // Initialize GoogleSignIn
       await GoogleSignIn.instance.initialize(
-        // Google OAuth requires the "Web Client ID" to run on Chrome/Web:
-        clientId: '638705857828-replace-with-your-web-client-id.apps.googleusercontent.com', 
-        serverClientId: '638705857828-b3mamn6rlq4bcsi3bs9nki0gn5hu8i9c.apps.googleusercontent.com',
+        clientId: kIsWeb && _googleWebClientId.isNotEmpty
+            ? _googleWebClientId
+            : null,
+        serverClientId: _googleServerClientId.isNotEmpty
+            ? _googleServerClientId
+            : null,
       );
 
       // Prompt user to sign in
-      GoogleSignInAccount? account;
+      late final GoogleSignInAccount account;
       try {
         account = await GoogleSignIn.instance.authenticate(
           scopeHint: ['email'],
         );
       } catch (e) {
         // User canceled the sign-in flow
-        state = state.copyWith(status: AuthStatus.unauthenticated, errorMessage: null);
+        state = state.copyWith(
+          status: AuthStatus.unauthenticated,
+          errorMessage: null,
+        );
         return;
       }
 
       // Get authentication tokens
-      // Get authentication tokens
       final GoogleSignInAuthentication auth = account.authentication;
-      
+
       if (auth.idToken == null) {
-        state = state.copyWith(status: AuthStatus.error, errorMessage: 'Failed to retrieve Google ID token');
+        state = state.copyWith(
+          status: AuthStatus.error,
+          errorMessage: 'Failed to retrieve Google ID token',
+        );
         return;
       }
 
@@ -115,7 +136,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Removed debug prints
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: 'Google Sign-In Error: \${error.toString().split("\\n").first}',
+        errorMessage:
+            'Google Sign-In Error: \${error.toString().split("\\n").first}',
       );
     }
   }
@@ -136,7 +158,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   void clearError() {
-    state = state.copyWith(status: AuthStatus.unauthenticated, errorMessage: null);
+    state = state.copyWith(
+      status: AuthStatus.unauthenticated,
+      errorMessage: null,
+    );
   }
 }
 
