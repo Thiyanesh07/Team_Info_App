@@ -1,7 +1,7 @@
 class ApiConstants {
   // Change this to your deployed backend URL
-  static const String baseUrl = 'http://localhost:3000/api';
-  static const String socketUrl = 'http://localhost:3000';
+  static const String baseUrl = 'https://team-info-app.onrender.com/api';
+  static const String socketUrl = 'https://team-info-app.onrender.com';
 
   // Auth
   static const String googleLogin = '/auth/google';
