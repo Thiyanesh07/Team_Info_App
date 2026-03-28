@@ -1,0 +1,18 @@
+# Exported from Render on 2026-03-28T04:20:47Z
+version: "1"
+services:
+- type: web
+  name: Team_Info_App
+  runtime: node
+  repo: https://github.com/Thiyanesh07/Team_Info_App
+  plan: free
+  envVars:
+  - key: DATABASE_URL
+    sync: false
+  - key: JWT_SECRET
+    sync: false
+  region: singapore
+  buildCommand: npm run build
+  startCommand: yarn start
+  autoDeployTrigger: commit
+  rootDir: backend
