@@ -5,7 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "build": "npx prisma generate && npx prisma migrate deploy",
+    "build": "npx prisma generate && (npx prisma migrate deploy || npx prisma db push)",
     "start": "node src/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -19,10 +19,14 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-async-errors": "^3.1.1",
+    "express-rate-limit": "^8.3.1",
     "express-validator": "^7.2.1",
     "firebase-admin": "^13.0.2",
     "google-auth-library": "^10.6.2",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
     "multer": "^1.4.5-lts.1",
     "socket.io": "^4.8.1"
   },

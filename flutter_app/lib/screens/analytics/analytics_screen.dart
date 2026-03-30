@@ -5,6 +5,7 @@ import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:team_info_app/services/api_service.dart';
 import 'package:team_info_app/models/app_models.dart';
+import 'package:team_info_app/screens/analytics/leaderboard_screen.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -131,7 +132,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   const SizedBox(height: 24),
 
                   // Leaderboard
-                  Text('🏆 Leaderboard', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('🏆 Leaderboard', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+                      TextButton(
+                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaderboardScreen())),
+                        child: Text('View Details', style: GoogleFonts.inter(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                   ..._leaderboard.asMap().entries.map((entry) {
                     final i = entry.key;

@@ -1,10 +1,13 @@
+import 'package:json_annotation/json_annotation.dart';
+
+@JsonEnum(alwaysCreate: true)
 enum UserRole {
-  admin,
-  captain,
-  viceCaptain,
-  strategist,
-  manager,
-  member;
+  @JsonValue('ADMIN') admin,
+  @JsonValue('CAPTAIN') captain,
+  @JsonValue('VICE_CAPTAIN') viceCaptain,
+  @JsonValue('STRATEGIST') strategist,
+  @JsonValue('MANAGER') manager,
+  @JsonValue('MEMBER') member;
 
   String get displayName {
     switch (this) {

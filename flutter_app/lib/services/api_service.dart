@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:team_info_app/core/constants/api_constants.dart';
+import 'package:team_info_app/services/cache_service.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -29,15 +30,35 @@ class ApiService {
   }
 
   // ─── HTTP Methods ──────────────────────────
-  Future<ApiResponse> get(String endpoint, {Map<String, String>? queryParams}) async {
+  Future<ApiResponse> get(String endpoint, {Map<String, String>? queryParams, bool useCache = false}) async {
+    final cacheKey = queryParams != null ? '$endpoint?${queryParams.toString()}' : endpoint;
+    
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint')
           .replace(queryParameters: queryParams);
       final response = await http.get(uri, headers: await _headers());
-      return _handleResponse(response);
+      final apiResponse = _handleResponse(response);
+      
+      if (useCache && apiResponse.success) {
+        await CacheService.set(cacheKey, apiResponse.data);
+      }
+      
+      return apiResponse;
     } catch (e) {
+      if (useCache) {
+        final cachedData = CacheService.get(cacheKey);
+        if (cachedData != null) {
+          return ApiResponse(success: true, data: cachedData, message: 'Loaded from cache (Offline)');
+        }
+      }
       return ApiResponse(success: false, message: 'Network error: $e');
     }
+  }
+
+  /// Manually get cached data
+  dynamic getCached(String endpoint, {Map<String, String>? queryParams}) {
+    final cacheKey = queryParams != null ? '$endpoint?${queryParams.toString()}' : endpoint;
+    return CacheService.get(cacheKey);
   }
 
   Future<ApiResponse> post(String endpoint, {Map<String, dynamic>? body, bool withAuth = true}) async {

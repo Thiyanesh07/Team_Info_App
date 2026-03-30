@@ -1,7 +1,9 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class ApiConstants {
-  // Change this to your deployed backend URL
-  static const String baseUrl = 'https://team-info-app.onrender.com/api';
-  static const String socketUrl = 'https://team-info-app.onrender.com';
+  // Configured via assets/.env
+  static String get baseUrl => dotenv.env['API_BASE_URL'] ?? 'https://team-info-app.onrender.com/api';
+  static String get socketUrl => dotenv.env['SOCKET_URL'] ?? 'https://team-info-app.onrender.com';
 
   // Auth
   static const String googleLogin = '/auth/google';

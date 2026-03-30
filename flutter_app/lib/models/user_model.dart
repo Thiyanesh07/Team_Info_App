@@ -1,5 +1,9 @@
+import 'package:json_annotation/json_annotation.dart';
 import 'package:team_info_app/core/enums/user_role.dart';
 
+part 'user_model.g.dart';
+
+@JsonSerializable()
 class UserModel {
   final String id;
   final String email;
@@ -49,53 +53,26 @@ class UserModel {
     this.updatedAt,
   });
 
-  factory UserModel.fromJson(Map<String, dynamic> json) {
-    return UserModel(
-      id: json['id'] ?? '',
-      email: json['email'] ?? '',
-      name: json['name'] ?? '',
-      regNo: json['regNo'],
-      department: json['department'],
-      year: json['year'],
-      mobile: json['mobile'],
-      cgpa: json['cgpa'] != null ? (json['cgpa'] as num).toDouble() : null,
-      rewardPoints: json['rewardPoints'] ?? 0,
-      activityPoints: json['activityPoints'] ?? 0,
-      profileImageUrl: json['profileImageUrl'],
-      role: UserRole.fromString(json['role'] ?? 'MEMBER'),
-      primarySkills: List<String>.from(json['primarySkills'] ?? []),
-      secondarySkills: List<String>.from(json['secondarySkills'] ?? []),
-      specialSkills: List<String>.from(json['specialSkills'] ?? []),
-      programmingLangs: List<String>.from(json['programmingLangs'] ?? []),
-      linkedinUrl: json['linkedinUrl'],
-      githubUrl: json['githubUrl'],
-      leetcodeUrl: json['leetcodeUrl'],
-      twitterUrl: json['twitterUrl'],
-      createdAt: json['createdAt'],
-      updatedAt: json['updatedAt'],
-    );
+  factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
+
+  Map<String, dynamic> toJson() => _$UserModelToJson(this);
+
+  String get rankName {
+    if (rewardPoints >= 5000) return 'Diamond Strategist';
+    if (rewardPoints >= 2500) return 'Platinum Architect';
+    if (rewardPoints >= 1000) return 'Gold Captain';
+    if (rewardPoints >= 500) return 'Silver Manager';
+    if (rewardPoints >= 100) return 'Bronze Member';
+    return 'Rookie';
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'email': email,
-      'name': name,
-      'regNo': regNo,
-      'department': department,
-      'year': year,
-      'mobile': mobile,
-      'cgpa': cgpa,
-      'profileImageUrl': profileImageUrl,
-      'primarySkills': primarySkills,
-      'secondarySkills': secondarySkills,
-      'specialSkills': specialSkills,
-      'programmingLangs': programmingLangs,
-      'linkedinUrl': linkedinUrl,
-      'githubUrl': githubUrl,
-      'leetcodeUrl': leetcodeUrl,
-      'twitterUrl': twitterUrl,
-    };
+  double get rankProgress {
+    if (rewardPoints >= 5000) return 1.0;
+    if (rewardPoints >= 2500) return (rewardPoints - 2500) / 2500;
+    if (rewardPoints >= 1000) return (rewardPoints - 1000) / 1500;
+    if (rewardPoints >= 500) return (rewardPoints - 500) / 500;
+    if (rewardPoints >= 100) return (rewardPoints - 100) / 400;
+    return rewardPoints / 100;
   }
 
   UserModel copyWith({

@@ -27,10 +27,10 @@ class _SkillsScreenState extends State<SkillsScreen> {
   }
 
   Future<void> _loadSkills() async {
-    final url = widget.targetUser != null 
-        ? '${ApiConstants.psSkills}/user/${widget.targetUser!.id}' 
+    final url = widget.targetUser != null
+        ? '${ApiConstants.psSkills}/user/${widget.targetUser!.id}'
         : ApiConstants.psSkills;
-    
+
     final res = await _api.get(url);
     if (res.success && mounted) {
       setState(() {
@@ -45,59 +45,95 @@ class _SkillsScreenState extends State<SkillsScreen> {
   @override
   Widget build(BuildContext context) {
     final isMe = widget.targetUser == null;
-    final title = isMe ? 'Skills Portfolio' : '${widget.targetUser!.name.split(' ').first}\'s Skills';
+    final title = isMe
+        ? 'Skills Portfolio'
+        : '${widget.targetUser!.name.split(' ').first}\'s Skills';
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(title, style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+        title: Text(
+          title,
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+        ),
         centerTitle: true,
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddSkillDialog(),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Skill Card'),
-        backgroundColor: AppColors.primary,
-      ).animate().scale(delay: 500.ms, duration: 400.ms, curve: Curves.easeOutBack),
+      floatingActionButton:
+          FloatingActionButton.extended(
+            onPressed: () => _showAddSkillDialog(),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Add Skill Card'),
+            backgroundColor: AppColors.primary,
+          ).animate().scale(
+            delay: 500.ms,
+            duration: 400.ms,
+            curve: Curves.easeOutBack,
+          ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _skills.isEmpty
-              ? _emptyState()
-              : RefreshIndicator(
-                  onRefresh: _loadSkills,
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(20),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.4,
-                    ),
-                    itemCount: _skills.length,
-                    itemBuilder: (_, i) => _SkillCard(
-                      skill: _skills[i],
-                      onDelete: () => _deleteSkill(_skills[i].id),
-                      onTap: () async {
-                        final res = await _api.put('${ApiConstants.psSkills}/${_skills[i].id}', body: {
-                          'completed': !_skills[i].completed,
-                        });
-                        if (res.success) _loadSkills();
-                      },
-                    ).animate().fade(delay: (i * 50).ms, duration: 300.ms).slideY(begin: 0.1, end: 0),
-                  ),
+          ? _emptyState()
+          : RefreshIndicator(
+              onRefresh: _loadSkills,
+              child: GridView.builder(
+                padding: const EdgeInsets.all(20),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.4,
                 ),
+                itemCount: _skills.length,
+                itemBuilder: (_, i) =>
+                    _SkillCard(
+                          skill: _skills[i],
+                          onDelete: () => _deleteSkill(_skills[i].id),
+                          onTap: () async {
+                            final res = await _api.put(
+                              '${ApiConstants.psSkills}/${_skills[i].id}',
+                              body: {'completed': !_skills[i].completed},
+                            );
+                            if (res.success) _loadSkills();
+                          },
+                        )
+                        .animate()
+                        .fade(delay: (i * 50).ms, duration: 300.ms)
+                        .slideY(begin: 0.1, end: 0),
+              ),
+            ),
     );
   }
 
   Widget _emptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.bolt_outlined, size: 80, color: AppColors.textMuted.withAlpha(50)),
-          const SizedBox(height: 16),
-          Text('No Skills Added', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white)),
-          const SizedBox(height: 8),
-          Text('Build your dynamic portfolio now!', style: GoogleFonts.inter(color: AppColors.textMuted)),
-        ],
-      ).animate().fade(duration: 600.ms).scale(duration: 600.ms, curve: Curves.easeOutBack),
+      child:
+          Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.bolt_outlined,
+                    size: 80,
+                    color: AppColors.textMuted.withAlpha(50),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Skills Added',
+                    style: GoogleFonts.outfit(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Build your dynamic portfolio now!',
+                    style: GoogleFonts.inter(color: AppColors.textMuted),
+                  ),
+                ],
+              )
+              .animate()
+              .fade(duration: 600.ms)
+              .scale(duration: 600.ms, curve: Curves.easeOutBack),
     );
   }
 
@@ -109,42 +145,79 @@ class _SkillsScreenState extends State<SkillsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.cardDark,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (_) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Add New Skill Card', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+              Text(
+                'Add New Skill Card',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
               const SizedBox(height: 20),
               TextField(
                 controller: nameC,
-                decoration: const InputDecoration(hintText: 'Skill Name (e.g. Flutter, UX Design)'),
+                decoration: const InputDecoration(
+                  hintText: 'Skill Name (e.g. Flutter, UX Design)',
+                ),
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 16),
-              const Text('Category', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+              const Text(
+                'Category',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  _TypeChip(label: 'TECHNICAL', current: type, onTap: () => setModalState(() => type = 'TECHNICAL')),
+                  _TypeChip(
+                    label: 'TECHNICAL',
+                    current: type,
+                    onTap: () => setModalState(() => type = 'TECHNICAL'),
+                  ),
                   const SizedBox(width: 10),
-                  _TypeChip(label: 'NON_TECHNICAL', current: type, onTap: () => setModalState(() => type = 'NON_TECHNICAL')),
+                  _TypeChip(
+                    label: 'NON_TECHNICAL',
+                    current: type,
+                    onTap: () => setModalState(() => type = 'NON_TECHNICAL'),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
               SizedBox(
-                width: double.infinity, height: 52,
+                width: double.infinity,
+                height: 52,
                 child: ElevatedButton(
                   onPressed: () async {
                     if (nameC.text.isEmpty) return;
-                    final res = await _api.post(ApiConstants.psSkills, body: {
-                      'skillName': nameC.text,
-                      'type': type,
-                      if (widget.targetUser != null) 'userId': widget.targetUser!.id,
-                    });
+                    final res = await _api.post(
+                      ApiConstants.psSkills,
+                      body: {
+                        'skillName': nameC.text,
+                        'type': type,
+                        if (widget.targetUser != null)
+                          'userId': widget.targetUser!.id,
+                      },
+                    );
+                    if (!context.mounted) return;
                     if (res.success) {
                       Navigator.pop(context);
                       _loadSkills();
@@ -169,7 +242,11 @@ class _SkillsScreenState extends State<SkillsScreen> {
 class _TypeChip extends StatelessWidget {
   final String label, current;
   final VoidCallback onTap;
-  const _TypeChip({required this.label, required this.current, required this.onTap});
+  const _TypeChip({
+    required this.label,
+    required this.current,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -180,13 +257,22 @@ class _TypeChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withAlpha(40) : AppColors.surfaceLight,
+          color: isSelected
+              ? AppColors.primary.withAlpha(40)
+              : AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? AppColors.primary : AppColors.divider),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.divider,
+          ),
         ),
-        child: Text(label.replaceAll('_', ' '), style: TextStyle(
-          fontSize: 12, fontWeight: FontWeight.w600, color: isSelected ? AppColors.primary : Colors.white60,
-        )),
+        child: Text(
+          label.replaceAll('_', ' '),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? AppColors.primary : Colors.white60,
+          ),
+        ),
       ),
     );
   }
@@ -197,7 +283,11 @@ class _SkillCard extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onTap;
 
-  const _SkillCard({required this.skill, required this.onDelete, required this.onTap});
+  const _SkillCard({
+    required this.skill,
+    required this.onDelete,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -212,9 +302,16 @@ class _SkillCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.cardDark,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: skill.completed ? AppColors.success : color.withAlpha(50)),
+          border: Border.all(
+            color: skill.completed ? AppColors.success : color.withAlpha(50),
+          ),
           boxShadow: [
-            if (skill.completed) BoxShadow(color: AppColors.success.withAlpha(20), blurRadius: 12, offset: const Offset(0, 4)),
+            if (skill.completed)
+              BoxShadow(
+                color: AppColors.success.withAlpha(20),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
           ],
         ),
         child: Stack(
@@ -227,26 +324,56 @@ class _SkillCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: color.withAlpha(30), borderRadius: BorderRadius.circular(8)),
-                      child: Text(isTech ? 'TECH' : 'SOFT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: color)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withAlpha(30),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isTech ? 'TECH' : 'SOFT',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: color,
+                        ),
+                      ),
                     ),
                     if (skill.completed)
-                      const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.success,
+                        size: 16,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Expanded(
-                  child: Text(skill.skillName, style: GoogleFonts.outfit(
-                    fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2,
-                  ), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    skill.skillName,
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      height: 1.2,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
             Positioned(
-              bottom: -10, right: -10,
+              bottom: -10,
+              right: -10,
               child: IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.textMuted),
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  size: 18,
+                  color: AppColors.textMuted,
+                ),
                 onPressed: onDelete,
               ),
             ),

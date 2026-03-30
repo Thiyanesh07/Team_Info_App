@@ -1,4 +1,9 @@
+import 'package:json_annotation/json_annotation.dart';
+
+part 'app_models.g.dart';
+
 // ─── Personal Project ─────────────────────────
+@JsonSerializable()
 class PersonalProject {
   final String id;
   final String userId;
@@ -16,21 +21,13 @@ class PersonalProject {
     this.skillsUsed = const [], this.createdAt,
   });
 
-  factory PersonalProject.fromJson(Map<String, dynamic> json) => PersonalProject(
-    id: json['id'] ?? '', userId: json['userId'] ?? '', name: json['name'] ?? '',
-    description: json['description'], contribution: json['contribution'],
-    githubLink: json['githubLink'], liveLink: json['liveLink'],
-    skillsUsed: List<String>.from(json['skillsUsed'] ?? []),
-    createdAt: json['createdAt'],
-  );
+  factory PersonalProject.fromJson(Map<String, dynamic> json) => _$PersonalProjectFromJson(json);
 
-  Map<String, dynamic> toJson() => {
-    'name': name, 'description': description, 'contribution': contribution,
-    'githubLink': githubLink, 'liveLink': liveLink, 'skillsUsed': skillsUsed,
-  };
+  Map<String, dynamic> toJson() => _$PersonalProjectToJson(this);
 }
 
 // ─── Team Project ─────────────────────────────
+@JsonSerializable()
 class TeamProject {
   final String id;
   final String projectName;
@@ -52,23 +49,12 @@ class TeamProject {
     this.status = 'NOT_STARTED', this.members = const [], this.createdAt,
   });
 
-  factory TeamProject.fromJson(Map<String, dynamic> json) => TeamProject(
-    id: json['id'] ?? '', projectName: json['projectName'] ?? '',
-    createdBy: json['createdBy'], assignedCaptain: json['assignedCaptain'],
-    domain: json['domain'], subDomain: json['subDomain'],
-    problemStatement: json['problemStatement'], solution: json['solution'],
-    startDate: json['startDate'], status: json['status'] ?? 'NOT_STARTED',
-    members: (json['members'] as List?)?.map((m) => TeamProjectMember.fromJson(m)).toList() ?? [],
-    createdAt: json['createdAt'],
-  );
+  factory TeamProject.fromJson(Map<String, dynamic> json) => _$TeamProjectFromJson(json);
 
-  Map<String, dynamic> toJson() => {
-    'projectName': projectName, 'domain': domain, 'subDomain': subDomain,
-    'problemStatement': problemStatement, 'solution': solution,
-    'startDate': startDate, 'status': status,
-  };
+  Map<String, dynamic> toJson() => _$TeamProjectToJson(this);
 }
 
+@JsonSerializable()
 class TeamProjectMember {
   final String id;
   final String userId;
@@ -76,12 +62,12 @@ class TeamProjectMember {
 
   TeamProjectMember({required this.id, required this.userId, this.user});
 
-  factory TeamProjectMember.fromJson(Map<String, dynamic> json) => TeamProjectMember(
-    id: json['id'] ?? '', userId: json['userId'] ?? '', user: json['user'],
-  );
+  factory TeamProjectMember.fromJson(Map<String, dynamic> json) => _$TeamProjectMemberFromJson(json);
+
+  Map<String, dynamic> toJson() => _$TeamProjectMemberToJson(this);
 }
 
-// ─── Project Update ───────────────────────────
+@JsonSerializable()
 class ProjectUpdate {
   final String id;
   final String projectId;
@@ -95,14 +81,12 @@ class ProjectUpdate {
     required this.updateText, this.user, this.createdAt,
   });
 
-  factory ProjectUpdate.fromJson(Map<String, dynamic> json) => ProjectUpdate(
-    id: json['id'] ?? '', projectId: json['projectId'] ?? '',
-    userId: json['userId'] ?? '', updateText: json['updateText'] ?? '',
-    user: json['user'], createdAt: json['createdAt'],
-  );
+  factory ProjectUpdate.fromJson(Map<String, dynamic> json) => _$ProjectUpdateFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ProjectUpdateToJson(this);
 }
 
-// ─── Hackathon ────────────────────────────────
+@JsonSerializable()
 class Hackathon {
   final String id;
   final String userId;
@@ -126,26 +110,12 @@ class Hackathon {
     this.rounds = const [], this.createdAt,
   });
 
-  factory Hackathon.fromJson(Map<String, dynamic> json) => Hackathon(
-    id: json['id'] ?? '', userId: json['userId'] ?? '',
-    hackName: json['hackName'] ?? '', projectName: json['projectName'],
-    description: json['description'], contribution: json['contribution'],
-    skillsUsed: List<String>.from(json['skillsUsed'] ?? []),
-    date: json['date'], isTeam: json['isTeam'] ?? false,
-    teamMembers: List<String>.from(json['teamMembers'] ?? []),
-    status: json['status'] ?? 'UPCOMING',
-    rounds: (json['rounds'] as List?)?.map((r) => HackathonRound.fromJson(r)).toList() ?? [],
-    createdAt: json['createdAt'],
-  );
+  factory Hackathon.fromJson(Map<String, dynamic> json) => _$HackathonFromJson(json);
 
-  Map<String, dynamic> toJson() => {
-    'hackName': hackName, 'projectName': projectName, 'description': description,
-    'contribution': contribution, 'skillsUsed': skillsUsed, 'date': date,
-    'isTeam': isTeam, 'teamMembers': teamMembers, 'status': status,
-    'rounds': rounds.map((r) => r.toJson()).toList(),
-  };
+  Map<String, dynamic> toJson() => _$HackathonToJson(this);
 }
 
+@JsonSerializable()
 class HackathonRound {
   final String? id;
   final String roundName;
@@ -153,14 +123,12 @@ class HackathonRound {
 
   HackathonRound({this.id, required this.roundName, this.description});
 
-  factory HackathonRound.fromJson(Map<String, dynamic> json) => HackathonRound(
-    id: json['id'], roundName: json['roundName'] ?? '', description: json['description'],
-  );
+  factory HackathonRound.fromJson(Map<String, dynamic> json) => _$HackathonRoundFromJson(json);
 
-  Map<String, dynamic> toJson() => {'roundName': roundName, 'description': description};
+  Map<String, dynamic> toJson() => _$HackathonRoundToJson(this);
 }
 
-// ─── Learning ─────────────────────────────────
+@JsonSerializable()
 class Learning {
   final String id;
   final String userId;
@@ -178,22 +146,13 @@ class Learning {
     this.level = 'BEGINNER', this.status = 'ONGOING', this.createdAt,
   });
 
-  factory Learning.fromJson(Map<String, dynamic> json) => Learning(
-    id: json['id'] ?? '', userId: json['userId'] ?? '',
-    skillName: json['skillName'] ?? '',
-    topics: List<String>.from(json['topics'] ?? []),
-    startDate: json['startDate'], endDate: json['endDate'],
-    level: json['level'] ?? 'BEGINNER', status: json['status'] ?? 'ONGOING',
-    createdAt: json['createdAt'],
-  );
+  factory Learning.fromJson(Map<String, dynamic> json) => _$LearningFromJson(json);
 
-  Map<String, dynamic> toJson() => {
-    'skillName': skillName, 'topics': topics, 'startDate': startDate,
-    'endDate': endDate, 'level': level, 'status': status,
-  };
+  Map<String, dynamic> toJson() => _$LearningToJson(this);
 }
 
 // ─── Daily Activity ───────────────────────────
+@JsonSerializable()
 class DailyActivity {
   final String id;
   final String userId;
@@ -212,21 +171,12 @@ class DailyActivity {
     required this.endTime, required this.date, this.user, this.createdAt,
   });
 
-  factory DailyActivity.fromJson(Map<String, dynamic> json) => DailyActivity(
-    id: json['id'] ?? '', userId: json['userId'] ?? '',
-    type: json['type'] ?? 'OTHERS', customType: json['customType'],
-    description: json['description'], startTime: json['startTime'] ?? '',
-    endTime: json['endTime'] ?? '', date: json['date'] ?? '',
-    user: json['user'], createdAt: json['createdAt'],
-  );
+  factory DailyActivity.fromJson(Map<String, dynamic> json) => _$DailyActivityFromJson(json);
 
-  Map<String, dynamic> toJson() => {
-    'type': type, 'customType': customType, 'description': description,
-    'startTime': startTime, 'endTime': endTime, 'date': date,
-  };
+  Map<String, dynamic> toJson() => _$DailyActivityToJson(this);
 }
 
-// ─── Certification ────────────────────────────
+@JsonSerializable()
 class Certification {
   final String id;
   final String userId;
@@ -241,20 +191,12 @@ class Certification {
     this.provider, this.description, this.issuedDate, this.createdAt,
   });
 
-  factory Certification.fromJson(Map<String, dynamic> json) => Certification(
-    id: json['id'] ?? '', userId: json['userId'] ?? '',
-    skill: json['skill'] ?? '', provider: json['provider'],
-    description: json['description'], issuedDate: json['issuedDate'],
-    createdAt: json['createdAt'],
-  );
+  factory Certification.fromJson(Map<String, dynamic> json) => _$CertificationFromJson(json);
 
-  Map<String, dynamic> toJson() => {
-    'skill': skill, 'provider': provider, 'description': description,
-    'issuedDate': issuedDate,
-  };
+  Map<String, dynamic> toJson() => _$CertificationToJson(this);
 }
 
-// ─── PS Skill ─────────────────────────────────
+@JsonSerializable()
 class PsSkill {
   final String id;
   final String userId;
@@ -268,18 +210,12 @@ class PsSkill {
     required this.skillName, this.completed = false, this.createdAt,
   });
 
-  factory PsSkill.fromJson(Map<String, dynamic> json) => PsSkill(
-    id: json['id'] ?? '', userId: json['userId'] ?? '',
-    type: json['type'] ?? 'TECHNICAL', skillName: json['skillName'] ?? '',
-    completed: json['completed'] ?? false, createdAt: json['createdAt'],
-  );
+  factory PsSkill.fromJson(Map<String, dynamic> json) => _$PsSkillFromJson(json);
 
-  Map<String, dynamic> toJson() => {
-    'type': type, 'skillName': skillName, 'completed': completed,
-  };
+  Map<String, dynamic> toJson() => _$PsSkillToJson(this);
 }
 
-// ─── Chat Models ──────────────────────────────
+@JsonSerializable()
 class TeamMessage {
   final String id;
   final String? message;
@@ -293,13 +229,12 @@ class TeamMessage {
     this.isPinned = false, required this.timestamp, this.sender,
   });
 
-  factory TeamMessage.fromJson(Map<String, dynamic> json) => TeamMessage(
-    id: json['id'] ?? '', message: json['message'], imageUrl: json['imageUrl'],
-    isPinned: json['isPinned'] ?? false, timestamp: json['timestamp'] ?? '',
-    sender: json['sender'],
-  );
+  factory TeamMessage.fromJson(Map<String, dynamic> json) => _$TeamMessageFromJson(json);
+
+  Map<String, dynamic> toJson() => _$TeamMessageToJson(this);
 }
 
+@JsonSerializable()
 class ChatConversation {
   final String id;
   final List<Map<String, dynamic>> participants;
@@ -311,16 +246,12 @@ class ChatConversation {
     this.messages = const [], this.updatedAt,
   });
 
-  factory ChatConversation.fromJson(Map<String, dynamic> json) => ChatConversation(
-    id: json['id'] ?? '',
-    participants: (json['participants'] as List?)
-        ?.map((p) => Map<String, dynamic>.from(p)).toList() ?? [],
-    messages: (json['messages'] as List?)
-        ?.map((m) => Map<String, dynamic>.from(m)).toList() ?? [],
-    updatedAt: json['updatedAt'],
-  );
+  factory ChatConversation.fromJson(Map<String, dynamic> json) => _$ChatConversationFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ChatConversationToJson(this);
 }
 
+@JsonSerializable()
 class ChatMessage {
   final String id;
   final String conversationId;
@@ -334,14 +265,12 @@ class ChatMessage {
     this.message, this.imageUrl, required this.timestamp, this.sender,
   });
 
-  factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
-    id: json['id'] ?? '', conversationId: json['conversationId'] ?? '',
-    message: json['message'], imageUrl: json['imageUrl'],
-    timestamp: json['timestamp'] ?? '', sender: json['sender'],
-  );
+  factory ChatMessage.fromJson(Map<String, dynamic> json) => _$ChatMessageFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ChatMessageToJson(this);
 }
 
-// ─── Analytics ────────────────────────────────
+@JsonSerializable()
 class WeeklyAnalytics {
   final double totalHours;
   final double learningHours;
@@ -361,21 +290,12 @@ class WeeklyAnalytics {
     this.totalActivities = 0,
   });
 
-  factory WeeklyAnalytics.fromJson(Map<String, dynamic> json) => WeeklyAnalytics(
-    totalHours: (json['totalHours'] as num?)?.toDouble() ?? 0,
-    learningHours: (json['learningHours'] as num?)?.toDouble() ?? 0,
-    projectHours: (json['projectHours'] as num?)?.toDouble() ?? 0,
-    otherHours: (json['otherHours'] as num?)?.toDouble() ?? 0,
-    activeDays: json['activeDays'] ?? 0,
-    consistencyScore: json['consistencyScore'] ?? 0,
-    bestDay: json['bestDay'],
-    bestDayHours: (json['bestDayHours'] as num?)?.toDouble() ?? 0,
-    dailyBreakdown: Map<String, dynamic>.from(json['dailyBreakdown'] ?? {}),
-    totalActivities: json['totalActivities'] ?? 0,
-  );
+  factory WeeklyAnalytics.fromJson(Map<String, dynamic> json) => _$WeeklyAnalyticsFromJson(json);
+
+  Map<String, dynamic> toJson() => _$WeeklyAnalyticsToJson(this);
 }
 
-// ─── Task Assignment ──────────────────────────
+@JsonSerializable()
 class TaskAssignment {
   final String id;
   final String title;
@@ -385,7 +305,9 @@ class TaskAssignment {
   final String? deadline;
   final String priority;
   final String status;
-  final int reportCount;
+  // Use @JsonKey to map the Prisma count correctly
+  @JsonKey(name: '_count')
+  final Map<String, dynamic>? count;
   final String? createdAt;
   final String? updatedAt;
 
@@ -393,26 +315,18 @@ class TaskAssignment {
     required this.id, required this.title, this.description,
     this.assignedBy, this.assignedTo, this.deadline,
     this.priority = 'MEDIUM', this.status = 'PENDING',
-    this.reportCount = 0, this.createdAt, this.updatedAt,
+    this.count, this.createdAt, this.updatedAt,
   });
 
-  factory TaskAssignment.fromJson(Map<String, dynamic> json) => TaskAssignment(
-    id: json['id'] ?? '', title: json['title'] ?? '',
-    description: json['description'],
-    assignedBy: json['assignedBy'], assignedTo: json['assignedTo'],
-    deadline: json['deadline'], priority: json['priority'] ?? 'MEDIUM',
-    status: json['status'] ?? 'PENDING',
-    reportCount: json['_count']?['reports'] ?? 0,
-    createdAt: json['createdAt'], updatedAt: json['updatedAt'],
-  );
+  // Getter for the report count from the count map
+  int get reportCount => count?['reports'] ?? 0;
 
-  Map<String, dynamic> toJson() => {
-    'title': title, 'description': description,
-    'deadline': deadline, 'priority': priority,
-  };
+  factory TaskAssignment.fromJson(Map<String, dynamic> json) => _$TaskAssignmentFromJson(json);
+
+  Map<String, dynamic> toJson() => _$TaskAssignmentToJson(this);
 }
 
-// ─── Task Report ──────────────────────────────
+@JsonSerializable()
 class TaskReport {
   final String id;
   final String taskId;
@@ -426,10 +340,8 @@ class TaskReport {
     required this.reportText, this.user, this.createdAt,
   });
 
-  factory TaskReport.fromJson(Map<String, dynamic> json) => TaskReport(
-    id: json['id'] ?? '', taskId: json['taskId'] ?? '',
-    userId: json['userId'] ?? '', reportText: json['reportText'] ?? '',
-    user: json['user'], createdAt: json['createdAt'],
-  );
+  factory TaskReport.fromJson(Map<String, dynamic> json) => _$TaskReportFromJson(json);
+
+  Map<String, dynamic> toJson() => _$TaskReportToJson(this);
 }
 

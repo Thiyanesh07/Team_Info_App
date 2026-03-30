@@ -3,7 +3,7 @@ const router = express.Router();
 const {
   getMyTasks, getAssignedTasks, getAllTasks,
   createTask, updateTask, updateTaskStatus,
-  addReport, getTaskReports, deleteTask,
+  addReport, getTaskReports, exportReports, deleteTask,
 } = require('../controllers/task.controller');
 const { authenticate, isLeader, isAdmin } = require('../middleware/auth.middleware');
 
@@ -19,6 +19,7 @@ router.put('/:id', updateTask);
 router.patch('/:id/status', updateTaskStatus);
 
 // Reports
+router.get('/reports/export', exportReports);
 router.post('/:id/reports', addReport);
 router.get('/:id/reports', getTaskReports);
 

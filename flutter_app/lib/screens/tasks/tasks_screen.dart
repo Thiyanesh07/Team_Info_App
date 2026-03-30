@@ -9,6 +9,7 @@ import 'package:team_info_app/providers/auth_provider.dart';
 import 'package:team_info_app/screens/tasks/create_task_screen.dart';
 import 'package:team_info_app/screens/tasks/task_detail_screen.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:team_info_app/screens/tasks/report_export_dialog.dart';
 
 class TasksScreen extends ConsumerStatefulWidget {
   const TasksScreen({super.key});
@@ -55,7 +56,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with SingleTickerProv
       }
     }
 
-    if (mounted) setState(() => _loading = false);
+    if (mounted) {
+      setState(() => _loading = false);
+    }
   }
 
   Color _getStatusColor(String status) {
@@ -83,6 +86,15 @@ class _TasksScreenState extends ConsumerState<TasksScreen> with SingleTickerProv
     return Scaffold(
       appBar: AppBar(
         title: Text('Tasks', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined, color: AppColors.primary),
+            onPressed: () {
+              showDialog(context: context, builder: (_) => const ReportExportDialog());
+            },
+            tooltip: 'Export Reports',
+          ),
+        ],
         bottom: isLeader
             ? TabBar(
                 controller: _tabController,

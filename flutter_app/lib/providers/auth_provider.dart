@@ -2,9 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
-import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:team_info_app/models/user_model.dart';
-import 'package:team_info_app/services/api_service.dart';
+import 'package:team_info_app/repositories/auth_repository.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 const String _googleWebClientId = String.fromEnvironment(
@@ -49,29 +48,29 @@ class AuthState {
 
 // ─── Auth Notifier ───────────────────────────
 class AuthNotifier extends StateNotifier<AuthState> {
-  final ApiService _api = ApiService();
+  final AuthRepository _repo;
 
-  AuthNotifier() : super(const AuthState()) {
+  AuthNotifier(this._repo) : super(const AuthState()) {
     _checkAuth();
   }
 
   Future<void> _checkAuth() async {
-    final token = await _api.getToken();
+    final token = await _repo.getToken();
     if (token == null) {
       state = state.copyWith(status: AuthStatus.unauthenticated);
       return;
     }
 
     state = state.copyWith(status: AuthStatus.loading);
-    final response = await _api.get(ApiConstants.me);
-    if (response.success && response.data != null) {
+    final user = await _repo.getMe();
+    if (user != null) {
       state = state.copyWith(
         status: AuthStatus.authenticated,
-        user: UserModel.fromJson(response.data),
+        user: user,
         token: token,
       );
     } else {
-      await _api.deleteToken();
+      await _repo.deleteToken();
       state = state.copyWith(status: AuthStatus.unauthenticated);
     }
   }
@@ -136,27 +135,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       // Render free instances can be cold; ping health once before auth request.
       try {
-        await _api.get('/health').timeout(const Duration(seconds: 25));
+        await _repo.healthCheck().timeout(const Duration(seconds: 25));
       } catch (_) {}
 
       // Send the ID token to our backend
-      final response = await _api
-          .post(
-            ApiConstants.googleLogin,
-            body: {'idToken': auth.idToken},
-            withAuth: false,
-          )
-          .timeout(
-            const Duration(seconds: 90),
-            onTimeout: () => ApiResponse(
-              success: false,
-              message:
-                  'Server is waking up. Please try again in 10-20 seconds.',
-            ),
-          );
+      final response = await _repo.loginWithGoogle(auth.idToken!);
 
       if (response.success && response.data != null) {
-        await _api.saveToken(response.data['token']);
+        await _repo.saveToken(response.data['token']);
         state = state.copyWith(
           status: AuthStatus.authenticated,
           user: UserModel.fromJson(response.data['user']),
@@ -186,7 +172,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
-    await _api.deleteToken();
+    await _repo.deleteToken();
     try {
       await GoogleSignIn.instance.signOut();
     } catch (_) {}
@@ -194,9 +180,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> refreshUser() async {
-    final response = await _api.get(ApiConstants.me);
-    if (response.success && response.data != null) {
-      state = state.copyWith(user: UserModel.fromJson(response.data));
+    final user = await _repo.getMe();
+    if (user != null) {
+      state = state.copyWith(user: user);
     }
   }
 
@@ -209,6 +195,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 // ─── Providers ───────────────────────────────
+final authRepositoryProvider = Provider<AuthRepository>(
+  (ref) => AuthRepository(),
+);
+
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier();
+  final repo = ref.watch(authRepositoryProvider);
+  return AuthNotifier(repo);
 });

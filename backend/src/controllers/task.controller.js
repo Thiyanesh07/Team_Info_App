@@ -225,8 +225,51 @@ const deleteTask = async (req, res) => {
   }
 };
 
+/** GET /api/tasks/reports/export - Export reports (Leader/Admin for all, Members for self) */
+const exportReports = async (req, res) => {
+  try {
+    const { startDate, endDate, userId } = req.query;
+    const isLeaderOrAdmin = req.user.role !== 'MEMBER';
+
+    // Base filter
+    let where = {};
+
+    // Date filtering
+    if (startDate && endDate) {
+      where.createdAt = {
+        gte: new Date(startDate),
+        lte: new Date(endDate + 'T23:59:59.999Z'),
+      };
+    }
+
+    // Role-based user filtering
+    if (isLeaderOrAdmin) {
+      if (userId) {
+        where.userId = userId;
+      }
+    } else {
+      // Members can ONLY see their own reports
+      where.userId = req.user.id;
+    }
+
+    const reports = await prisma.taskReport.findMany({
+      where,
+      include: { 
+        user: { select: { name: true, email: true, department: true } },
+        task: { select: { title: true, description: true, status: true, deadline: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json({ success: true, data: reports });
+  } catch (error) {
+    console.error('ExportReports error:', error);
+    res.status(500).json({ success: false, message: 'Failed to export reports' });
+  }
+};
+
 module.exports = {
   getMyTasks, getAssignedTasks, getAllTasks,
   createTask, updateTask, updateTaskStatus,
-  addReport, getTaskReports, deleteTask,
+  addReport, getTaskReports, exportReports, deleteTask,
 };

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/screens/home/home_screen.dart';
 import 'package:team_info_app/screens/projects/projects_screen.dart';
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:team_info_app/screens/chat/chat_list_screen.dart';
 import 'package:team_info_app/screens/tasks/tasks_screen.dart';
 import 'package:team_info_app/screens/profile/profile_screen.dart';
@@ -25,29 +27,77 @@ class _AppShellState extends ConsumerState<AppShell> {
     ProfileScreen(),
   ];
 
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+  bool _isOffline = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkInitialConnectivity();
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
+      final isOffline = results.isEmpty || results.every((r) => r == ConnectivityResult.none);
+      if (_isOffline != isOffline && mounted) {
+        setState(() => _isOffline = isOffline);
+      }
+    });
+  }
+
+  Future<void> _checkInitialConnectivity() async {
+    final results = await Connectivity().checkConnectivity();
+    final isOffline = results.isEmpty || results.every((r) => r == ConnectivityResult.none);
+    if (mounted && isOffline) setState(() => _isOffline = isOffline);
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        switchInCurve: Curves.easeOut,
-        switchOutCurve: Curves.easeIn,
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.0, 0.05),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
+      body: Column(
+        children: [
+          // Global Offline Banner
+          if (_isOffline)
+            Container(
+              width: double.infinity,
+              color: AppColors.error,
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 12, bottom: 12),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                   Icon(Icons.wifi_off_rounded, color: Colors.white, size: 16),
+                   SizedBox(width: 8),
+                   Text('No Internet Connection', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                ],
+              ),
             ),
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey<int>(_currentIndex),
-          child: _screens[_currentIndex],
-        ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.0, 0.05),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              child: KeyedSubtree(
+                key: ValueKey<int>(_currentIndex),
+                child: _screens[_currentIndex],
+              ),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

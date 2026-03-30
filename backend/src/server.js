@@ -1,6 +1,10 @@
 require('dotenv').config();
 const express = require('express');
+require('express-async-errors'); // Automatically catches unhandled promise rejections
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const morgan = require('morgan');
 const http = require('http');
 const { Server } = require('socket.io');
 const { PrismaClient } = require('@prisma/client');
@@ -25,6 +29,7 @@ const taskRoutes = require('./routes/task.routes');
 const { setupSocketHandlers } = require('./socket/chatSocket');
 
 const app = express();
+app.set('trust proxy', 1); // Required for Render load balancer to pass real client IP
 const server = http.createServer(app);
 const prisma = new PrismaClient();
 
@@ -44,19 +49,31 @@ app.set('io', io);
 // MIDDLEWARE
 // ──────────────────────────────────────
 
+// 1. Security Headers (Protects against XSS, clickjacking, etc.)
+app.use(helmet());
+
+// 2. HTTP Request Logger (Replaces basic console.log)
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// 3. API Rate Limiting (Protects Database from Spam & DDoS)
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes window
+  max: 250, // Limit each IP to 250 requests per window
+  message: { success: false, message: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '10mb' })); // limits payload to 10mb
 app.use(express.urlencoded({ extended: true }));
+
+// Apply Rate Limiter strictly to API routes
+app.use('/api', apiLimiter);
 
 // ──────────────────────────────────────
 // ROUTES
 // ──────────────────────────────────────
-
-
-app.use((req, res, next) => {
-  console.log(`[DEBUG] ${req.method} ${req.url}`);
-  next();
-});
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -82,11 +99,16 @@ app.use('/api/tasks', taskRoutes);
 // ──────────────────────────────────────
 
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({
+  console.error('[GLOBAL ERROR HANDLER]:', err);
+  
+  // Distinguish between handled app errors and severe crashes
+  const statusCode = err.statusCode || 500;
+  
+  res.status(statusCode).json({
     success: false,
-    message: 'Internal server error',
+    message: statusCode === 500 ? 'Internal Server Error' : err.message,
     error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
   });
 });
 
