@@ -81,6 +81,26 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.get('/api/health/db', async (req, res) => {
+  try {
+    const userCount = await prisma.user.count();
+    res.json({ 
+      status: 'ok', 
+      database: 'connected', 
+      userCount, 
+      timestamp: new Date().toISOString() 
+    });
+  } catch (error) {
+    console.error('[DATABASE HEALTH CHECK FAILED]:', error);
+    res.status(503).json({ 
+      status: 'error', 
+      database: 'disconnected', 
+      message: error.message,
+      timestamp: new Date().toISOString() 
+    });
+  }
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/personal-projects', personalProjectRoutes);
@@ -133,10 +153,19 @@ setupSocketHandlers(io, prisma);
 
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log(`🚀 Server is successfully running on port ${PORT}`);
   console.log(`📡 Socket.io integration ready`);
   console.log(`🔗 Health check available at: http://0.0.0.0:${PORT}/api/health`);
+  
+  // Initial DB connection attempt
+  try {
+    await prisma.$connect();
+    console.log('📦 Database connection via Prisma established');
+  } catch (err) {
+    console.error('❌ Database connection via Prisma FAILED:');
+    console.error(err.message);
+  }
 });
 
 // Graceful shutdown

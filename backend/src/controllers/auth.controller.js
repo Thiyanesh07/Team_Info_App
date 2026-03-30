@@ -122,11 +122,18 @@ const googleSignIn = async (req, res) => {
     });
   } catch (error) {
     console.error('Google Sign-In error:', error);
+    
+    // Log full error stack in non-production to identify detailed Prisma causes
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(error.stack);
+    }
+
     if (isDatabaseUnavailableError(error)) {
       return res.status(503).json({
         success: false,
         message:
             'Authentication service is temporarily unavailable (database connection failed). Please try again shortly.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
     res.status(500).json({ success: false, message: 'Google Sign-In failed' });
