@@ -270,6 +270,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return _safeName(rawName)[0].toUpperCase();
   }
 
+  ImageProvider? _safeNetworkImage(String? rawUrl) {
+    final url = (rawUrl ?? '').trim();
+    if (url.isEmpty) return null;
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) return null;
+    return NetworkImage(url);
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
@@ -383,10 +391,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: CircleAvatar(
             radius: 28,
             backgroundColor: AppColors.cardDark,
-            backgroundImage: user.profileImageUrl != null
-                ? NetworkImage(user.profileImageUrl!)
-                : null,
-            child: user.profileImageUrl == null
+            backgroundImage: _safeNetworkImage(user.profileImageUrl),
+            child: _safeNetworkImage(user.profileImageUrl) == null
                 ? Text(
                     _safeInitial(user.name),
                     style: GoogleFonts.outfit(
@@ -739,10 +745,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           : AppColors.primary,
                       child: CircleAvatar(
                         radius: 20,
-                        backgroundImage: user.profileImageUrl != null
-                            ? NetworkImage(user.profileImageUrl!)
-                            : null,
-                        child: user.profileImageUrl == null
+                        backgroundImage: _safeNetworkImage(
+                          user.profileImageUrl,
+                        ),
+                        child: _safeNetworkImage(user.profileImageUrl) == null
                             ? Text(_safeInitial(user.name))
                             : null,
                       ),

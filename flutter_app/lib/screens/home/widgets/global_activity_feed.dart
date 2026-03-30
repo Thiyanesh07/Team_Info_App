@@ -88,6 +88,14 @@ class _ActivityCard extends StatelessWidget {
     return text.isEmpty ? fallback : text;
   }
 
+  ImageProvider? _safeNetworkImage(String? rawUrl) {
+    final url = (rawUrl ?? '').trim();
+    if (url.isEmpty) return null;
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) return null;
+    return NetworkImage(url);
+  }
+
   String _typeLabel(ActivityItemType type) {
     switch (type) {
       case ActivityItemType.DAILY_LOG:
@@ -214,14 +222,15 @@ class _ActivityCard extends StatelessWidget {
   }
 
   Widget _buildAvatar(ActivityItem item) {
-    final avatarUrl = item.user?['profileImageUrl'];
+    final avatarUrl = _asText(item.user?['profileImageUrl']);
     final name = _asText(item.user?['name'], fallback: 'U');
+    final imageProvider = _safeNetworkImage(avatarUrl);
 
     return CircleAvatar(
       radius: 18,
       backgroundColor: AppColors.surfaceLight,
-      backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-      child: avatarUrl == null
+      backgroundImage: imageProvider,
+      child: imageProvider == null
           ? Text(
               _safeInitial(name),
               style: const TextStyle(fontSize: 12, color: Colors.white),
