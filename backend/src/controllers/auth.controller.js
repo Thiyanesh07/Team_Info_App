@@ -4,7 +4,23 @@ const { PrismaClient } = require('@prisma/client');
 const { OAuth2Client } = require('google-auth-library');
 
 const prisma = new PrismaClient();
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const configuredClientIds = (
+  process.env.GOOGLE_CLIENT_ID || process.env['GOOGLE_CLIENT_ID '] || ''
+)
+  .split(',')
+  .map((id) => id.trim())
+  .filter(Boolean);
+const client = new OAuth2Client(configuredClientIds[0] || undefined);
+
+const isDatabaseUnavailableError = (error) => {
+  const message = error?.message || '';
+  return (
+    error?.name === 'PrismaClientInitializationError' ||
+    message.includes("Can't reach database server") ||
+    message.includes('ECONNREFUSED') ||
+    message.includes('ETIMEDOUT')
+  );
+};
 
 /**
  * Validate email domain
@@ -29,7 +45,6 @@ const generateToken = (userId) => {
  * POST /api/auth/google
  */
 const googleSignIn = async (req, res) => {
-  console.log('[DEBUG] googleSignIn called');
   try {
     const { idToken } = req.body;
     
@@ -39,8 +54,8 @@ const googleSignIn = async (req, res) => {
 
     let payload;
     try {
-      const verifyOptions = process.env.GOOGLE_CLIENT_ID
-        ? { idToken, audience: process.env.GOOGLE_CLIENT_ID }
+      const verifyOptions = configuredClientIds.length > 0
+        ? { idToken, audience: configuredClientIds }
         : { idToken };
       const ticket = await client.verifyIdToken(verifyOptions);
       payload = ticket.getPayload();
@@ -107,6 +122,13 @@ const googleSignIn = async (req, res) => {
     });
   } catch (error) {
     console.error('Google Sign-In error:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return res.status(503).json({
+        success: false,
+        message:
+            'Authentication service is temporarily unavailable (database connection failed). Please try again shortly.',
+      });
+    }
     res.status(500).json({ success: false, message: 'Google Sign-In failed' });
   }
 };
@@ -134,6 +156,13 @@ const getMe = async (req, res) => {
     res.json({ success: true, data: user });
   } catch (error) {
     console.error('GetMe error:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return res.status(503).json({
+        success: false,
+        message:
+            'User profile service is temporarily unavailable (database connection failed).',
+      });
+    }
     res.status(500).json({ success: false, message: 'Failed to get user profile' });
   }
 };
@@ -151,6 +180,13 @@ const updateFcmToken = async (req, res) => {
     res.json({ success: true, message: 'FCM token updated' });
   } catch (error) {
     console.error('FCM token error:', error);
+    if (isDatabaseUnavailableError(error)) {
+      return res.status(503).json({
+        success: false,
+        message:
+            'Notification service is temporarily unavailable (database connection failed).',
+      });
+    }
     res.status(500).json({ success: false, message: 'Failed to update FCM token' });
   }
 };

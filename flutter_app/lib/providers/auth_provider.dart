@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:team_info_app/models/user_model.dart';
 import 'package:team_info_app/repositories/auth_repository.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -14,6 +15,35 @@ const String _googleServerClientId = String.fromEnvironment(
 );
 const String _googleServerClientIdFallback =
     '638705857828-3r7ammk6lbimalqlcb5spbaesma7tse4.apps.googleusercontent.com';
+
+String _configuredWebClientId() {
+  final fromEnv = (dotenv.env['GOOGLE_WEB_CLIENT_ID'] ?? '').trim();
+  if (fromEnv.isNotEmpty) return fromEnv;
+  return _googleWebClientId.trim();
+}
+
+String _configuredServerClientId() {
+  final fromEnv = (dotenv.env['GOOGLE_SERVER_CLIENT_ID'] ?? '').trim();
+  if (fromEnv.isNotEmpty) return fromEnv;
+  if (_googleServerClientId.trim().isNotEmpty) {
+    return _googleServerClientId.trim();
+  }
+  return _googleServerClientIdFallback;
+}
+
+String _mapGoogleError(Object error) {
+  final msg = error.toString();
+  if (msg.contains('ApiException: 10') || msg.contains('DEVELOPER_ERROR')) {
+    return 'Google Sign-In is not configured for this app build. Check SHA-1/SHA-256 and Firebase google-services setup.';
+  }
+  if (msg.contains('network_error') || msg.contains('Network')) {
+    return 'Network issue while contacting Google. Please retry with stable internet.';
+  }
+  if (msg.contains('sign_in_canceled')) {
+    return 'Sign-In cancelled.';
+  }
+  return 'Google Sign-In Error: ${msg.split("\n").first}';
+}
 
 // ─── Auth State ──────────────────────────────
 enum AuthStatus { initial, loading, authenticated, unauthenticated, error }
@@ -85,12 +115,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Initialize GoogleSignIn
       await GoogleSignIn.instance
           .initialize(
-            clientId: kIsWeb && _googleWebClientId.isNotEmpty
-                ? _googleWebClientId
+            clientId: kIsWeb && _configuredWebClientId().isNotEmpty
+                ? _configuredWebClientId()
                 : null,
-            serverClientId: _googleServerClientId.isNotEmpty
-                ? _googleServerClientId
-                : _googleServerClientIdFallback,
+            serverClientId: _configuredServerClientId(),
           )
           .timeout(
             const Duration(seconds: 15),
@@ -168,8 +196,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Removed debug prints
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage:
-            'Google Sign-In Error: ${error.toString().split("\n").first}',
+        errorMessage: _mapGoogleError(error),
       );
     }
   }
