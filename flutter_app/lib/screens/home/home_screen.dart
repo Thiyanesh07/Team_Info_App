@@ -17,7 +17,17 @@ import 'package:team_info_app/repositories/app_data_repository.dart';
 import 'package:team_info_app/core/widgets/shimmer_loading.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:team_info_app/screens/home/activity_logs_screen.dart';
 import 'package:team_info_app/screens/home/widgets/global_activity_feed.dart';
+import 'package:team_info_app/screens/home/widgets/quick_actions.dart';
+import 'package:team_info_app/screens/leaderboard/leaderboard_screen.dart';
+import 'package:team_info_app/screens/profile/profile_screen.dart';
+import 'package:team_info_app/screens/tasks/my_tasks_screen.dart';
+import 'package:team_info_app/screens/tasks/tasks_screen.dart';
+import 'package:team_info_app/screens/admin/audit_log_screen.dart';
+import 'package:team_info_app/screens/admin/analytics_dashboard_screen.dart';
+import 'package:team_info_app/screens/admin/team_workload_screen.dart';
+import 'package:team_info_app/services/api_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -379,13 +389,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     // Activity Section
                     _safeSection(
                       'activity title',
-                      () => _buildSectionTitle('Engineering Pulse'),
+                      () => _buildSectionTitle(
+                        'Engineering Pulse',
+                        trailing: TextButton(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const ActivityLogsScreen()),
+                          ),
+                          child: Text(
+                            'View All',
+                            style: GoogleFonts.inter(
+                              color: AppColors.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     _safeSection(
                       'activity feed',
                       () => GlobalActivityFeed(
-                        activities: _activities,
+                        activities: _activities.take(5).toList(),
                         isLoading: _loading,
                       ),
                     ),
@@ -656,14 +683,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ).animate().fade(duration: 400.ms).slideX(begin: -0.1, end: 0);
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: GoogleFonts.outfit(
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        color: Colors.white,
-      ),
+  Widget _buildSectionTitle(String title, {Widget? trailing}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.outfit(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        if (trailing != null) trailing,
+      ],
     );
   }
 
@@ -735,14 +768,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _safeSection(
-              'top performers title',
-              () => _buildSectionTitle('Top Performers'),
-            ),
-            TextButton(
+        _safeSection(
+          'top performers title',
+          () => _buildSectionTitle(
+            'Top Performers',
+            trailing: TextButton(
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
@@ -751,11 +781,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 'View All',
                 style: GoogleFonts.inter(
                   color: AppColors.primary,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-          ],
+          ),
         ),
         const SizedBox(height: 12),
         SizedBox(
