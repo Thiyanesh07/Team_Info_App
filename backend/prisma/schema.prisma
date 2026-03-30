@@ -102,26 +102,28 @@ model User {
   leetcodeUrl       String?
   twitterUrl        String?
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  lastActive         DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   // Relations
-  personalProjects  PersonalProject[]
-  teamMemberships   TeamProjectMember[]
-  projectUpdates    ProjectUpdate[]
-  hackathons        Hackathon[]
-  learnings         Learning[]
-  dailyActivities   DailyActivity[]
-  certifications    Certification[]
-  psSkills          PsSkill[]
-  sentTeamMessages  TeamMessage[]
-  chatParticipants  ChatParticipant[]
-  chatMessages      ChatMessage[]
+  personalProjects    PersonalProject[]
+  teamMemberships     TeamProjectMember[]
+  projectUpdates      ProjectUpdate[]
+  hackathons          Hackathon[]
+  learnings           Learning[]
+  dailyActivities     DailyActivity[]
+  certifications      Certification[]
+  psSkills            PsSkill[]
+  sentTeamMessages    TeamMessage[]
+  chatParticipants    ChatParticipant[]
+  chatMessages        ChatMessage[]
   createdTeamProjects TeamProject[] @relation("CreatedBy")
   captainedProjects   TeamProject[] @relation("AssignedCaptain")
-  tasksAssigned     TaskAssignment[] @relation("TasksAssigned")
-  tasksReceived     TaskAssignment[] @relation("TasksReceived")
-  taskReports       TaskReport[]
+  tasksAssigned       TaskAssignment[] @relation("TasksAssigned")
+  tasksReceived       TaskAssignment[] @relation("TasksReceived")
+  taskReports         TaskReport[]
+  systemActivities    SystemActivity[]
 
   @@map("users")
 }
@@ -169,8 +171,25 @@ model TeamProject {
   assignedCaptain  User?         @relation("AssignedCaptain", fields: [assignedCaptainId], references: [id])
   members          TeamProjectMember[]
   updates          ProjectUpdate[]
+  milestones       ProjectMilestone[]
 
   @@map("team_projects")
+}
+
+model ProjectMilestone {
+  id            String      @id @default(uuid())
+  projectId     String
+  title         String
+  description   String?
+  dueDate       DateTime?
+  status        String      @default("PENDING") // PENDING, COMPLETED
+  order         Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  project       TeamProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_milestones")
 }
 
 model TeamProjectMember {
@@ -407,5 +426,24 @@ model ChatMessage {
   conversation    ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender          User             @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
+
   @@map("chat_messages")
+}
+
+// ──────────────────────────────────────
+// SYSTEM ACTIVITY (Unified Audit/Pulse)
+// ──────────────────────────────────────
+
+model SystemActivity {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  content   String
+  type      String   // TASK_COMPLETED, PROJECT_JOINED, SKILL_ADDED, etc.
+  metadata  Json?    // Optional extra info (e.g. task ID)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("system_activities")
 }

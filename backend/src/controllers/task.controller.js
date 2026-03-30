@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { logSystemActivity } = require('./systemActivity.controller');
 
 const taskInclude = {
   assignedBy: { select: { id: true, name: true, profileImageUrl: true } },
@@ -87,6 +88,15 @@ const createTask = async (req, res) => {
     });
 
     res.status(201).json({ success: true, message: 'Task assigned', data: task });
+
+    // Log System Activity
+    logSystemActivity(
+      req.user.id,
+      'New Task Assigned',
+      `Assigned "${title}" to ${assignee.name}`,
+      'TASK_CREATED',
+      { taskId: task.id, assignedToId }
+    );
   } catch (error) {
     console.error('CreateTask error:', error);
     res.status(500).json({ success: false, message: 'Failed to create task' });
@@ -146,6 +156,17 @@ const updateTaskStatus = async (req, res) => {
     });
 
     res.json({ success: true, message: 'Status updated', data: task });
+
+    // Log System Activity if completed
+    if (status === 'COMPLETED') {
+      logSystemActivity(
+        req.user.id,
+        'Task Completed',
+        `Completed the task: "${task.title}"`,
+        'TASK_COMPLETED',
+        { taskId: task.id }
+      );
+    }
   } catch (error) {
     console.error('UpdateTaskStatus error:', error);
     res.status(500).json({ success: false, message: 'Failed to update status' });

@@ -24,6 +24,8 @@ class ApiConstants {
   static const String hackathons = '/hackathons';
   static const String learning = '/learning';
   static const String activities = '/activities';
+  static const String unifiedActivities = '/activities/unified';
+  static const String milestones = '/milestones';
   static const String certifications = '/certifications';
   static const String psSkills = '/ps-skills';
 
@@ -35,6 +37,7 @@ class ApiConstants {
   // Analytics
   static const String weeklyAnalytics = '/analytics/weekly';
   static const String leaderboard = '/analytics/leaderboard';
+  static const String teamWorkload = '/analytics/team-workload';
 
   // Upload
   static const String uploadImage = '/upload/image';

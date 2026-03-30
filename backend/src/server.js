@@ -24,6 +24,8 @@ const chatRoutes = require('./routes/chat.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const taskRoutes = require('./routes/task.routes');
+const systemActivityRoutes = require('./routes/systemActivity.routes');
+const milestoneRoutes = require('./routes/milestone.routes');
 
 // Import socket handler
 const { setupSocketHandlers } = require('./socket/chatSocket');
@@ -93,6 +95,8 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/activities', systemActivityRoutes); // Mount unified activities at /api/activities/unified
+app.use('/api/milestones', milestoneRoutes);
 
 // ──────────────────────────────────────
 // ERROR HANDLING

@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { logSystemActivity } = require('./systemActivity.controller');
 
 /** GET /api/ps-skills */
 const getMyPsSkills = async (req, res) => {
@@ -38,6 +39,15 @@ const createPsSkill = async (req, res) => {
       data: { userId: targetUserId, type, skillName },
     });
     res.status(201).json({ success: true, message: 'PS skill added', data: skill });
+
+    // Log System Activity
+    logSystemActivity(
+      req.user.id,
+      'Skill Added',
+      `Added a new skill: "${skillName}" (${type})`,
+      'SKILL_ADDED',
+      { skillId: skill.id }
+    );
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to create PS skill' });
   }
@@ -56,6 +66,17 @@ const updatePsSkill = async (req, res) => {
 
     const skill = await prisma.psSkill.update({ where: { id: req.params.id }, data: req.body });
     res.json({ success: true, message: 'PS skill updated', data: skill });
+
+    // Log System Activity if completed
+    if (req.body.completed === true) {
+      logSystemActivity(
+        req.user.id,
+        'Skill Achieved',
+        `Mastered the skill: "${skill.skillName}"`,
+        'SKILL_COMPLETED',
+        { skillId: skill.id }
+      );
+    }
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to update PS skill' });
   }

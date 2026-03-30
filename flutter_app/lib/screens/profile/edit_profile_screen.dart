@@ -17,7 +17,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameC, _regNoC, _deptC, _yearC, _mobileC, _cgpaC;
   late TextEditingController _linkedinC, _githubC, _leetcodeC, _twitterC;
-  List<String> _primarySkills = [], _secondarySkills = [], _specialSkills = [], _langs = [];
+  late TextEditingController _primarySkill1C, _primarySkill2C;
+  late TextEditingController _secondarySkill1C, _secondarySkill2C;
+  late TextEditingController _specialSkill1C, _specialSkill2C;
+  final List<TextEditingController> _langControllers = [];
+  List<String> _primarySkills = [],
+      _secondarySkills = [],
+      _specialSkills = [],
+      _langs = [];
   bool _saving = false;
 
   @override
@@ -38,33 +45,101 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _secondarySkills = List.from(user.secondarySkills);
     _specialSkills = List.from(user.specialSkills);
     _langs = List.from(user.programmingLangs);
+
+    _primarySkill1C = TextEditingController(
+      text: _primarySkills.isNotEmpty ? _primarySkills[0] : '',
+    );
+    _primarySkill2C = TextEditingController(
+      text: _primarySkills.length > 1 ? _primarySkills[1] : '',
+    );
+    _secondarySkill1C = TextEditingController(
+      text: _secondarySkills.isNotEmpty ? _secondarySkills[0] : '',
+    );
+    _secondarySkill2C = TextEditingController(
+      text: _secondarySkills.length > 1 ? _secondarySkills[1] : '',
+    );
+    _specialSkill1C = TextEditingController(
+      text: _specialSkills.isNotEmpty ? _specialSkills[0] : '',
+    );
+    _specialSkill2C = TextEditingController(
+      text: _specialSkills.length > 1 ? _specialSkills[1] : '',
+    );
+
+    if (_langs.isEmpty) {
+      _langControllers.add(TextEditingController());
+    } else {
+      for (final lang in _langs) {
+        _langControllers.add(TextEditingController(text: lang));
+      }
+    }
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
 
-    final res = await _api.put(ApiConstants.updateProfile, body: {
-      'name': _nameC.text, 'regNo': _regNoC.text, 'department': _deptC.text,
-      'year': _yearC.text, 'mobile': _mobileC.text,
-      'cgpa': _cgpaC.text.isNotEmpty ? double.tryParse(_cgpaC.text) : null,
-      'linkedinUrl': _linkedinC.text.isNotEmpty ? _linkedinC.text : null,
-      'githubUrl': _githubC.text.isNotEmpty ? _githubC.text : null,
-      'leetcodeUrl': _leetcodeC.text.isNotEmpty ? _leetcodeC.text : null,
-      'twitterUrl': _twitterC.text.isNotEmpty ? _twitterC.text : null,
-      'primarySkills': _primarySkills, 'secondarySkills': _secondarySkills,
-      'specialSkills': _specialSkills, 'programmingLangs': _langs,
-    });
+    _primarySkills = [
+      _primarySkill1C.text.trim(),
+      _primarySkill2C.text.trim(),
+    ].where((s) => s.isNotEmpty).toList();
+    _secondarySkills = [
+      _secondarySkill1C.text.trim(),
+      _secondarySkill2C.text.trim(),
+    ].where((s) => s.isNotEmpty).toList();
+    _specialSkills = [
+      _specialSkill1C.text.trim(),
+      _specialSkill2C.text.trim(),
+    ].where((s) => s.isNotEmpty).toList();
+
+    final rawLangs = _langControllers
+        .map((controller) => controller.text.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    final seen = <String>{};
+    _langs = rawLangs.where((lang) {
+      final key = lang.toLowerCase();
+      if (seen.contains(key)) return false;
+      seen.add(key);
+      return true;
+    }).toList();
+
+    final res = await _api.put(
+      ApiConstants.updateProfile,
+      body: {
+        'name': _nameC.text,
+        'regNo': _regNoC.text,
+        'department': _deptC.text,
+        'year': _yearC.text,
+        'mobile': _mobileC.text,
+        'cgpa': _cgpaC.text.isNotEmpty ? double.tryParse(_cgpaC.text) : null,
+        'linkedinUrl': _linkedinC.text.isNotEmpty ? _linkedinC.text : null,
+        'githubUrl': _githubC.text.isNotEmpty ? _githubC.text : null,
+        'leetcodeUrl': _leetcodeC.text.isNotEmpty ? _leetcodeC.text : null,
+        'twitterUrl': _twitterC.text.isNotEmpty ? _twitterC.text : null,
+        'primarySkills': _primarySkills,
+        'secondarySkills': _secondarySkills,
+        'specialSkills': _specialSkills,
+        'programmingLangs': _langs,
+      },
+    );
 
     setState(() => _saving = false);
     if (res.success && mounted) {
       ref.read(authProvider.notifier).refreshUser();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated!'), backgroundColor: AppColors.success));
+        const SnackBar(
+          content: Text('Profile updated!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
       Navigator.pop(context);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message ?? 'Update failed'), backgroundColor: AppColors.error));
+        SnackBar(
+          content: Text(res.message ?? 'Update failed'),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
   }
 
@@ -72,13 +147,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Edit Profile', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+        title: Text(
+          'Edit Profile',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+        ),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : Text('Save', style: GoogleFonts.inter(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    'Save',
+                    style: GoogleFonts.inter(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
         ],
       ),
@@ -90,7 +178,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _sectionTitle('Basic Information'),
-              _field(_nameC, 'Full Name', validator: (v) => v!.isEmpty ? 'Required' : null),
+              _field(
+                _nameC,
+                'Full Name',
+                validator: (v) => v!.isEmpty ? 'Required' : null,
+              ),
               _field(_regNoC, 'Register No.'),
               _field(_deptC, 'Department'),
               _field(_yearC, 'Year'),
@@ -99,10 +191,28 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               const SizedBox(height: 20),
 
               _sectionTitle('Skills'),
-              _chipInput('Primary Skills', _primarySkills, AppColors.primary),
-              _chipInput('Secondary Skills', _secondarySkills, AppColors.secondary),
-              _chipInput('Special Skills', _specialSkills, AppColors.accent),
-              _chipInput('Programming Languages', _langs, AppColors.warning),
+              _skillPairInput(
+                'Primary Skills',
+                _primarySkill1C,
+                _primarySkill2C,
+                AppColors.primary,
+              ),
+              _skillPairInput(
+                'Secondary Skills',
+                _secondarySkill1C,
+                _secondarySkill2C,
+                AppColors.secondary,
+              ),
+              _skillPairInput(
+                'Special Skills',
+                _specialSkill1C,
+                _specialSkill2C,
+                AppColors.accent,
+              ),
+              _dynamicLanguagesInput(
+                'Programming Languages',
+                AppColors.warning,
+              ),
               const SizedBox(height: 20),
 
               _sectionTitle('Social Links'),
@@ -119,70 +229,175 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   Widget _sectionTitle(String title) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
-    child: Text(title, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
+    child: Text(
+      title,
+      style: GoogleFonts.inter(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: Colors.white,
+      ),
+    ),
   );
 
-  Widget _field(TextEditingController c, String hint, {
-    TextInputType? keyboardType, String? Function(String?)? validator,
+  Widget _field(
+    TextEditingController c,
+    String hint, {
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: TextFormField(
-      controller: c, keyboardType: keyboardType, validator: validator,
+      controller: c,
+      keyboardType: keyboardType,
+      validator: validator,
       decoration: InputDecoration(hintText: hint),
       style: const TextStyle(color: Colors.white),
     ),
   );
 
-  Widget _chipInput(String label, List<String> items, Color color) {
-    final controller = TextEditingController();
-    return StatefulBuilder(
-      builder: (context, setSectionState) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary)),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6, runSpacing: 6,
-              children: [
-                ...items.map((s) => Chip(
-                  label: Text(s, style: TextStyle(fontSize: 12, color: color)),
-                  backgroundColor: color.withAlpha(20),
-                  deleteIcon: Icon(Icons.close, size: 14, color: color),
-                  onDeleted: () => setSectionState(() { items.remove(s); setState(() {}); }),
-                  side: BorderSide(color: color.withAlpha(50)),
-                )),
-                SizedBox(
-                  width: 120,
-                  child: TextField(
-                    controller: controller,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Add...', isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: color.withAlpha(50))),
-                    ),
-                    onSubmitted: (v) {
-                      if (v.trim().isNotEmpty) {
-                        setSectionState(() { items.add(v.trim()); controller.clear(); setState(() {}); });
-                      }
-                    },
-                  ),
-                ),
-              ],
+  Widget _skillPairInput(
+    String label,
+    TextEditingController first,
+    TextEditingController second,
+    Color color,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: AppColors.textSecondary,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: first,
+                  decoration: InputDecoration(
+                    hintText: 'Skill 1',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: color.withAlpha(70)),
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextFormField(
+                  controller: second,
+                  decoration: InputDecoration(
+                    hintText: 'Skill 2',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: color.withAlpha(70)),
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dynamicLanguagesInput(String label, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...List.generate(_langControllers.length, (index) {
+            final isLast = index == _langControllers.length - 1;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _langControllers[index],
+                      decoration: InputDecoration(
+                        hintText: 'Language ${index + 1}',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: color.withAlpha(70)),
+                        ),
+                      ),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (isLast)
+                    IconButton(
+                      icon: Icon(Icons.add_circle_outline, color: color),
+                      tooltip: 'Add language',
+                      onPressed: () {
+                        setState(() {
+                          _langControllers.add(TextEditingController());
+                        });
+                      },
+                    ),
+                  if (_langControllers.length > 1)
+                    IconButton(
+                      icon: const Icon(
+                        Icons.remove_circle_outline,
+                        color: AppColors.error,
+                      ),
+                      tooltip: 'Remove language',
+                      onPressed: () {
+                        setState(() {
+                          _langControllers[index].dispose();
+                          _langControllers.removeAt(index);
+                        });
+                      },
+                    ),
+                ],
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
 
   @override
   void dispose() {
-    _nameC.dispose(); _regNoC.dispose(); _deptC.dispose(); _yearC.dispose();
-    _mobileC.dispose(); _cgpaC.dispose(); _linkedinC.dispose(); _githubC.dispose();
-    _leetcodeC.dispose(); _twitterC.dispose();
+    _nameC.dispose();
+    _regNoC.dispose();
+    _deptC.dispose();
+    _yearC.dispose();
+    _mobileC.dispose();
+    _cgpaC.dispose();
+    _linkedinC.dispose();
+    _githubC.dispose();
+    _leetcodeC.dispose();
+    _twitterC.dispose();
+    _primarySkill1C.dispose();
+    _primarySkill2C.dispose();
+    _secondarySkill1C.dispose();
+    _secondarySkill2C.dispose();
+    _specialSkill1C.dispose();
+    _specialSkill2C.dispose();
+    for (final controller in _langControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 }

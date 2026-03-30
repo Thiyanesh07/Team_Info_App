@@ -326,6 +326,8 @@ WeeklyAnalytics _$WeeklyAnalyticsFromJson(Map<String, dynamic> json) =>
       bestDayHours: (json['bestDayHours'] as num?)?.toDouble() ?? 0,
       dailyBreakdown:
           json['dailyBreakdown'] as Map<String, dynamic>? ?? const {},
+      dailyActivityCount:
+          json['dailyActivityCount'] as Map<String, dynamic>? ?? const {},
       totalActivities: (json['totalActivities'] as num?)?.toInt() ?? 0,
     );
 
@@ -340,6 +342,7 @@ Map<String, dynamic> _$WeeklyAnalyticsToJson(WeeklyAnalytics instance) =>
       'bestDay': instance.bestDay,
       'bestDayHours': instance.bestDayHours,
       'dailyBreakdown': instance.dailyBreakdown,
+      'dailyActivityCount': instance.dailyActivityCount,
       'totalActivities': instance.totalActivities,
     };
 
@@ -391,3 +394,62 @@ Map<String, dynamic> _$TaskReportToJson(TaskReport instance) =>
       'user': instance.user,
       'createdAt': instance.createdAt,
     };
+
+ActivityItem _$ActivityItemFromJson(Map<String, dynamic> json) => ActivityItem(
+      id: json['id'] as String,
+      userId: json['userId'] as String,
+      title: json['title'] as String,
+      content: json['content'] as String,
+      timestamp: json['timestamp'] as String,
+      type: $enumDecode(_$ActivityItemTypeEnumMap, json['type']),
+      user: json['user'] as Map<String, dynamic>?,
+      metadata: json['metadata'] as String?,
+    );
+
+Map<String, dynamic> _$ActivityItemToJson(ActivityItem instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'userId': instance.userId,
+      'title': instance.title,
+      'content': instance.content,
+      'timestamp': instance.timestamp,
+      'type': _$ActivityItemTypeEnumMap[instance.type]!,
+      'user': instance.user,
+      'metadata': instance.metadata,
+    };
+
+const _$ActivityItemTypeEnumMap = {
+  ActivityItemType.DAILY_LOG: 'DAILY_LOG',
+  ActivityItemType.PROJECT_UPDATE: 'PROJECT_UPDATE',
+  ActivityItemType.TASK_REPORT: 'TASK_REPORT',
+  ActivityItemType.SYSTEM_EVENT: 'SYSTEM_EVENT',
+};
+
+ProjectMilestone _$ProjectMilestoneFromJson(Map<String, dynamic> json) =>
+    ProjectMilestone(
+      id: json['id'] as String,
+      projectId: json['projectId'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String?,
+      deadline: json['deadline'] as String?,
+      status: $enumDecodeNullable(_$MilestoneStatusEnumMap, json['status']) ??
+          MilestoneStatus.PENDING,
+      order: (json['order'] as num?)?.toInt() ?? 0,
+    );
+
+Map<String, dynamic> _$ProjectMilestoneToJson(ProjectMilestone instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'projectId': instance.projectId,
+      'title': instance.title,
+      'description': instance.description,
+      'deadline': instance.deadline,
+      'status': _$MilestoneStatusEnumMap[instance.status]!,
+      'order': instance.order,
+    };
+
+const _$MilestoneStatusEnumMap = {
+  MilestoneStatus.PENDING: 'PENDING',
+  MilestoneStatus.IN_PROGRESS: 'IN_PROGRESS',
+  MilestoneStatus.COMPLETED: 'COMPLETED',
+};

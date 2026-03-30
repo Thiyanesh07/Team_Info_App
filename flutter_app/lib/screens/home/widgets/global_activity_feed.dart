@@ -1,0 +1,204 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:team_info_app/core/theme/app_theme.dart';
+import 'package:team_info_app/models/app_models.dart';
+import 'package:timeago/timeago.dart' as timeago;
+
+class GlobalActivityFeed extends StatelessWidget {
+  final List<ActivityItem> activities;
+  final bool isLoading;
+
+  const GlobalActivityFeed({
+    super.key,
+    required this.activities,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading && activities.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    if (activities.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.cardDark.withAlpha(100),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.hub_outlined, color: AppColors.textMuted, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              'No activity recorded yet',
+              style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 13),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: activities.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final item = activities[index];
+        return _ActivityCard(item: item);
+      },
+    );
+  }
+}
+
+class _ActivityCard extends StatelessWidget {
+  final ActivityItem item;
+
+  const _ActivityCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color typeColor = _getTypeColor(item.type);
+    final IconData typeIcon = _getTypeIcon(item.type);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(20),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildAvatar(item),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.user?['name'] ?? 'System',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      timeago.format(DateTime.parse(item.timestamp)),
+                      style: GoogleFonts.inter(
+                        color: AppColors.textMuted,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: typeColor.withAlpha(30),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(typeIcon, color: typeColor, size: 10),
+                          const SizedBox(width: 4),
+                          Text(
+                            item.type.name.split('.').last.replaceAll('_', ' '),
+                            style: TextStyle(
+                              color: typeColor,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  item.content,
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(ActivityItem item) {
+    final avatarUrl = item.user?['profileImageUrl'];
+    final name = item.user?['name'] ?? 'S';
+    
+    return CircleAvatar(
+      radius: 18,
+      backgroundColor: AppColors.surfaceLight,
+      backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+      child: avatarUrl == null 
+        ? Text(name[0], style: const TextStyle(fontSize: 12, color: Colors.white))
+        : null,
+    );
+  }
+
+  Color _getTypeColor(ActivityItemType type) {
+    switch (type) {
+      case ActivityItemType.DAILY_LOG: return Colors.blueAccent;
+      case ActivityItemType.PROJECT_UPDATE: return Colors.purpleAccent;
+      case ActivityItemType.TASK_REPORT: return Colors.greenAccent;
+      case ActivityItemType.SYSTEM_EVENT: return Colors.orangeAccent;
+    }
+  }
+
+  IconData _getTypeIcon(ActivityItemType type) {
+    switch (type) {
+      case ActivityItemType.DAILY_LOG: return Icons.history_edu;
+      case ActivityItemType.PROJECT_UPDATE: return Icons.rocket_launch;
+      case ActivityItemType.TASK_REPORT: return Icons.assignment_turned_in;
+      case ActivityItemType.SYSTEM_EVENT: return Icons.auto_awesome;
+    }
+  }
+}

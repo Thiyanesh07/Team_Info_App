@@ -17,6 +17,8 @@ import 'package:team_info_app/repositories/app_data_repository.dart';
 import 'package:team_info_app/core/widgets/shimmer_loading.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:team_info_app/screens/home/widgets/global_activity_feed.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -33,6 +35,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   List<TaskAssignment> _pendingMyTasks = [];
   List<TaskAssignment> _pendingAssignedTasks = [];
+  List<ActivityItem> _activities = [];
 
   @override
   void initState() {
@@ -50,6 +53,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       setState(() {
         _analytics = cachedAnalytics;
         _leaderboard = cachedLeaderboard;
+        _activities = repo.getCachedUnifiedActivity();
         _loading = false; // Show cached data immediately
       });
     }
@@ -64,6 +68,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _loadAnalytics(),
       _loadPendingTasks(),
       _loadLeaderboard(),
+      _loadActivities(),
     ]);
   }
 
@@ -71,6 +76,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final users = await ref.read(appDataRepositoryProvider).getLeaderboard();
     if (mounted) {
       setState(() => _leaderboard = users);
+    }
+  }
+
+  Future<void> _loadActivities() async {
+    final acts = await ref.read(appDataRepositoryProvider).getUnifiedActivity();
+    if (mounted) {
+      setState(() => _activities = acts);
     }
   }
 
@@ -330,6 +342,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const SizedBox(height: 28),
 
                     // Activity Section
+                    _buildSectionTitle('Engineering Pulse'),
+                    const SizedBox(height: 16),
+                    GlobalActivityFeed(activities: _activities, isLoading: _loading),
+                    const SizedBox(height: 32),
+
+                    // Weekly Insights
                     _buildActivitySummary(context),
                     const SizedBox(height: 32),
 
@@ -708,6 +726,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             : null,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    _buildPresenceTag(user),
+                    const SizedBox(height: 4),
                     const SizedBox(height: 8),
                     Text(
                       _safeFirstName(user.name),
@@ -795,6 +816,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
     ).animate().fade(delay: 500.ms).slideY(begin: 0.1, end: 0);
+  }
+
+  Widget _buildPresenceTag(UserModel user) {
+    // Basic presence logic: if active within last 5 minutes, show "Active"
+    final lastActive = user.updatedAt != null ? DateTime.parse(user.updatedAt!) : null;
+    final isOnline = lastActive != null && 
+        DateTime.now().difference(lastActive).inMinutes < 5;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isOnline ? Colors.green.withAlpha(40) : AppColors.textMuted.withAlpha(20),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isOnline ? Colors.green : AppColors.textMuted,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isOnline ? 'Active' : (lastActive != null ? timeago.format(lastActive, locale: 'en_short') : 'N/A'),
+            style: TextStyle(
+              fontSize: 8,
+              color: isOnline ? Colors.green : AppColors.textMuted,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildQuickActions(BuildContext context) {

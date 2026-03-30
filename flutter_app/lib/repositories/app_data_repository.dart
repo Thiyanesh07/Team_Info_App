@@ -26,6 +26,12 @@ class AppDataRepository extends BaseRepository {
     return itemFromResponse(response, WeeklyAnalytics.fromJson);
   }
 
+  Future<List<Map<String, dynamic>>> getTeamWorkload() async {
+    final response = await api.get(ApiConstants.teamWorkload, useCache: true);
+    final List<dynamic> data = response.data as List<dynamic>? ?? [];
+    return data.cast<Map<String, dynamic>>();
+  }
+
   Future<List<TaskAssignment>> getMyTasks() async {
     final response = await api.get(ApiConstants.myTasks, useCache: true);
     return listFromResponse(response, TaskAssignment.fromJson);
@@ -54,6 +60,22 @@ class AppDataRepository extends BaseRepository {
     return listFromResponse(response, UserModel.fromJson);
   }
 
+  Future<List<ActivityItem>> getUnifiedActivity() async {
+    final response = await api.get(
+      ApiConstants.unifiedActivities,
+      useCache: true,
+    );
+    return listFromResponse(response, ActivityItem.fromJson);
+  }
+
+  Future<List<ProjectMilestone>> getMilestones(String projectId) async {
+    final response = await api.get(
+      '${ApiConstants.milestones}/project/$projectId',
+      useCache: true,
+    );
+    return listFromResponse(response, ProjectMilestone.fromJson);
+  }
+
   // Sync methods for instant loading
   List<UserModel> getCachedTeamMembers() =>
       getCachedList(ApiConstants.users, null, UserModel.fromJson);
@@ -64,4 +86,10 @@ class AppDataRepository extends BaseRepository {
   );
   List<UserModel> getCachedLeaderboard() =>
       getCachedList(ApiConstants.leaderboard, null, UserModel.fromJson);
+
+  List<ActivityItem> getCachedUnifiedActivity() => getCachedList(
+    ApiConstants.unifiedActivities,
+    null,
+    ActivityItem.fromJson,
+  );
 }

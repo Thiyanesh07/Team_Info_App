@@ -23,12 +23,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profile', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+        title: Text(
+          'Profile',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
             onPressed: () async {
-              await Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen()));
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              );
               ref.read(authProvider.notifier).refreshUser();
             },
           ),
@@ -46,14 +52,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             CircleAvatar(
               radius: 48,
               backgroundColor: AppColors.surfaceLight,
-              backgroundImage: user.profileImageUrl != null ? NetworkImage(user.profileImageUrl!) : null,
+              backgroundImage: user.profileImageUrl != null
+                  ? NetworkImage(user.profileImageUrl!)
+                  : null,
               child: user.profileImageUrl == null
-                  ? Text(user.name[0].toUpperCase(),
-                      style: GoogleFonts.inter(fontSize: 36, fontWeight: FontWeight.w700, color: AppColors.primary))
+                  ? Text(
+                      user.name[0].toUpperCase(),
+                      style: GoogleFonts.inter(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    )
                   : null,
             ),
             const SizedBox(height: 16),
-            Text(user.name, style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
+            Text(
+              user.name,
+              style: GoogleFonts.inter(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
             Container(
               margin: const EdgeInsets.only(top: 6),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -61,11 +82,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 gradient: AppColors.primaryGradient,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(user.role.displayName,
-                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+              child: Text(
+                user.role.displayName,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
             ),
             const SizedBox(height: 8),
-            Text(user.email, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary)),
+            Text(
+              user.email,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
             const SizedBox(height: 24),
 
             // Rank Progress Card
@@ -73,21 +106,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             const SizedBox(height: 24),
 
             // Info Cards
-            _InfoSection(title: 'Basic Info', children: [
-              if (user.regNo != null) _InfoTile('Reg No', user.regNo!),
-              if (user.department != null) _InfoTile('Department', user.department!),
-              if (user.year != null) _InfoTile('Year', user.year!),
-              if (user.mobile != null) _InfoTile('Mobile', user.mobile!),
-              if (user.cgpa != null) _InfoTile('CGPA', user.cgpa.toString()),
-            ]),
+            _InfoSection(
+              title: 'Basic Info',
+              children: [
+                if (user.regNo != null) _InfoTile('Reg No', user.regNo!),
+                if (user.department != null)
+                  _InfoTile('Department', user.department!),
+                if (user.year != null) _InfoTile('Year', user.year!),
+                if (user.mobile != null) _InfoTile('Mobile', user.mobile!),
+                if (user.cgpa != null) _InfoTile('CGPA', user.cgpa.toString()),
+              ],
+            ),
             const SizedBox(height: 16),
 
             // Stats
             Row(
               children: [
-                Expanded(child: _StatChip('Reward Pts', user.rewardPoints.toString(), AppColors.primary)),
+                Expanded(
+                  child: _StatChip(
+                    'Reward Pts',
+                    user.rewardPoints.toString(),
+                    AppColors.primary,
+                  ),
+                ),
                 const SizedBox(width: 10),
-                Expanded(child: _StatChip('Activity Pts', user.activityPoints.toString(), AppColors.secondary)),
+                Expanded(
+                  child: _StatChip(
+                    'Activity Pts',
+                    user.activityPoints.toString(),
+                    AppColors.secondary,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -101,7 +150,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SkillsScreen())),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SkillsScreen()),
+                    ),
                     icon: const Icon(Icons.bolt_rounded, size: 18),
                     label: const Text('Manage Portfolio Cards'),
                   ),
@@ -113,12 +165,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             // Social Links
             if (_hasSocialLinks(user)) ...[
               const SizedBox(height: 16),
-              _InfoSection(title: 'Social Links', children: [
-                if (user.githubUrl != null) _LinkTile('GitHub', user.githubUrl!, Icons.code),
-                if (user.linkedinUrl != null) _LinkTile('LinkedIn', user.linkedinUrl!, Icons.work),
-                if (user.leetcodeUrl != null) _LinkTile('LeetCode', user.leetcodeUrl!, Icons.terminal),
-                if (user.twitterUrl != null) _LinkTile('Twitter', user.twitterUrl!, Icons.chat),
-              ]),
+              _InfoSection(
+                title: 'Social Links',
+                children: [
+                  if (user.githubUrl != null)
+                    _LinkTile('GitHub', user.githubUrl!, Icons.code),
+                  if (user.linkedinUrl != null)
+                    _LinkTile('LinkedIn', user.linkedinUrl!, Icons.work),
+                  if (user.leetcodeUrl != null)
+                    _LinkTile('LeetCode', user.leetcodeUrl!, Icons.terminal),
+                  if (user.twitterUrl != null)
+                    _LinkTile('Twitter', user.twitterUrl!, Icons.chat),
+                ],
+              ),
             ],
           ],
         ),
@@ -127,7 +186,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   bool _hasSocialLinks(UserModel user) =>
-      user.githubUrl != null || user.linkedinUrl != null || user.leetcodeUrl != null || user.twitterUrl != null;
+      user.githubUrl != null ||
+      user.linkedinUrl != null ||
+      user.leetcodeUrl != null ||
+      user.twitterUrl != null;
 
   Widget _buildRankCard(UserModel user) {
     return Container(
@@ -137,7 +199,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.primary.withAlpha(50)),
         boxShadow: [
-          BoxShadow(color: AppColors.primary.withAlpha(20), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(
+            color: AppColors.primary.withAlpha(20),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: Column(
@@ -145,9 +211,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Your Rank', style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary)),
-              Text(user.rankName, 
-                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
+              Text(
+                'Your Rank',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              Text(
+                user.rankName,
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -157,31 +235,53 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               value: user.rankProgress,
               minHeight: 12,
               backgroundColor: AppColors.surfaceLight,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.primary,
+              ),
             ),
           ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${user.rewardPoints} points', 
-                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-              Text('Next Rank: 85%', // Mock percentage for next rank logic
-                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted)),
+              Text(
+                '${user.rewardPoints} points',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                'Next Rank: 85%', // Mock percentage for next rank logic
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                ),
+              ),
             ],
           ),
         ],
       ),
-    ).animate().scale(delay: 200.ms, duration: 600.ms, curve: Curves.easeOutBack);
+    ).animate().scale(
+      delay: 200.ms,
+      duration: 600.ms,
+      curve: Curves.easeOutBack,
+    );
   }
 
   Widget _buildSkillsPreview(BuildContext context, UserModel user) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (user.primarySkills.isNotEmpty) _SkillRow('Primary', user.primarySkills, AppColors.primary),
-        if (user.secondarySkills.isNotEmpty) _SkillRow('Secondary', user.secondarySkills, AppColors.secondary),
-        if (user.programmingLangs.isNotEmpty) _SkillRow('Langs', user.programmingLangs, AppColors.warning),
+        if (user.primarySkills.isNotEmpty)
+          _SkillRow('Primary', user.primarySkills, AppColors.primary),
+        if (user.secondarySkills.isNotEmpty)
+          _SkillRow('Secondary', user.secondarySkills, AppColors.secondary),
+        if (user.specialSkills.isNotEmpty)
+          _SkillRow('Special', user.specialSkills, AppColors.accent),
+        if (user.programmingLangs.isNotEmpty)
+          _SkillRow('Langs', user.programmingLangs, AppColors.warning),
       ],
     );
   }
@@ -199,13 +299,21 @@ class _InfoSection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cardDark, borderRadius: BorderRadius.circular(16),
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(height: 12),
           ...children,
         ],
@@ -225,8 +333,21 @@ class _InfoTile extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary)),
-          Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
         ],
       ),
     );
@@ -249,14 +370,26 @@ class _StatChip extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(value, style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
-          Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
         ],
       ),
     );
   }
 }
-
 
 class _SkillRow extends StatelessWidget {
   final String label;
@@ -271,15 +404,41 @@ class _SkillRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textMuted,
+            ),
+          ),
           const SizedBox(height: 4),
           Wrap(
-            spacing: 6, runSpacing: 6,
-            children: skills.map((s) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: color.withAlpha(20), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withAlpha(50))),
-              child: Text(s, style: GoogleFonts.inter(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
-            )).toList(),
+            spacing: 6,
+            runSpacing: 6,
+            children: skills
+                .map(
+                  (s) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withAlpha(20),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: color.withAlpha(50)),
+                    ),
+                    child: Text(
+                      s,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: color,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),
@@ -295,14 +454,18 @@ class _LinkTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      onTap: () =>
+          launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           children: [
             Icon(icon, color: AppColors.primary, size: 18),
             const SizedBox(width: 10),
-            Text(label, style: GoogleFonts.inter(fontSize: 13, color: AppColors.primary)),
+            Text(
+              label,
+              style: GoogleFonts.inter(fontSize: 13, color: AppColors.primary),
+            ),
             const Spacer(),
             const Icon(Icons.open_in_new, color: AppColors.textMuted, size: 14),
           ],

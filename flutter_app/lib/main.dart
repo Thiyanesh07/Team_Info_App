@@ -14,10 +14,10 @@ import 'package:team_info_app/services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // 0. Initialize Storage & Environment
   await Hive.initFlutter();
-  await Hive.openBox('api_cache'); 
+  await Hive.openBox('api_cache');
   await dotenv.load(fileName: "assets/.env");
 
   // 1. Initialize Firebase & Notifications (Optional/Safe)
@@ -25,7 +25,9 @@ Future<void> main() async {
     await Firebase.initializeApp();
     await NotificationService.initialize();
   } catch (e) {
-    debugPrint('Firebase Initialization Failed (Possibly missing google-services.json): $e');
+    debugPrint(
+      'Firebase Initialization Failed (Possibly missing google-services.json): $e',
+    );
   }
 
   // 1. Handle UI Exceptions (Widget build errors)
@@ -38,11 +40,19 @@ Future<void> main() async {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 64),
+              const Icon(
+                Icons.error_outline_rounded,
+                color: AppColors.error,
+                size: 64,
+              ),
               const SizedBox(height: 16),
               Text(
                 'Oops! Something went wrong rendering this component.',
-                style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
@@ -79,7 +89,7 @@ class TeamInfoApp extends ConsumerWidget {
     final authState = ref.watch(authProvider);
 
     return MaterialApp(
-      title: 'Team Info',
+      title: 'TMA_A74',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       home: _buildHome(authState),

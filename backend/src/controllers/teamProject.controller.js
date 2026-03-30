@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { logSystemActivity } = require('./systemActivity.controller');
 
 /** GET /api/team-projects */
 const getTeamProjects = async (req, res) => {
@@ -93,6 +94,15 @@ const createTeamProject = async (req, res) => {
     });
 
     res.status(201).json({ success: true, message: 'Team project created', data: project });
+
+    // Log System Activity
+    logSystemActivity(
+      req.user.id,
+      'New Project Created',
+      `Launched "${projectName}" for the team.`,
+      'PROJECT_CREATED',
+      { projectId: project.id }
+    );
   } catch (error) {
     console.error('CreateTeamProject error:', error);
     res.status(500).json({ success: false, message: 'Failed to create team project' });
@@ -124,6 +134,17 @@ const updateTeamProject = async (req, res) => {
     });
 
     res.json({ success: true, message: 'Project updated', data: project });
+
+    // Log System Activity if completed
+    if (status === 'COMPLETED') {
+      logSystemActivity(
+        req.user.id,
+        'Project Milestone Reached',
+        `Completed the project: "${project.projectName}"`,
+        'PROJECT_COMPLETED',
+        { projectId: project.id }
+      );
+    }
   } catch (error) {
     console.error('UpdateTeamProject error:', error);
     res.status(500).json({ success: false, message: 'Failed to update project' });
@@ -152,6 +173,15 @@ const assignMembers = async (req, res) => {
     });
 
     res.json({ success: true, message: 'Members assigned', data: project });
+
+    // Log System Activity
+    logSystemActivity(
+      req.user.id,
+      'Team Updated',
+      `Modified members for project: "${project.projectName}"`,
+      'PROJECT_MEMBERS_UPDATED',
+      { projectId: project.id, memberCount: memberIds.length }
+    );
   } catch (error) {
     console.error('AssignMembers error:', error);
     res.status(500).json({ success: false, message: 'Failed to assign members' });

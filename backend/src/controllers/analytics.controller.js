@@ -24,6 +24,7 @@ const getWeeklyAnalytics = async (req, res) => {
     let otherHours = 0;
     const activeDaysSet = new Set();
     const dayHours = {};
+    const dayCounts = {};
 
     for (const activity of activities) {
       const hours = (new Date(activity.endTime) - new Date(activity.startTime)) / (1000 * 60 * 60);
@@ -32,6 +33,9 @@ const getWeeklyAnalytics = async (req, res) => {
       const dayKey = new Date(activity.date).toISOString().split('T')[0];
       activeDaysSet.add(dayKey);
       dayHours[dayKey] = (dayHours[dayKey] || 0) + hours;
+      
+      // Track counts for velocity
+      dayCounts[dayKey] = (dayCounts[dayKey] || 0) + 1;
 
       switch (activity.type) {
         case 'LEARNING': learningHours += hours; break;
@@ -65,6 +69,7 @@ const getWeeklyAnalytics = async (req, res) => {
         bestDay,
         bestDayHours: Math.round(bestDayHours * 100) / 100,
         dailyBreakdown: dayHours,
+        dailyActivityCount: dayCounts,
         totalActivities: activities.length,
       },
     });
@@ -122,4 +127,56 @@ const getLeaderboard = async (req, res) => {
   }
 };
 
-module.exports = { getWeeklyAnalytics, getLeaderboard };
+/** GET /api/analytics/team-workload */
+const getTeamWorkload = async (req, res) => {
+  try {
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - 7);
+    startDate.setHours(0, 0, 0, 0);
+
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true, profileImageUrl: true },
+    });
+
+    const workload = [];
+
+    for (const user of users) {
+      const activities = await prisma.dailyActivity.findMany({
+        where: {
+          userId: user.id,
+          date: { gte: startDate, lte: new Date() },
+        },
+      });
+
+      const dailyHours = {};
+      // Initialize last 7 days with 0
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        dailyHours[d.toISOString().split('T')[0]] = 0;
+      }
+
+      for (const activity of activities) {
+        const hours = (new Date(activity.endTime) - new Date(activity.startTime)) / (1000 * 60 * 60);
+        const dayKey = new Date(activity.date).toISOString().split('T')[0];
+        if (dailyHours[dayKey] !== undefined) {
+          dailyHours[dayKey] += hours;
+        }
+      }
+
+      workload.push({
+        user,
+        dailyHours,
+        totalWeekHours: Object.values(dailyHours).reduce((a, b) => a + b, 0),
+      });
+    }
+
+    res.json({ success: true, data: workload });
+  } catch (error) {
+    console.error('GetTeamWorkload error:', error);
+    res.status(500).json({ success: false, message: 'Failed to compute workload' });
+  }
+};
+
+module.exports = { getWeeklyAnalytics, getLeaderboard, getTeamWorkload };

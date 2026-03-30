@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { getWeeklyAnalytics, getLeaderboard } = require('../controllers/analytics.controller');
+const { getWeeklyAnalytics, getLeaderboard, getTeamWorkload } = require('../controllers/analytics.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 
 router.use(authenticate);
 router.get('/weekly', getWeeklyAnalytics);
 router.get('/leaderboard', getLeaderboard);
+router.get('/team-workload', getTeamWorkload);
 
 module.exports = router;

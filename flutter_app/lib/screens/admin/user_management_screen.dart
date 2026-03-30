@@ -8,6 +8,7 @@ import 'package:team_info_app/core/enums/user_role.dart';
 import 'package:team_info_app/screens/skills/skills_screen.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:team_info_app/screens/tasks/report_export_dialog.dart';
+import 'package:team_info_app/screens/admin/audit_log_screen.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -75,6 +76,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               );
             },
             tooltip: 'Export Reports',
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.security_rounded,
+              color: AppColors.secondary,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AuditLogScreen()),
+              );
+            },
+            tooltip: 'Security Audit Logs',
           ),
         ],
         bottom: PreferredSize(

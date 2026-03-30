@@ -31,7 +31,7 @@ dependencies:
   flutter_secure_storage: ^9.2.4
 
   # UI Components
-  fl_chart: ^0.70.2
+  fl_chart: ^1.2.0
   cached_network_image: ^3.4.1
   image_picker: ^1.1.2
   google_fonts: ^6.2.1

@@ -30,6 +30,12 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'User not found' });
     }
 
+    // Update presence in the background (no await to avoid latency)
+    prisma.user.update({
+      where: { id: user.id },
+      data: { lastActive: new Date() },
+    }).catch(err => console.error('Presence update error:', err));
+
     req.user = user;
     next();
   } catch (error) {
