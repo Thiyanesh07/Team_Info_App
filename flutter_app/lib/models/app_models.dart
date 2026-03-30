@@ -325,6 +325,7 @@ class ChatMessage {
   final String conversationId;
   final String? message;
   final String? imageUrl;
+  final bool isPinned;
   final String timestamp;
   final Map<String, dynamic>? sender;
 
@@ -333,6 +334,7 @@ class ChatMessage {
     required this.conversationId,
     this.message,
     this.imageUrl,
+    this.isPinned = false,
     required this.timestamp,
     this.sender,
   });

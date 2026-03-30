@@ -1,6 +1,14 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const isConversationParticipant = async (conversationId, userId) => {
+  const participant = await prisma.chatParticipant.findFirst({
+    where: { conversationId, userId },
+    select: { id: true },
+  });
+  return Boolean(participant);
+};
+
 // ────────────────────────────────────────
 // TEAM CHAT
 // ────────────────────────────────────────
@@ -135,6 +143,11 @@ const createConversation = async (req, res) => {
 /** GET /api/chat/conversations/:id/messages */
 const getConversationMessages = async (req, res) => {
   try {
+    const allowed = await isConversationParticipant(req.params.id, req.user.id);
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this conversation' });
+    }
+
     const { limit = 50, before } = req.query;
     const where = { conversationId: req.params.id };
     if (before) where.timestamp = { lt: new Date(before) };
@@ -143,7 +156,7 @@ const getConversationMessages = async (req, res) => {
       where,
       include: { sender: { select: { id: true, name: true, profileImageUrl: true } } },
       orderBy: { timestamp: 'desc' },
-      take: parseInt(limit),
+      take: parseInt(limit, 10),
     });
     res.json({ success: true, data: messages.reverse() });
   } catch (error) {
@@ -154,6 +167,11 @@ const getConversationMessages = async (req, res) => {
 /** POST /api/chat/conversations/:id/messages */
 const sendConversationMessage = async (req, res) => {
   try {
+    const allowed = await isConversationParticipant(req.params.id, req.user.id);
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this conversation' });
+    }
+
     const { message, imageUrl } = req.body;
     if (!message && !imageUrl) return res.status(400).json({ success: false, message: 'Message or image required' });
 
@@ -178,7 +196,35 @@ const sendConversationMessage = async (req, res) => {
   }
 };
 
+/** PUT /api/chat/conversations/:conversationId/messages/:messageId/pin */
+const toggleConversationPin = async (req, res) => {
+  try {
+    const { conversationId, messageId } = req.params;
+    const allowed = await isConversationParticipant(conversationId, req.user.id);
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this conversation' });
+    }
+
+    const message = await prisma.chatMessage.findFirst({
+      where: { id: messageId, conversationId },
+    });
+    if (!message) {
+      return res.status(404).json({ success: false, message: 'Message not found' });
+    }
+
+    const updated = await prisma.chatMessage.update({
+      where: { id: messageId },
+      data: { isPinned: !message.isPinned },
+      include: { sender: { select: { id: true, name: true, profileImageUrl: true } } },
+    });
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to toggle pin' });
+  }
+};
+
 module.exports = {
   getTeamMessages, sendTeamMessage, togglePinMessage, getPinnedMessages,
   getConversations, createConversation, getConversationMessages, sendConversationMessage,
+  toggleConversationPin,
 };

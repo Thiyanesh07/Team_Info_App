@@ -37,10 +37,14 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
     if (mounted) {
       setState(() {
         if (convRes.success) {
-          _conversations = (convRes.data as List).map((e) => ChatConversation.fromJson(e)).toList();
+          _conversations = (convRes.data as List)
+              .map((e) => ChatConversation.fromJson(e))
+              .toList();
         }
         if (usersRes.success) {
-          _users = (usersRes.data as List).map((e) => UserModel.fromJson(e)).toList();
+          _users = (usersRes.data as List)
+              .map((e) => UserModel.fromJson(e))
+              .toList();
         }
         _loading = false;
       });
@@ -53,7 +57,10 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chat', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+        title: Text(
+          'Chat',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -64,8 +71,10 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                 children: [
                   // Team Chat
                   InkWell(
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const TeamChatScreen())),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const TeamChatScreen()),
+                    ),
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
                       padding: const EdgeInsets.all(16),
@@ -83,21 +92,40 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                               color: Colors.white.withAlpha(30),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.groups, color: Colors.white, size: 28),
+                            child: const Icon(
+                              Icons.groups,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Team Chat', style: GoogleFonts.inter(
-                                  fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
-                                Text('Chat with your team', style: GoogleFonts.inter(
-                                  fontSize: 13, color: Colors.white70)),
+                                Text(
+                                  'Team Chat',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  'Chat with your team',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    color: Colors.white70,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.white70,
+                            size: 16,
+                          ),
                         ],
                       ),
                     ),
@@ -108,10 +136,19 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Personal Chats', style: GoogleFonts.inter(
-                        fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
+                      Text(
+                        'Personal Chats',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
                       IconButton(
-                        icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                        icon: const Icon(
+                          Icons.add_circle_outline,
+                          color: AppColors.primary,
+                        ),
                         onPressed: () => _showNewChatDialog(currentUser),
                       ),
                     ],
@@ -124,27 +161,47 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                         padding: const EdgeInsets.all(32),
                         child: Column(
                           children: [
-                            Icon(Icons.chat_bubble_outline, size: 48, color: AppColors.textMuted.withAlpha(100)),
+                            Icon(
+                              Icons.chat_bubble_outline,
+                              size: 48,
+                              color: AppColors.textMuted.withAlpha(100),
+                            ),
                             const SizedBox(height: 12),
-                            Text('No conversations yet', style: GoogleFonts.inter(color: AppColors.textSecondary)),
+                            Text(
+                              'No conversations yet',
+                              style: GoogleFonts.inter(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     )
                   else
                     ...(_conversations.map((conv) {
-                      final otherParticipant = conv.participants.where(
-                        (p) => (p['user'] as Map?)?['id'] != currentUser?.id
-                      ).firstOrNull;
-                      final otherUser = otherParticipant != null ? otherParticipant['user'] as Map? : null;
-                      final lastMsg = conv.messages.isNotEmpty ? conv.messages.first : null;
+                      final otherParticipant = conv.participants
+                          .where(
+                            (p) =>
+                                (p['user'] as Map?)?['id'] != currentUser?.id,
+                          )
+                          .firstOrNull;
+                      final otherUser = otherParticipant != null
+                          ? otherParticipant['user'] as Map?
+                          : null;
+                      final lastMsg = conv.messages.isNotEmpty
+                          ? conv.messages.first
+                          : null;
 
                       return InkWell(
-                        onTap: () => Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => PersonalChatScreen(
-                            conversationId: conv.id,
-                            otherUserName: otherUser?['name'] ?? 'User',
-                          ))),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PersonalChatScreen(
+                              conversationId: conv.id,
+                              otherUserName: otherUser?['name'] ?? 'User',
+                            ),
+                          ),
+                        ),
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(14),
@@ -160,7 +217,11 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                                 backgroundColor: AppColors.surfaceLight,
                                 child: Text(
                                   (otherUser?['name'] ?? 'U')[0].toUpperCase(),
-                                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -168,12 +229,24 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(otherUser?['name'] ?? 'User',
-                                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                                    Text(
+                                      otherUser?['name'] ?? 'User',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                     if (lastMsg != null)
-                                      Text(lastMsg['message'] ?? 'Image',
-                                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
-                                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      Text(
+                                        lastMsg['message'] ?? 'Image',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: AppColors.textMuted,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                   ],
                                 ),
                               ),
@@ -193,36 +266,98 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('New Chat', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
-            const SizedBox(height: 16),
-            ...otherUsers.map((u) => ListTile(
-              leading: CircleAvatar(
-                backgroundColor: AppColors.surfaceLight,
-                child: Text(u.name[0], style: GoogleFonts.inter(color: AppColors.primary, fontWeight: FontWeight.w600)),
-              ),
-              title: Text(u.name, style: const TextStyle(color: Colors.white)),
-              subtitle: Text(u.role.displayName, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-              onTap: () async {
-                Navigator.pop(context);
-                final res = await _api.post(ApiConstants.conversations, body: {'otherUserId': u.id});
-                if (res.success && mounted) {
-                  Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => PersonalChatScreen(conversationId: res.data['id'], otherUserName: u.name),
-                  ));
-                }
-              },
-            )),
-          ],
-        ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      builder: (_) {
+        final maxHeight = MediaQuery.of(context).size.height * 0.7;
+        return SafeArea(
+          child: SizedBox(
+            height: maxHeight,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'New Chat',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: otherUsers.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No other users found',
+                              style: GoogleFonts.inter(
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: otherUsers.length,
+                            separatorBuilder: (_, _) => const Divider(
+                              height: 1,
+                              color: AppColors.divider,
+                            ),
+                            itemBuilder: (_, index) {
+                              final u = otherUsers[index];
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: AppColors.surfaceLight,
+                                  child: Text(
+                                    u.name[0],
+                                    style: GoogleFonts.inter(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                title: Text(
+                                  u.name,
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                                subtitle: Text(
+                                  u.role.displayName,
+                                  style: const TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                onTap: () async {
+                                  Navigator.pop(context);
+                                  final res = await _api.post(
+                                    ApiConstants.conversations,
+                                    body: {'otherUserId': u.id},
+                                  );
+                                  if (res.success && mounted) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => PersonalChatScreen(
+                                          conversationId: res.data['id'],
+                                          otherUserName: u.name,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

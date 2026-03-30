@@ -19,14 +19,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:team_info_app/screens/home/activity_logs_screen.dart';
 import 'package:team_info_app/screens/home/widgets/global_activity_feed.dart';
-import 'package:team_info_app/screens/home/widgets/quick_actions.dart';
-import 'package:team_info_app/screens/leaderboard/leaderboard_screen.dart';
 import 'package:team_info_app/screens/profile/profile_screen.dart';
-import 'package:team_info_app/screens/tasks/my_tasks_screen.dart';
 import 'package:team_info_app/screens/tasks/tasks_screen.dart';
 import 'package:team_info_app/screens/admin/audit_log_screen.dart';
-import 'package:team_info_app/screens/admin/analytics_dashboard_screen.dart';
-import 'package:team_info_app/screens/admin/team_workload_screen.dart';
 import 'package:team_info_app/services/api_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 

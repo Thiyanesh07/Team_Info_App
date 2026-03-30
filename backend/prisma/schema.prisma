@@ -421,6 +421,7 @@ model ChatMessage {
   senderId        String
   message         String?
   imageUrl        String?
+  isPinned        Boolean          @default(false)
   timestamp       DateTime         @default(now())
 
   conversation    ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)

@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getTeamMessages, sendTeamMessage, togglePinMessage, getPinnedMessages,
   getConversations, createConversation, getConversationMessages, sendConversationMessage,
+  toggleConversationPin,
 } = require('../controllers/chat.controller');
 const { authenticate, isLeader } = require('../middleware/auth.middleware');
 
@@ -19,5 +20,6 @@ router.get('/conversations', getConversations);
 router.post('/conversations', createConversation);
 router.get('/conversations/:id/messages', getConversationMessages);
 router.post('/conversations/:id/messages', sendConversationMessage);
+router.put('/conversations/:conversationId/messages/:messageId/pin', toggleConversationPin);
 
 module.exports = router;

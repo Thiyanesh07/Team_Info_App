@@ -66,11 +66,12 @@ dev_dependencies:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/images/app_icon.jpeg"
+  image_path: "assets/images/team_74_app_icon.jpeg"
   min_sdk_android: 21 # android min sdk version
 
 flutter:
   uses-material-design: true
   assets:
+    - assets/images/team_74_app_icon.jpeg
     - assets/images/app_icon.jpeg
     - assets/.env

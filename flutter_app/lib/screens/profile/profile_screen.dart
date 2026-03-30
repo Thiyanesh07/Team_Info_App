@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
+import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:team_info_app/providers/auth_provider.dart';
 import 'package:team_info_app/models/user_model.dart';
+import 'package:team_info_app/services/api_service.dart';
 import 'package:team_info_app/screens/profile/edit_profile_screen.dart';
 import 'package:team_info_app/screens/skills/skills_screen.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -16,6 +18,97 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final _api = ApiService();
+
+  Future<void> _editPoints({
+    required String fieldKey,
+    required String label,
+    required int currentValue,
+  }) async {
+    final controller = TextEditingController(text: currentValue.toString());
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          24,
+          24,
+          MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Update $label',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: 'Enter $label',
+                suffixText: 'pts',
+              ),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final parsed = int.tryParse(controller.text.trim());
+                  if (parsed == null || parsed <= 0) {
+                    ScaffoldMessenger.of(sheetContext).showSnackBar(
+                      const SnackBar(
+                        content: Text('Enter a valid positive number'),
+                      ),
+                    );
+                    return;
+                  }
+
+                  final res = await _api.put(
+                    ApiConstants.updateProfile,
+                    body: {fieldKey: parsed},
+                  );
+
+                  if (!sheetContext.mounted) return;
+                  if (res.success) {
+                    await ref.read(authProvider.notifier).refreshUser();
+                    if (!sheetContext.mounted) return;
+                    Navigator.pop(sheetContext);
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('$label updated')));
+                  } else {
+                    ScaffoldMessenger.of(sheetContext).showSnackBar(
+                      SnackBar(
+                        content: Text(res.message ?? 'Failed to update $label'),
+                      ),
+                    );
+                  }
+                },
+                child: const Text('Save'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
@@ -127,6 +220,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     'Reward Pts',
                     user.rewardPoints.toString(),
                     AppColors.primary,
+                    onTap: () => _editPoints(
+                      fieldKey: 'rewardPoints',
+                      label: 'Reward Points',
+                      currentValue: user.rewardPoints,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -135,6 +233,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     'Activity Pts',
                     user.activityPoints.toString(),
                     AppColors.secondary,
+                    onTap: () => _editPoints(
+                      fieldKey: 'activityPoints',
+                      label: 'Activity Points',
+                      currentValue: user.activityPoints,
+                    ),
                   ),
                 ),
               ],
@@ -357,35 +460,48 @@ class _InfoTile extends StatelessWidget {
 class _StatChip extends StatelessWidget {
   final String label, value;
   final Color color;
-  const _StatChip(this.label, this.value, this.color);
+  final VoidCallback? onTap;
+  const _StatChip(this.label, this.value, this.color, {this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withAlpha(20),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withAlpha(50)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: color.withAlpha(20),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withAlpha(50)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
             ),
-          ),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: AppColors.textSecondary,
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
-          ),
-        ],
+            if (onTap != null)
+              Text(
+                'Tap to edit',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  color: AppColors.textMuted,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

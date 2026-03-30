@@ -10,7 +10,11 @@ import 'package:team_info_app/providers/auth_provider.dart';
 class PersonalChatScreen extends ConsumerStatefulWidget {
   final String conversationId;
   final String otherUserName;
-  const PersonalChatScreen({super.key, required this.conversationId, required this.otherUserName});
+  const PersonalChatScreen({
+    super.key,
+    required this.conversationId,
+    required this.otherUserName,
+  });
 
   @override
   ConsumerState<PersonalChatScreen> createState() => _PersonalChatScreenState();
@@ -30,10 +34,14 @@ class _PersonalChatScreenState extends ConsumerState<PersonalChatScreen> {
   }
 
   Future<void> _loadMessages() async {
-    final res = await _api.get('${ApiConstants.conversations}/${widget.conversationId}/messages');
+    final res = await _api.get(
+      '${ApiConstants.conversations}/${widget.conversationId}/messages',
+    );
     if (res.success && mounted) {
       setState(() {
-        _messages = (res.data as List).map((e) => ChatMessage.fromJson(e)).toList();
+        _messages = (res.data as List)
+            .map((e) => ChatMessage.fromJson(e))
+            .toList();
         _loading = false;
       });
       _scrollToBottom();
@@ -47,7 +55,8 @@ class _PersonalChatScreenState extends ConsumerState<PersonalChatScreen> {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300), curve: Curves.easeOut,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
         );
       }
     });
@@ -65,6 +74,25 @@ class _PersonalChatScreenState extends ConsumerState<PersonalChatScreen> {
     if (res.success) _loadMessages();
   }
 
+  Future<void> _togglePin(ChatMessage message) async {
+    final res = await _api.put(
+      '${ApiConstants.conversations}/${widget.conversationId}/messages/${message.id}/pin',
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          res.success
+              ? (message.isPinned ? 'Message unpinned' : 'Message pinned')
+              : (res.message ?? 'Failed to update message pin'),
+        ),
+      ),
+    );
+    if (res.success) {
+      _loadMessages();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(authProvider).user?.id;
@@ -76,11 +104,23 @@ class _PersonalChatScreenState extends ConsumerState<PersonalChatScreen> {
             CircleAvatar(
               radius: 16,
               backgroundColor: AppColors.surfaceLight,
-              child: Text(widget.otherUserName[0].toUpperCase(),
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary)),
+              child: Text(
+                widget.otherUserName[0].toUpperCase(),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
             ),
             const SizedBox(width: 10),
-            Text(widget.otherUserName, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600)),
+            Text(
+              widget.otherUserName,
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
         actions: [
@@ -93,54 +133,115 @@ class _PersonalChatScreenState extends ConsumerState<PersonalChatScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _messages.isEmpty
-                    ? Center(child: Text('Start a conversation!', style: GoogleFonts.inter(color: AppColors.textMuted)))
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _messages.length,
-                        itemBuilder: (_, i) {
-                          final msg = _messages[i];
-                          final isMe = msg.sender?['id'] == currentUserId;
+                ? Center(
+                    child: Text(
+                      'Start a conversation!',
+                      style: GoogleFonts.inter(color: AppColors.textMuted),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _messages.length,
+                    itemBuilder: (_, i) {
+                      final msg = _messages[i];
+                      final isMe = msg.sender?['id'] == currentUserId;
 
-                          return Align(
-                            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 3),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                              decoration: BoxDecoration(
-                                color: isMe ? AppColors.primary : AppColors.surfaceLight,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: const Radius.circular(16), topRight: const Radius.circular(16),
-                                  bottomLeft: Radius.circular(isMe ? 16 : 4),
-                                  bottomRight: Radius.circular(isMe ? 4 : 16),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (msg.message != null)
-                                    Text(msg.message!, style: TextStyle(color: isMe ? Colors.white : AppColors.textPrimary)),
-                                  if (msg.imageUrl != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Image.network(msg.imageUrl!, width: 200),
-                                      ),
-                                    ),
-                                ],
+                      return Align(
+                        alignment: isMe
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: GestureDetector(
+                          onLongPress: () => _togglePin(msg),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  MediaQuery.of(context).size.width * 0.75,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isMe
+                                  ? AppColors.primary
+                                  : AppColors.surfaceLight,
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(16),
+                                topRight: const Radius.circular(16),
+                                bottomLeft: Radius.circular(isMe ? 16 : 4),
+                                bottomRight: Radius.circular(isMe ? 4 : 16),
                               ),
                             ),
-                          );
-                        },
-                      ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (msg.isPinned)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 4),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.push_pin,
+                                          size: 12,
+                                          color: isMe
+                                              ? Colors.white70
+                                              : AppColors.warning,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Pinned',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: isMe
+                                                ? Colors.white70
+                                                : AppColors.warning,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                if (msg.message != null)
+                                  Text(
+                                    msg.message!,
+                                    style: TextStyle(
+                                      color: isMe
+                                          ? Colors.white
+                                          : AppColors.textPrimary,
+                                    ),
+                                  ),
+                                if (msg.imageUrl != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(
+                                        msg.imageUrl!,
+                                        width: 200,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
           Container(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             decoration: BoxDecoration(
               color: AppColors.surface,
-              boxShadow: [BoxShadow(color: Colors.black.withAlpha(30), blurRadius: 8, offset: const Offset(0, -2))],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(30),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
+                ),
+              ],
             ),
             child: SafeArea(
               child: Row(
@@ -150,9 +251,16 @@ class _PersonalChatScreenState extends ConsumerState<PersonalChatScreen> {
                       controller: _messageController,
                       decoration: InputDecoration(
                         hintText: 'Type a message...',
-                        filled: true, fillColor: AppColors.surfaceLight,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        filled: true,
+                        fillColor: AppColors.surfaceLight,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
                       ),
                       style: const TextStyle(color: Colors.white),
                       onSubmitted: (_) => _sendMessage(),
@@ -160,9 +268,16 @@ class _PersonalChatScreenState extends ConsumerState<PersonalChatScreen> {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    decoration: const BoxDecoration(gradient: AppColors.primaryGradient, shape: BoxShape.circle),
+                    decoration: const BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      shape: BoxShape.circle,
+                    ),
                     child: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                      icon: const Icon(
+                        Icons.send,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                       onPressed: _sendMessage,
                     ),
                   ),

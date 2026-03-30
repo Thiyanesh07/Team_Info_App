@@ -95,6 +95,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                           activity: _activities[i],
                           color: _typeColor(_activities[i].type),
                           icon: _typeIcon(_activities[i].type),
+                          onEdit: () => _showEditActivityDialog(_activities[i]),
                           onDelete: () => _deleteActivity(_activities[i].id),
                         )
                         .animate()
@@ -143,10 +144,201 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
     if (res.success) _loadActivities();
   }
 
+  void _showEditActivityDialog(DailyActivity activity) {
+    String selectedType = activity.type;
+    final descC = TextEditingController(text: activity.description ?? '');
+    final customTypeC = TextEditingController(text: activity.customType ?? '');
+    DateTime selectedDate = DateTime.tryParse(activity.date) ?? DateTime.now();
+    final parsedStart = DateTime.tryParse(activity.startTime) ?? DateTime.now();
+    final parsedEnd = DateTime.tryParse(activity.endTime) ?? DateTime.now();
+    TimeOfDay startTime = TimeOfDay(
+      hour: parsedStart.hour,
+      minute: parsedStart.minute,
+    );
+    TimeOfDay endTime = TimeOfDay(
+      hour: parsedEnd.hour,
+      minute: parsedEnd.minute,
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => StatefulBuilder(
+        builder: (context, setDialogState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Edit Activity',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: ['LEARNING', 'PROJECT', 'OTHERS']
+                      .map(
+                        (t) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(
+                              t,
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            selected: selectedType == t,
+                            onSelected: (val) {
+                              if (val) setDialogState(() => selectedType = t);
+                            },
+                            selectedColor: _typeColor(t).withAlpha(50),
+                            labelStyle: TextStyle(
+                              color: selectedType == t
+                                  ? _typeColor(t)
+                                  : Colors.white60,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (selectedType == 'OTHERS')
+                TextField(
+                  controller: customTypeC,
+                  decoration: const InputDecoration(
+                    hintText: 'What kind of activity?',
+                  ),
+                ),
+              if (selectedType == 'OTHERS') const SizedBox(height: 12),
+              TextField(
+                controller: descC,
+                decoration: const InputDecoration(
+                  hintText: 'What did you achieve?',
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 20),
+              _DatePickerButton(
+                label: 'Date',
+                date: selectedDate,
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (picked != null) {
+                    setDialogState(() => selectedDate = picked);
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _TimePickerButton(
+                      label: 'Start',
+                      time: startTime,
+                      onTap: () async {
+                        final t = await showTimePicker(
+                          context: context,
+                          initialTime: startTime,
+                        );
+                        if (t != null) setDialogState(() => startTime = t);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _TimePickerButton(
+                      label: 'End',
+                      time: endTime,
+                      onTap: () async {
+                        final t = await showTimePicker(
+                          context: context,
+                          initialTime: endTime,
+                        );
+                        if (t != null) setDialogState(() => endTime = t);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final start = DateTime(
+                      selectedDate.year,
+                      selectedDate.month,
+                      selectedDate.day,
+                      startTime.hour,
+                      startTime.minute,
+                    );
+                    final end = DateTime(
+                      selectedDate.year,
+                      selectedDate.month,
+                      selectedDate.day,
+                      endTime.hour,
+                      endTime.minute,
+                    );
+
+                    final res = await _api.put(
+                      '${ApiConstants.activities}/${activity.id}',
+                      body: {
+                        'type': selectedType,
+                        'customType': customTypeC.text.isNotEmpty
+                            ? customTypeC.text
+                            : null,
+                        'description': descC.text,
+                        'startTime': start.toIso8601String(),
+                        'endTime': end.toIso8601String(),
+                        'date': DateTime(
+                          selectedDate.year,
+                          selectedDate.month,
+                          selectedDate.day,
+                        ).toIso8601String(),
+                      },
+                    );
+                    if (!context.mounted) return;
+                    if (res.success) {
+                      Navigator.pop(context);
+                      _loadActivities();
+                    }
+                  },
+                  child: const Text('Save Changes'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showAddActivityDialog(BuildContext context) {
     String selectedType = 'LEARNING';
     final descC = TextEditingController();
     final customTypeC = TextEditingController();
+    DateTime selectedDate = DateTime.now();
     TimeOfDay startTime = TimeOfDay.now();
     TimeOfDay endTime = TimeOfDay(hour: TimeOfDay.now().hour + 1, minute: 0);
 
@@ -224,6 +416,22 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: 20),
+              _DatePickerButton(
+                label: 'Date',
+                date: selectedDate,
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (picked != null) {
+                    setDialogState(() => selectedDate = picked);
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -261,18 +469,17 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                 height: 54,
                 child: ElevatedButton(
                   onPressed: () async {
-                    final now = DateTime.now();
                     final start = DateTime(
-                      now.year,
-                      now.month,
-                      now.day,
+                      selectedDate.year,
+                      selectedDate.month,
+                      selectedDate.day,
                       startTime.hour,
                       startTime.minute,
                     );
                     final end = DateTime(
-                      now.year,
-                      now.month,
-                      now.day,
+                      selectedDate.year,
+                      selectedDate.month,
+                      selectedDate.day,
                       endTime.hour,
                       endTime.minute,
                     );
@@ -288,9 +495,9 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                         'startTime': start.toIso8601String(),
                         'endTime': end.toIso8601String(),
                         'date': DateTime(
-                          now.year,
-                          now.month,
-                          now.day,
+                          selectedDate.year,
+                          selectedDate.month,
+                          selectedDate.day,
                         ).toIso8601String(),
                       },
                     );
@@ -315,12 +522,14 @@ class _ActivityCard extends StatelessWidget {
   final DailyActivity activity;
   final Color color;
   final IconData icon;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _ActivityCard({
     required this.activity,
     required this.color,
     required this.icon,
+    required this.onEdit,
     required this.onDelete,
   });
 
@@ -376,6 +585,21 @@ class _ActivityCard extends StatelessWidget {
                 Row(
                   children: [
                     Icon(
+                      Icons.calendar_today_rounded,
+                      size: 14,
+                      color: AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _formatDate(activity.date),
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Icon(
                       Icons.schedule_rounded,
                       size: 14,
                       color: AppColors.textMuted,
@@ -394,13 +618,25 @@ class _ActivityCard extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(
-              Icons.delete_outline_rounded,
-              size: 20,
-              color: AppColors.textMuted,
-            ),
-            onPressed: onDelete,
+          Column(
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  size: 20,
+                  color: AppColors.textMuted,
+                ),
+                onPressed: onEdit,
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  size: 20,
+                  color: AppColors.textMuted,
+                ),
+                onPressed: onDelete,
+              ),
+            ],
           ),
         ],
       ),
@@ -411,6 +647,15 @@ class _ActivityCard extends StatelessWidget {
     try {
       final dt = DateTime.parse(iso);
       return DateFormat.jm().format(dt);
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  String _formatDate(String iso) {
+    try {
+      final dt = DateTime.parse(iso);
+      return DateFormat('dd MMM yyyy').format(dt);
     } catch (_) {
       return iso;
     }
@@ -453,6 +698,56 @@ class _TimePickerButton extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               time.format(context),
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DatePickerButton extends StatelessWidget {
+  final String label;
+  final DateTime date;
+  final VoidCallback onTap;
+  const _DatePickerButton({
+    required this.label,
+    required this.date,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLight.withAlpha(100),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              DateFormat('dd MMM yyyy').format(date),
               style: const TextStyle(
                 fontSize: 14,
                 color: Colors.white,

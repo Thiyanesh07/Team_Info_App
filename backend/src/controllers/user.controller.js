@@ -44,7 +44,22 @@ const updateProfile = async (req, res) => {
   try {
     const { name, regNo, department, year, mobile, cgpa, profileImageUrl,
       primarySkills, secondarySkills, specialSkills, programmingLangs,
-      linkedinUrl, githubUrl, leetcodeUrl, twitterUrl } = req.body;
+      linkedinUrl, githubUrl, leetcodeUrl, twitterUrl,
+      rewardPoints, activityPoints } = req.body;
+
+    if (rewardPoints !== undefined) {
+      const reward = Number(rewardPoints);
+      if (!Number.isFinite(reward) || reward <= 0) {
+        return res.status(400).json({ success: false, message: 'Reward points must be a positive number' });
+      }
+    }
+
+    if (activityPoints !== undefined) {
+      const activity = Number(activityPoints);
+      if (!Number.isFinite(activity) || activity <= 0) {
+        return res.status(400).json({ success: false, message: 'Activity points must be a positive number' });
+      }
+    }
 
     const user = await prisma.user.update({
       where: { id: req.user.id },
@@ -60,6 +75,12 @@ const updateProfile = async (req, res) => {
         ...(secondarySkills && { secondarySkills }),
         ...(specialSkills && { specialSkills }),
         ...(programmingLangs && { programmingLangs }),
+        ...(rewardPoints !== undefined && {
+          rewardPoints: Number(rewardPoints),
+        }),
+        ...(activityPoints !== undefined && {
+          activityPoints: Number(activityPoints),
+        }),
         ...(linkedinUrl !== undefined && { linkedinUrl }),
         ...(githubUrl !== undefined && { githubUrl }),
         ...(leetcodeUrl !== undefined && { leetcodeUrl }),
