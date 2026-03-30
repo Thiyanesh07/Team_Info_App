@@ -10,9 +10,15 @@ abstract class BaseRepository {
     T Function(Map<String, dynamic>) fromJson,
   ) async {
     if (response.success && response.data is List) {
-      return (response.data as List)
-          .map((item) => fromJson(item as Map<String, dynamic>))
-          .toList();
+      final parsed = <T>[];
+      for (final item in (response.data as List)) {
+        try {
+          parsed.add(fromJson(item as Map<String, dynamic>));
+        } catch (_) {
+          // Skip malformed records so one bad item cannot crash the screen.
+        }
+      }
+      return parsed;
     }
     return [];
   }
@@ -22,7 +28,11 @@ abstract class BaseRepository {
     T Function(Map<String, dynamic>) fromJson,
   ) async {
     if (response.success && response.data != null) {
-      return fromJson(response.data as Map<String, dynamic>);
+      try {
+        return fromJson(response.data as Map<String, dynamic>);
+      } catch (_) {
+        return null;
+      }
     }
     return null;
   }
@@ -35,7 +45,15 @@ abstract class BaseRepository {
   ) {
     final cachedData = api.getCached(endpoint, queryParams: queryParams);
     if (cachedData is List) {
-      return cachedData.map((item) => fromJson(item as Map<String, dynamic>)).toList();
+      final parsed = <T>[];
+      for (final item in cachedData) {
+        try {
+          parsed.add(fromJson(item as Map<String, dynamic>));
+        } catch (_) {
+          // Skip malformed cached entries.
+        }
+      }
+      return parsed;
     }
     return [];
   }
@@ -47,7 +65,11 @@ abstract class BaseRepository {
   ) {
     final cachedData = api.getCached(endpoint, queryParams: queryParams);
     if (cachedData != null) {
-      return fromJson(cachedData as Map<String, dynamic>);
+      try {
+        return fromJson(cachedData as Map<String, dynamic>);
+      } catch (_) {
+        return null;
+      }
     }
     return null;
   }

@@ -278,6 +278,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return NetworkImage(url);
   }
 
+  Widget _safeSection(String label, Widget Function() builder) {
+    try {
+      return builder();
+    } catch (e) {
+      debugPrint('Home section "$label" failed to render: $e');
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.error.withAlpha(20),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.error.withAlpha(60)),
+        ),
+        child: Text(
+          'Unable to render $label right now.',
+          style: GoogleFonts.inter(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
@@ -319,53 +343,71 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header Area
-                    _buildHeader(user),
+                    _safeSection('header', () => _buildHeader(user)),
                     const SizedBox(height: 32),
 
                     // Pending Tasks Banner
                     if (_pendingMyTasks.isNotEmpty ||
                         _pendingAssignedTasks.isNotEmpty) ...[
-                      _buildPendingTasksBanner(),
+                      _safeSection('pending tasks', _buildPendingTasksBanner),
                       const SizedBox(height: 28),
                     ],
 
                     // Admin View Selector
                     if (user.role.canManageUsers) ...[
-                      _buildAdminSelector(),
+                      _safeSection('admin selector', _buildAdminSelector),
                       const SizedBox(height: 28),
                     ],
 
                     // Main Stats Section
-                    _buildSectionTitle(
-                      _selectedUserId == null
-                          ? 'My Performance'
-                          : '${_safeFirstName(_selectedUserName)}\'s Performance',
+                    _safeSection(
+                      'stats title',
+                      () => _buildSectionTitle(
+                        _selectedUserId == null
+                            ? 'My Performance'
+                            : '${_safeFirstName(_selectedUserName)}\'s Performance',
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    _buildStatsGrid(),
+                    _safeSection('stats', _buildStatsGrid),
                     const SizedBox(height: 28),
 
                     // Top Performers Leaderboard Preview
-                    _buildLeaderboardPreview(),
+                    _safeSection('leaderboard', _buildLeaderboardPreview),
                     const SizedBox(height: 28),
 
                     // Activity Section
-                    _buildSectionTitle('Engineering Pulse'),
+                    _safeSection(
+                      'activity title',
+                      () => _buildSectionTitle('Engineering Pulse'),
+                    ),
                     const SizedBox(height: 16),
-                    GlobalActivityFeed(
-                      activities: _activities,
-                      isLoading: _loading,
+                    _safeSection(
+                      'activity feed',
+                      () => GlobalActivityFeed(
+                        activities: _activities,
+                        isLoading: _loading,
+                      ),
                     ),
                     const SizedBox(height: 32),
 
                     // Weekly Insights
-                    _buildActivitySummary(context),
+                    _safeSection(
+                      'weekly summary',
+                      () => _buildActivitySummary(context),
+                    ),
                     const SizedBox(height: 32),
 
                     // Quick Actions
-                    _buildSectionTitle('Quick Actions'),
+                    _safeSection(
+                      'quick actions title',
+                      () => _buildSectionTitle('Quick Actions'),
+                    ),
                     const SizedBox(height: 16),
-                    _buildQuickActions(context),
+                    _safeSection(
+                      'quick actions',
+                      () => _buildQuickActions(context),
+                    ),
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -654,7 +696,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _StatCard(
           icon: Icons.timer_outlined,
           label: 'Total Hours',
-          value: '${_analytics?.totalHours.toStringAsFixed(1) ?? 0}h',
+          value: '${(_analytics?.totalHours ?? 0).toStringAsFixed(1)}h',
           color: const Color(0xFF6366F1),
           delay: 0,
           progress: (_analytics?.totalHours ?? 0) / 40, // Assuming 40h goal
@@ -662,7 +704,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _StatCard(
           icon: Icons.auto_graph_rounded,
           label: 'Learning',
-          value: '${_analytics?.learningHours.toStringAsFixed(1) ?? 0}h',
+          value: '${(_analytics?.learningHours ?? 0).toStringAsFixed(1)}h',
           color: const Color(0xFF10B981),
           delay: 100,
           progress: (_analytics?.learningHours ?? 0) / 10, // Assuming 10h goal
@@ -670,7 +712,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _StatCard(
           icon: Icons.layers_outlined,
           label: 'Projects',
-          value: '${_analytics?.projectHours.toStringAsFixed(1) ?? 0}h',
+          value: '${(_analytics?.projectHours ?? 0).toStringAsFixed(1)}h',
           color: const Color(0xFFEC4899),
           delay: 200,
           progress: (_analytics?.projectHours ?? 0) / 20, // Assuming 20h goal
@@ -696,7 +738,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildSectionTitle('Top Performers'),
+            _safeSection(
+              'top performers title',
+              () => _buildSectionTitle('Top Performers'),
+            ),
             TextButton(
               onPressed: () => Navigator.push(
                 context,
@@ -875,9 +920,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Text(
             isOnline
                 ? 'Active'
-                : (lastActive != null
-                      ? timeago.format(lastActive, locale: 'en_short')
-                      : 'N/A'),
+                : (lastActive != null ? timeago.format(lastActive) : 'N/A'),
             style: TextStyle(
               fontSize: 8,
               color: isOnline ? Colors.green : AppColors.textMuted,

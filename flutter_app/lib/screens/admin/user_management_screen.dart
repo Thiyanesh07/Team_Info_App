@@ -150,6 +150,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   void _showAddUserDialog() {
     final nameC = TextEditingController();
     final emailC = TextEditingController();
+    final rewardPointsC = TextEditingController(text: '0');
+    final activityPointsC = TextEditingController(text: '0');
     String selectedRole = 'MEMBER';
 
     showModalBottomSheet(
@@ -183,6 +185,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               _formField(nameC, 'Full Name', Icons.person_outline),
               const SizedBox(height: 12),
               _formField(emailC, 'Google Email', Icons.email_outlined),
+              const SizedBox(height: 12),
+              _formField(
+                rewardPointsC,
+                'Initial Reward Points',
+                Icons.stars_rounded,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 12),
+              _formField(
+                activityPointsC,
+                'Initial Activity Points',
+                Icons.local_fire_department_outlined,
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 16),
               const Text(
                 'Assigned Role',
@@ -231,6 +247,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         'name': nameC.text,
                         'email': emailC.text,
                         'role': selectedRole,
+                        'rewardPoints':
+                            int.tryParse(rewardPointsC.text.trim()) ?? 0,
+                        'activityPoints':
+                            int.tryParse(activityPointsC.text.trim()) ?? 0,
                       },
                     );
                     if (!context.mounted) return;

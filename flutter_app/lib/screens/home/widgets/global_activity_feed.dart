@@ -60,7 +60,26 @@ class GlobalActivityFeed extends StatelessWidget {
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final item = activities[index];
-        return _ActivityCard(item: item);
+        try {
+          return _ActivityCard(item: item);
+        } catch (e) {
+          debugPrint('Failed to render activity item at index $index: $e');
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.error.withAlpha(12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.error.withAlpha(40)),
+            ),
+            child: Text(
+              'Unable to render one activity item.',
+              style: GoogleFonts.inter(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          );
+        }
       },
     );
   }
