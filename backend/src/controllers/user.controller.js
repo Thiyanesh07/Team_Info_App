@@ -100,7 +100,17 @@ const assignRole = async (req, res) => {
 /** POST /api/users/create - Admin: create user (Google-auth compatible, no password) */
 const createUser = async (req, res) => {
   try {
-    const { email, name, role, regNo, department, year, mobile } = req.body;
+    const {
+      email,
+      name,
+      role,
+      regNo,
+      department,
+      year,
+      mobile,
+      rewardPoints,
+      activityPoints,
+    } = req.body;
 
     if (!email || !name) {
       return res.status(400).json({ success: false, message: 'Email and name are required' });
@@ -115,6 +125,16 @@ const createUser = async (req, res) => {
       data: {
         email, name,
         role: role || 'MEMBER', regNo, department, year, mobile,
+        ...(rewardPoints !== undefined && {
+          rewardPoints: Number.isFinite(Number(rewardPoints))
+              ? Number(rewardPoints)
+              : 0,
+        }),
+        ...(activityPoints !== undefined && {
+          activityPoints: Number.isFinite(Number(activityPoints))
+              ? Number(activityPoints)
+              : 0,
+        }),
       },
       select: userSelect,
     });
@@ -140,9 +160,25 @@ const deleteUser = async (req, res) => {
 /** PUT /api/users/:id - Admin: update any user */
 const adminUpdateUser = async (req, res) => {
   try {
-    const { name, regNo, department, year, mobile, cgpa, role,
-      primarySkills, secondarySkills, specialSkills, programmingLangs,
-      linkedinUrl, githubUrl, leetcodeUrl, twitterUrl } = req.body;
+    const {
+      name,
+      regNo,
+      department,
+      year,
+      mobile,
+      cgpa,
+      role,
+      rewardPoints,
+      activityPoints,
+      primarySkills,
+      secondarySkills,
+      specialSkills,
+      programmingLangs,
+      linkedinUrl,
+      githubUrl,
+      leetcodeUrl,
+      twitterUrl,
+    } = req.body;
 
     const user = await prisma.user.update({
       where: { id: req.params.id },
@@ -154,6 +190,16 @@ const adminUpdateUser = async (req, res) => {
         ...(mobile !== undefined && { mobile }),
         ...(cgpa !== undefined && { cgpa: cgpa ? parseFloat(cgpa) : null }),
         ...(role && { role }),
+        ...(rewardPoints !== undefined && {
+          rewardPoints: Number.isFinite(Number(rewardPoints))
+              ? Number(rewardPoints)
+              : 0,
+        }),
+        ...(activityPoints !== undefined && {
+          activityPoints: Number.isFinite(Number(activityPoints))
+              ? Number(activityPoints)
+              : 0,
+        }),
         ...(primarySkills && { primarySkills }),
         ...(secondarySkills && { secondarySkills }),
         ...(specialSkills && { specialSkills }),

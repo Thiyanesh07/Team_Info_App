@@ -30,7 +30,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   WeeklyAnalytics? _analytics;
   List<UserModel> _teamMembers = [];
   List<UserModel> _leaderboard = [];
-  UserModel? _selectedUser;
+  String? _selectedUserId;
   bool _loading = true;
 
   List<TaskAssignment> _pendingMyTasks = [];
@@ -248,7 +248,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     setState(() => _loading = true);
     final analytics = await ref
         .read(appDataRepositoryProvider)
-        .getWeeklyAnalytics(userId: _selectedUser?.id);
+        .getWeeklyAnalytics(userId: _selectedUserId);
     if (mounted) {
       setState(() {
         _analytics = analytics;
@@ -329,9 +329,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                     // Main Stats Section
                     _buildSectionTitle(
-                      _selectedUser == null
+                      _selectedUserId == null
                           ? 'My Performance'
-                          : '${_safeFirstName(_selectedUser!.name)}\'s Performance',
+                          : '${_safeFirstName(_selectedUserName)}\'s Performance',
                     ),
                     const SizedBox(height: 16),
                     _buildStatsGrid(),
@@ -344,7 +344,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     // Activity Section
                     _buildSectionTitle('Engineering Pulse'),
                     const SizedBox(height: 16),
-                    GlobalActivityFeed(activities: _activities, isLoading: _loading),
+                    GlobalActivityFeed(
+                      activities: _activities,
+                      isLoading: _loading,
+                    ),
                     const SizedBox(height: 32),
 
                     // Weekly Insights
@@ -445,6 +448,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildAdminSelector() {
+    UserModel? selectedUser;
+    if (_selectedUserId != null) {
+      for (final m in _teamMembers) {
+        if (m.id == _selectedUserId) {
+          selectedUser = m;
+          break;
+        }
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -468,8 +481,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
           const Spacer(),
-          DropdownButton<UserModel?>(
-            value: _selectedUser,
+          DropdownButton<String?>(
+            value: selectedUser?.id,
             hint: const Text(
               'My Stats',
               style: TextStyle(
@@ -494,7 +507,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               ..._teamMembers.map(
                 (m) => DropdownMenuItem(
-                  value: m,
+                  value: m.id,
                   child: Text(
                     m.name,
                     style: const TextStyle(fontSize: 13, color: Colors.white),
@@ -503,13 +516,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ],
             onChanged: (v) {
-              setState(() => _selectedUser = v);
+              setState(() => _selectedUserId = v);
               _loadAnalytics();
             },
           ),
         ],
       ),
     ).animate().fade(delay: 200.ms).slideX(begin: 0.1, end: 0);
+  }
+
+  String? get _selectedUserName {
+    if (_selectedUserId == null) return null;
+    for (final m in _teamMembers) {
+      if (m.id == _selectedUserId) return m.name;
+    }
+    return null;
   }
 
   Widget _buildPendingTasksBanner() {
@@ -820,14 +841,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildPresenceTag(UserModel user) {
     // Basic presence logic: if active within last 5 minutes, show "Active"
-    final lastActive = user.updatedAt != null ? DateTime.parse(user.updatedAt!) : null;
-    final isOnline = lastActive != null && 
+    final lastActive = DateTime.tryParse(user.updatedAt ?? '');
+    final isOnline =
+        lastActive != null &&
         DateTime.now().difference(lastActive).inMinutes < 5;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isOnline ? Colors.green.withAlpha(40) : AppColors.textMuted.withAlpha(20),
+        color: isOnline
+            ? Colors.green.withAlpha(40)
+            : AppColors.textMuted.withAlpha(20),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -843,7 +867,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           const SizedBox(width: 4),
           Text(
-            isOnline ? 'Active' : (lastActive != null ? timeago.format(lastActive, locale: 'en_short') : 'N/A'),
+            isOnline
+                ? 'Active'
+                : (lastActive != null
+                      ? timeago.format(lastActive, locale: 'en_short')
+                      : 'N/A'),
             style: TextStyle(
               fontSize: 8,
               color: isOnline ? Colors.green : AppColors.textMuted,

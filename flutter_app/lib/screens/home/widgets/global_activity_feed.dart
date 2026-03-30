@@ -35,11 +35,18 @@ class GlobalActivityFeed extends StatelessWidget {
         ),
         child: Column(
           children: [
-            const Icon(Icons.hub_outlined, color: AppColors.textMuted, size: 48),
+            const Icon(
+              Icons.hub_outlined,
+              color: AppColors.textMuted,
+              size: 48,
+            ),
             const SizedBox(height: 16),
             Text(
               'No activity recorded yet',
-              style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 13),
+              style: GoogleFonts.inter(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
             ),
           ],
         ),
@@ -64,10 +71,41 @@ class _ActivityCard extends StatelessWidget {
 
   const _ActivityCard({required this.item});
 
+  DateTime? _tryParseDate(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    return DateTime.tryParse(value);
+  }
+
+  String _safeInitial(String? name) {
+    final normalized = name?.trim() ?? '';
+    if (normalized.isEmpty) return 'U';
+    return normalized[0].toUpperCase();
+  }
+
+  String _asText(dynamic value, {String fallback = ''}) {
+    if (value == null) return fallback;
+    final text = value.toString().trim();
+    return text.isEmpty ? fallback : text;
+  }
+
+  String _typeLabel(ActivityItemType type) {
+    switch (type) {
+      case ActivityItemType.DAILY_LOG:
+        return 'DAILY LOG';
+      case ActivityItemType.PROJECT_UPDATE:
+        return 'PROJECT UPDATE';
+      case ActivityItemType.TASK_REPORT:
+        return 'TASK REPORT';
+      case ActivityItemType.SYSTEM_EVENT:
+        return 'SYSTEM EVENT';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color typeColor = _getTypeColor(item.type);
     final IconData typeIcon = _getTypeIcon(item.type);
+    final parsedTime = _tryParseDate(item.timestamp);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -96,7 +134,7 @@ class _ActivityCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        item.user?['name'] ?? 'System',
+                        _asText(item.user?['name'], fallback: 'System'),
                         style: GoogleFonts.inter(
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -105,7 +143,9 @@ class _ActivityCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      timeago.format(DateTime.parse(item.timestamp)),
+                      parsedTime != null
+                          ? timeago.format(parsedTime)
+                          : 'just now',
                       style: GoogleFonts.inter(
                         color: AppColors.textMuted,
                         fontSize: 10,
@@ -117,7 +157,10 @@ class _ActivityCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: typeColor.withAlpha(30),
                         borderRadius: BorderRadius.circular(4),
@@ -128,7 +171,7 @@ class _ActivityCard extends StatelessWidget {
                           Icon(typeIcon, color: typeColor, size: 10),
                           const SizedBox(width: 4),
                           Text(
-                            item.type.name.split('.').last.replaceAll('_', ' '),
+                            _typeLabel(item.type),
                             style: TextStyle(
                               color: typeColor,
                               fontSize: 9,
@@ -141,7 +184,7 @@ class _ActivityCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        item.title,
+                        _asText(item.title, fallback: 'Activity'),
                         style: GoogleFonts.inter(
                           fontWeight: FontWeight.w600,
                           color: AppColors.textSecondary,
@@ -155,7 +198,7 @@ class _ActivityCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  item.content,
+                  _asText(item.content, fallback: 'No details available'),
                   style: GoogleFonts.inter(
                     color: Colors.white70,
                     fontSize: 12,
@@ -172,33 +215,44 @@ class _ActivityCard extends StatelessWidget {
 
   Widget _buildAvatar(ActivityItem item) {
     final avatarUrl = item.user?['profileImageUrl'];
-    final name = item.user?['name'] ?? 'S';
-    
+    final name = _asText(item.user?['name'], fallback: 'U');
+
     return CircleAvatar(
       radius: 18,
       backgroundColor: AppColors.surfaceLight,
       backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-      child: avatarUrl == null 
-        ? Text(name[0], style: const TextStyle(fontSize: 12, color: Colors.white))
-        : null,
+      child: avatarUrl == null
+          ? Text(
+              _safeInitial(name),
+              style: const TextStyle(fontSize: 12, color: Colors.white),
+            )
+          : null,
     );
   }
 
   Color _getTypeColor(ActivityItemType type) {
     switch (type) {
-      case ActivityItemType.DAILY_LOG: return Colors.blueAccent;
-      case ActivityItemType.PROJECT_UPDATE: return Colors.purpleAccent;
-      case ActivityItemType.TASK_REPORT: return Colors.greenAccent;
-      case ActivityItemType.SYSTEM_EVENT: return Colors.orangeAccent;
+      case ActivityItemType.DAILY_LOG:
+        return Colors.blueAccent;
+      case ActivityItemType.PROJECT_UPDATE:
+        return Colors.purpleAccent;
+      case ActivityItemType.TASK_REPORT:
+        return Colors.greenAccent;
+      case ActivityItemType.SYSTEM_EVENT:
+        return Colors.orangeAccent;
     }
   }
 
   IconData _getTypeIcon(ActivityItemType type) {
     switch (type) {
-      case ActivityItemType.DAILY_LOG: return Icons.history_edu;
-      case ActivityItemType.PROJECT_UPDATE: return Icons.rocket_launch;
-      case ActivityItemType.TASK_REPORT: return Icons.assignment_turned_in;
-      case ActivityItemType.SYSTEM_EVENT: return Icons.auto_awesome;
+      case ActivityItemType.DAILY_LOG:
+        return Icons.history_edu;
+      case ActivityItemType.PROJECT_UPDATE:
+        return Icons.rocket_launch;
+      case ActivityItemType.TASK_REPORT:
+        return Icons.assignment_turned_in;
+      case ActivityItemType.SYSTEM_EVENT:
+        return Icons.auto_awesome;
     }
   }
 }

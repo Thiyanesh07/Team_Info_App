@@ -261,6 +261,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final nameC = TextEditingController(text: user.name);
     final regNoC = TextEditingController(text: user.regNo ?? '');
     final deptC = TextEditingController(text: user.department ?? '');
+    final rewardPointsC = TextEditingController(
+      text: user.rewardPoints.toString(),
+    );
+    final activityPointsC = TextEditingController(
+      text: user.activityPoints.toString(),
+    );
 
     showModalBottomSheet(
       context: context,
@@ -294,6 +300,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             _formField(regNoC, 'Register No', Icons.badge_outlined),
             const SizedBox(height: 12),
             _formField(deptC, 'Department', Icons.business_outlined),
+            const SizedBox(height: 12),
+            _formField(
+              rewardPointsC,
+              'Reward Points',
+              Icons.stars_rounded,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            _formField(
+              activityPointsC,
+              'Activity Points',
+              Icons.local_fire_department_outlined,
+              keyboardType: TextInputType.number,
+            ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -306,12 +326,23 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       'name': nameC.text,
                       'regNo': regNoC.text,
                       'department': deptC.text,
+                      'rewardPoints':
+                          int.tryParse(rewardPointsC.text.trim()) ?? 0,
+                      'activityPoints':
+                          int.tryParse(activityPointsC.text.trim()) ?? 0,
                     },
                   );
                   if (!sheetContext.mounted) return;
                   if (res.success) {
                     Navigator.pop(sheetContext);
                     _loadUsers();
+                  } else {
+                    ScaffoldMessenger.of(sheetContext).showSnackBar(
+                      SnackBar(
+                        content: Text(res.message ?? 'Failed to update member'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
                   }
                 },
                 child: const Text('Save Changes'),
@@ -326,10 +357,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   Widget _formField(
     TextEditingController controller,
     String hint,
-    IconData icon,
-  ) {
+    IconData icon, {
+    TextInputType? keyboardType,
+  }) {
     return TextField(
       controller: controller,
+      keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Icon(icon, size: 20, color: AppColors.textMuted),
@@ -473,7 +506,8 @@ class _UserCard extends StatelessWidget {
             : null,
         child: user.profileImageUrl == null
             ? Text(
-                user.name[0].toUpperCase(),
+                ((user.name.trim().isNotEmpty ? user.name.trim()[0] : 'U')
+                    .toUpperCase()),
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
