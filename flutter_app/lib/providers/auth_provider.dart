@@ -70,6 +70,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         token: token,
       );
     } else {
+      // Avoid deleting a freshly-updated token if a stale startup check finishes late.
+      final latestToken = await _repo.getToken();
+      if (latestToken != token) return;
       await _repo.deleteToken();
       state = state.copyWith(status: AuthStatus.unauthenticated);
     }

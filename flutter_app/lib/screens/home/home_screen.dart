@@ -245,6 +245,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  String _safeName(String? rawName) {
+    final trimmed = rawName?.trim() ?? '';
+    return trimmed.isEmpty ? 'User' : trimmed;
+  }
+
+  String _safeFirstName(String? rawName) {
+    return _safeName(rawName).split(RegExp(r'\s+')).first;
+  }
+
+  String _safeInitial(String? rawName) {
+    return _safeName(rawName)[0].toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
@@ -306,7 +319,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     _buildSectionTitle(
                       _selectedUser == null
                           ? 'My Performance'
-                          : '${_selectedUser!.name.split(' ').first}\'s Performance',
+                          : '${_safeFirstName(_selectedUser!.name)}\'s Performance',
                     ),
                     const SizedBox(height: 16),
                     _buildStatsGrid(),
@@ -354,7 +367,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 : null,
             child: user.profileImageUrl == null
                 ? Text(
-                    user.name[0].toUpperCase(),
+                    _safeInitial(user.name),
                     style: GoogleFonts.outfit(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -370,7 +383,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Hi, ${user.name.split(' ').first}! ✨',
+                'Hi, ${_safeFirstName(user.name)}! ✨',
                 style: GoogleFonts.outfit(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
@@ -691,13 +704,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ? NetworkImage(user.profileImageUrl!)
                             : null,
                         child: user.profileImageUrl == null
-                            ? Text(user.name[0])
+                            ? Text(_safeInitial(user.name))
                             : null,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      user.name.split(' ').first,
+                      _safeFirstName(user.name),
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,

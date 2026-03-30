@@ -11,44 +11,71 @@ class ApiService {
 
   final _storage = const FlutterSecureStorage();
   static const _tokenKey = 'auth_token';
+  String? _inMemoryToken;
 
   // ─── Token Management ──────────────────────
-  Future<String?> getToken() => _storage.read(key: _tokenKey);
+  Future<String?> getToken() async {
+    if (_inMemoryToken != null && _inMemoryToken!.isNotEmpty) {
+      return _inMemoryToken;
+    }
+    final token = await _storage.read(key: _tokenKey);
+    _inMemoryToken = token;
+    return token;
+  }
 
-  Future<void> saveToken(String token) => _storage.write(key: _tokenKey, value: token);
+  Future<void> saveToken(String token) async {
+    _inMemoryToken = token;
+    await _storage.write(key: _tokenKey, value: token);
+  }
 
-  Future<void> deleteToken() => _storage.delete(key: _tokenKey);
+  Future<void> deleteToken() async {
+    _inMemoryToken = null;
+    await _storage.delete(key: _tokenKey);
+  }
 
   // ─── Headers ───────────────────────────────
   Future<Map<String, String>> _headers({bool withAuth = true}) async {
     final headers = {'Content-Type': 'application/json'};
     if (withAuth) {
-      final token = await getToken();
-      if (token != null) headers['Authorization'] = 'Bearer $token';
+      final token = (await getToken())?.trim();
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
     }
     return headers;
   }
 
   // ─── HTTP Methods ──────────────────────────
-  Future<ApiResponse> get(String endpoint, {Map<String, String>? queryParams, bool useCache = false}) async {
-    final cacheKey = queryParams != null ? '$endpoint?${queryParams.toString()}' : endpoint;
-    
+  Future<ApiResponse> get(
+    String endpoint, {
+    Map<String, String>? queryParams,
+    bool useCache = false,
+  }) async {
+    final cacheKey = queryParams != null
+        ? '$endpoint?${queryParams.toString()}'
+        : endpoint;
+
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint')
-          .replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '${ApiConstants.baseUrl}$endpoint',
+      ).replace(queryParameters: queryParams);
       final response = await http.get(uri, headers: await _headers());
       final apiResponse = _handleResponse(response);
-      
+
       if (useCache && apiResponse.success) {
         await CacheService.set(cacheKey, apiResponse.data);
       }
-      
+
       return apiResponse;
     } catch (e) {
       if (useCache) {
         final cachedData = CacheService.get(cacheKey);
         if (cachedData != null) {
-          return ApiResponse(success: true, data: cachedData, message: 'Loaded from cache (Offline)');
+          return ApiResponse(
+            success: true,
+            data: cachedData,
+            message: 'Loaded from cache (Offline)',
+          );
         }
       }
       return ApiResponse(success: false, message: 'Network error: $e');
@@ -57,15 +84,22 @@ class ApiService {
 
   /// Manually get cached data
   dynamic getCached(String endpoint, {Map<String, String>? queryParams}) {
-    final cacheKey = queryParams != null ? '$endpoint?${queryParams.toString()}' : endpoint;
+    final cacheKey = queryParams != null
+        ? '$endpoint?${queryParams.toString()}'
+        : endpoint;
     return CacheService.get(cacheKey);
   }
 
-  Future<ApiResponse> post(String endpoint, {Map<String, dynamic>? body, bool withAuth = true}) async {
+  Future<ApiResponse> post(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    bool withAuth = true,
+  }) async {
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
       final response = await http.post(
-        uri, headers: await _headers(withAuth: withAuth),
+        uri,
+        headers: await _headers(withAuth: withAuth),
         body: body != null ? jsonEncode(body) : null,
       );
       return _handleResponse(response);
@@ -78,7 +112,8 @@ class ApiService {
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
       final response = await http.put(
-        uri, headers: await _headers(),
+        uri,
+        headers: await _headers(),
         body: body != null ? jsonEncode(body) : null,
       );
       return _handleResponse(response);
@@ -100,7 +135,9 @@ class ApiService {
   // ─── Multipart Upload ──────────────────────
   Future<ApiResponse> uploadImage(String filePath) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.uploadImage}');
+      final uri = Uri.parse(
+        '${ApiConstants.baseUrl}${ApiConstants.uploadImage}',
+      );
       final request = http.MultipartRequest('POST', uri);
       final token = await getToken();
       if (token != null) request.headers['Authorization'] = 'Bearer $token';
@@ -124,9 +161,17 @@ class ApiService {
           message: body['message'],
         );
       } else if (response.statusCode == 401) {
-        return ApiResponse(success: false, message: body['message'] ?? 'Unauthorized', statusCode: 401);
+        return ApiResponse(
+          success: false,
+          message: body['message'] ?? 'Unauthorized',
+          statusCode: 401,
+        );
       } else {
-        return ApiResponse(success: false, message: body['message'] ?? 'Error occurred', statusCode: response.statusCode);
+        return ApiResponse(
+          success: false,
+          message: body['message'] ?? 'Error occurred',
+          statusCode: response.statusCode,
+        );
       }
     } catch (e) {
       return ApiResponse(success: false, message: 'Failed to parse response');
@@ -140,5 +185,10 @@ class ApiResponse {
   final String? message;
   final int? statusCode;
 
-  ApiResponse({required this.success, this.data, this.message, this.statusCode});
+  ApiResponse({
+    required this.success,
+    this.data,
+    this.message,
+    this.statusCode,
+  });
 }
