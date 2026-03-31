@@ -5,6 +5,8 @@ import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/models/app_models.dart';
 import 'package:team_info_app/repositories/app_data_repository.dart';
 import 'package:team_info_app/screens/projects/widgets/milestone_timeline.dart';
+import 'package:team_info_app/services/api_service.dart';
+import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class ProjectDetailScreen extends ConsumerStatefulWidget {

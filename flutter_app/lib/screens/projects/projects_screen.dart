@@ -9,6 +9,7 @@ import 'package:team_info_app/providers/auth_provider.dart';
 import 'package:team_info_app/repositories/app_data_repository.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:team_info_app/screens/projects/project_detail_screen.dart';
+import 'package:team_info_app/core/enums/user_role.dart';
 
 class ProjectsScreen extends ConsumerStatefulWidget {
   const ProjectsScreen({super.key});

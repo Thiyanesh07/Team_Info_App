@@ -24,6 +24,7 @@ import 'package:team_info_app/screens/tasks/tasks_screen.dart';
 import 'package:team_info_app/screens/admin/audit_log_screen.dart';
 import 'package:team_info_app/services/api_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:team_info_app/screens/profile/certifications_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -1002,7 +1003,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           color: AppColors.warning,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const LearningScreen()),
+            MaterialPageRoute(builder: (_) => LearningScreen()),
           ),
         ),
         _QuickAction(
@@ -1011,7 +1012,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           color: AppColors.secondary,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const CertificationsScreen()),
+            MaterialPageRoute(builder: (_) => CertificationsScreen()),
           ),
         ),
       ],
