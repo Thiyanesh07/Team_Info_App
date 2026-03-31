@@ -95,6 +95,7 @@ class ProjectUpdate {
   final String? description;
   final Map<String, dynamic>? user;
   final String? createdAt;
+  final String? updatedAt;
 
   ProjectUpdate({
     required this.id,
@@ -104,6 +105,7 @@ class ProjectUpdate {
     this.description,
     this.user,
     this.createdAt,
+    this.updatedAt,
   });
 
   factory ProjectUpdate.fromJson(Map<String, dynamic> json) =>

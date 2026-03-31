@@ -89,9 +89,11 @@ ProjectUpdate _$ProjectUpdateFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       projectId: json['projectId'] as String,
       userId: json['userId'] as String,
-      updateText: json['updateText'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String?,
       user: json['user'] as Map<String, dynamic>?,
       createdAt: json['createdAt'] as String?,
+      updatedAt: json['updatedAt'] as String?,
     );
 
 Map<String, dynamic> _$ProjectUpdateToJson(ProjectUpdate instance) =>
@@ -99,9 +101,11 @@ Map<String, dynamic> _$ProjectUpdateToJson(ProjectUpdate instance) =>
       'id': instance.id,
       'projectId': instance.projectId,
       'userId': instance.userId,
-      'updateText': instance.updateText,
+      'title': instance.title,
+      'description': instance.description,
       'user': instance.user,
       'createdAt': instance.createdAt,
+      'updatedAt': instance.updatedAt,
     };
 
 Hackathon _$HackathonFromJson(Map<String, dynamic> json) => Hackathon(
