@@ -57,42 +57,92 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Add Certification', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
-            const SizedBox(height: 20),
-            _textField(skillC, 'Skill Name (e.g. AWS, React)', Icons.bolt_rounded),
-            const SizedBox(height: 12),
-            _textField(providerC, 'Provider (e.g. Coursera, Google)', Icons.business_outlined),
-            const SizedBox(height: 12),
-            _textField(descC, 'Description / Verification ID', Icons.description_outlined, maxLines: 3),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () async {
-                  if (skillC.text.isEmpty) return;
-                  final api = ref.read(apiServiceProvider);
-                  final res = await api.post(ApiConstants.certifications, body: {
-                    'skill': skillC.text.trim(),
-                    'provider': providerC.text.trim(),
-                    'description': descC.text.trim(),
-                    'issuedDate': selectedDate.toIso8601String(),
-                  });
-                  if (mounted && res.success) {
-                    Navigator.pop(context);
-                    _loadCerts();
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Add Certification', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+              const SizedBox(height: 20),
+              _textField(skillC, 'Skill Name (e.g. AWS, React)', Icons.bolt_rounded),
+              const SizedBox(height: 12),
+              _textField(providerC, 'Provider (e.g. Coursera, Google)', Icons.business_outlined),
+              const SizedBox(height: 12),
+              _textField(descC, 'Description / Verification ID', Icons.description_outlined, maxLines: 3),
+              const SizedBox(height: 16),
+              
+              // Date Picker Trigger
+              InkWell(
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime.now(),
+                    builder: (context, child) => Theme(
+                      data: Theme.of(context).copyWith(
+                        colorScheme: const ColorScheme.dark(
+                          primary: AppColors.primary,
+                          onPrimary: Colors.white,
+                          surface: AppColors.surface,
+                          onSurface: Colors.white,
+                        ),
+                      ),
+                      child: child!,
+                    ),
+                  );
+                  if (date != null) {
+                    setModalState(() => selectedDate = date);
                   }
                 },
-                child: const Text('Add Achievement'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight.withAlpha(50),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.divider),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Issued Date: ${DateFormat('MMM yyyy').format(selectedDate)}',
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.edit_calendar_outlined, size: 16, color: AppColors.textMuted),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (skillC.text.isEmpty) return;
+                    final api = ref.read(apiServiceProvider);
+                    final res = await api.post(ApiConstants.certifications, body: {
+                      'skill': skillC.text.trim(),
+                      'provider': providerC.text.trim(),
+                      'description': descC.text.trim(),
+                      'issuedDate': selectedDate.toIso8601String(),
+                    });
+                    if (mounted && res.success) {
+                      Navigator.pop(context);
+                      _loadCerts();
+                    }
+                  },
+                  child: const Text('Add Achievement'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -111,42 +161,92 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Edit Certification', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
-            const SizedBox(height: 20),
-            _textField(skillC, 'Skill Name (e.g. AWS, React)', Icons.bolt_rounded),
-            const SizedBox(height: 12),
-            _textField(providerC, 'Provider (e.g. Coursera, Google)', Icons.business_outlined),
-            const SizedBox(height: 12),
-            _textField(descC, 'Description / Verification ID', Icons.description_outlined, maxLines: 3),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () async {
-                  if (skillC.text.isEmpty) return;
-                  final api = ref.read(apiServiceProvider);
-                  final res = await api.put('${ApiConstants.certifications}/${cert.id}', body: {
-                    'skill': skillC.text.trim(),
-                    'provider': providerC.text.trim(),
-                    'description': descC.text.trim(),
-                    'issuedDate': selectedDate.toIso8601String(),
-                  });
-                  if (mounted && res.success) {
-                    Navigator.pop(context);
-                    _loadCerts();
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Edit Certification', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+              const SizedBox(height: 20),
+              _textField(skillC, 'Skill Name (e.g. AWS, React)', Icons.bolt_rounded),
+              const SizedBox(height: 12),
+              _textField(providerC, 'Provider (e.g. Coursera, Google)', Icons.business_outlined),
+              const SizedBox(height: 12),
+              _textField(descC, 'Description / Verification ID', Icons.description_outlined, maxLines: 3),
+              const SizedBox(height: 16),
+
+              // Date Picker Trigger
+              InkWell(
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime.now(),
+                    builder: (context, child) => Theme(
+                      data: Theme.of(context).copyWith(
+                        colorScheme: const ColorScheme.dark(
+                          primary: AppColors.primary,
+                          onPrimary: Colors.white,
+                          surface: AppColors.surface,
+                          onSurface: Colors.white,
+                        ),
+                      ),
+                      child: child!,
+                    ),
+                  );
+                  if (date != null) {
+                    setModalState(() => selectedDate = date);
                   }
                 },
-                child: const Text('Save Changes'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight.withAlpha(50),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.divider),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Issued Date: ${DateFormat('MMM yyyy').format(selectedDate)}',
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.edit_calendar_outlined, size: 16, color: AppColors.textMuted),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (skillC.text.isEmpty) return;
+                    final api = ref.read(apiServiceProvider);
+                    final res = await api.put('${ApiConstants.certifications}/${cert.id}', body: {
+                      'skill': skillC.text.trim(),
+                      'provider': providerC.text.trim(),
+                      'description': descC.text.trim(),
+                      'issuedDate': selectedDate.toIso8601String(),
+                    });
+                    if (mounted && res.success) {
+                      Navigator.pop(context);
+                      _loadCerts();
+                    }
+                  },
+                  child: const Text('Save Changes'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

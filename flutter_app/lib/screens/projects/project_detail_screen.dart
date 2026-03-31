@@ -180,6 +180,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
                   if (!context.mounted) return;
                   if (res.success) {
                     Navigator.pop(context);
+                    // Refresh both the updates list and the project data to reflect changes
+                    _loadProject(); 
                     _loadUpdates();
                   }
                 },

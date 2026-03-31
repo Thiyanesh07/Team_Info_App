@@ -133,6 +133,26 @@ const updateTeamProject = async (req, res) => {
       },
     });
 
+    // Handle Member Sync if memberIds provided
+    const { memberIds } = req.body;
+    if (memberIds && Array.isArray(memberIds)) {
+      await prisma.teamProjectMember.deleteMany({ where: { teamProjectId: req.params.id } });
+      await prisma.teamProjectMember.createMany({
+        data: memberIds.map(userId => ({ teamProjectId: req.params.id, userId })),
+      });
+      
+      // Re-fetch with fresh members
+      const updatedProject = await prisma.teamProject.findUnique({
+        where: { id: req.params.id },
+        include: {
+          createdBy: { select: { id: true, name: true, email: true } },
+          assignedCaptain: { select: { id: true, name: true, email: true } },
+          members: { include: { user: { select: { id: true, name: true, email: true } } } },
+        },
+      });
+      return res.json({ success: true, message: 'Project and members updated', data: updatedProject });
+    }
+
     res.json({ success: true, message: 'Project updated', data: project });
 
     // Log System Activity if completed
@@ -220,7 +240,10 @@ const addProgressUpdate = async (req, res) => {
 
     const isMember = project.members.some(m => m.userId === req.user.id);
     const isCaptain = project.assignedCaptainId === req.user.id;
-    if (!isMember && !isCaptain && req.user.role !== 'ADMIN') {
+    const leaderRoles = ['ADMIN', 'CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'];
+    const isLeader = leaderRoles.includes(req.user.role);
+
+    if (!isMember && !isCaptain && !isLeader) {
       return res.status(403).json({ success: false, message: 'Not authorized to add progress' });
     }
 
