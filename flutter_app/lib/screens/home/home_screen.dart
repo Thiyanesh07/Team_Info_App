@@ -7,7 +7,7 @@ import 'package:team_info_app/models/app_models.dart';
 import 'package:team_info_app/models/user_model.dart';
 import 'package:team_info_app/screens/analytics/analytics_screen.dart';
 import 'package:team_info_app/screens/analytics/leaderboard_screen.dart';
-import 'package:team_info_app/screens/admin/user_management_screen.dart';
+import 'package:team_info_app/screens/admin/admin_dashboard_screen.dart';
 import 'package:team_info_app/screens/activity/activity_screen.dart';
 import 'package:team_info_app/screens/projects/projects_screen.dart';
 import 'package:team_info_app/screens/hackathons/hackathons_screen.dart';
@@ -510,7 +510,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             icon: Icons.admin_panel_settings_outlined,
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const UserManagementScreen()),
+              MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
             ),
           ),
       ],

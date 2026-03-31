@@ -47,4 +47,8 @@ class ApiConstants {
   static const String assignedTasks = '/tasks/assigned';
   static const String allTasks = '/tasks/all';
   static const String tasks = '/tasks';
+
+  // Admin
+  static const String adminOverview = '/admin/overview';
+  static const String adminUserDetail = '/admin/users'; // followed by /:id/detail
 }

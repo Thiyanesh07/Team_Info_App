@@ -47,46 +47,73 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadLeaderboard,
-              child: CustomScrollView(
-                slivers: [
-                  if (_topUsers.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 32),
-                        child: _Podium(top3: _topUsers.take(3).toList()),
+          : _topUsers.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.emoji_events_outlined,
+                        size: 64,
+                        color: AppColors.textMuted.withAlpha(100),
                       ),
-                    ),
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          // Start from index 3 if we showed podium
-                          final actualIndex = _topUsers.length >= 3
-                              ? index + 3
-                              : index;
-                          if (actualIndex >= _topUsers.length) return null;
-
-                          final user = _topUsers[actualIndex];
-                          return _LeaderboardItem(
-                            user: user,
-                            rank: actualIndex + 1,
-                          );
-                        },
-                        childCount: _topUsers.length >= 3
-                            ? (_topUsers.length - 3).clamp(0, 100)
-                            : _topUsers.length,
+                      const SizedBox(height: 16),
+                      Text(
+                        'No ranking data yet',
+                        style: GoogleFonts.outfit(
+                          fontSize: 18,
+                          color: AppColors.textMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Keep working to appear on the leaderboard!',
+                        style: TextStyle(color: AppColors.textMuted),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadLeaderboard,
+                  child: CustomScrollView(
+                    slivers: [
+                      if (_topUsers.isNotEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 32),
+                            child: _Podium(top3: _topUsers.take(3).toList()),
+                          ),
+                        ),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              // Start from index 3 if we showed podium
+                              final actualIndex = _topUsers.length >= 3
+                                  ? index + 3
+                                  : index;
+                              if (actualIndex >= _topUsers.length) return null;
+
+                              final user = _topUsers[actualIndex];
+                              return _LeaderboardItem(
+                                user: user,
+                                rank: actualIndex + 1,
+                              );
+                            },
+                            childCount: _topUsers.length >= 3
+                                ? (_topUsers.length - 3).clamp(0, 100)
+                                : _topUsers.length,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
     );
   }
 }

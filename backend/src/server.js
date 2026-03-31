@@ -12,6 +12,7 @@ const { PrismaClient } = require('@prisma/client');
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
+const adminRoutes = require('./routes/admin.routes');
 const personalProjectRoutes = require('./routes/personalProject.routes');
 const teamProjectRoutes = require('./routes/teamProject.routes');
 const projectUpdateRoutes = require('./routes/projectUpdate.routes');
@@ -60,7 +61,7 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 // 3. API Rate Limiting (Protects Database from Spam & DDoS)
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes window
-  max: 250, // Limit each IP to 250 requests per window
+  max: 1000, // Increased to 1000 for development to prevent Network Errors on dashboard reloads
   message: { success: false, message: 'Too many requests from this IP, please try again later.' },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -103,6 +104,7 @@ app.get('/api/health/db', async (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/personal-projects', personalProjectRoutes);
 app.use('/api/team-projects', teamProjectRoutes);
 app.use('/api/project-updates', projectUpdateRoutes);
@@ -115,7 +117,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/tasks', taskRoutes);
-app.use('/api/activities', systemActivityRoutes); // Mount unified activities at /api/activities/unified
+app.use('/api/system-activities', systemActivityRoutes); // Remapped to /api/system-activities to resolve clash
 app.use('/api/milestones', milestoneRoutes);
 
 // ──────────────────────────────────────

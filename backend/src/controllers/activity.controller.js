@@ -101,7 +101,9 @@ const updateActivity = async (req, res) => {
   try {
     const existing = await prisma.dailyActivity.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ success: false, message: 'Not found' });
-    if (existing.userId !== req.user.id) return res.status(403).json({ success: false, message: 'Not authorized' });
+    if (existing.userId !== req.user.id && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
 
     const data = { ...req.body };
     if (data.startTime) data.startTime = new Date(data.startTime);

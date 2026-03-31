@@ -27,9 +27,15 @@ class ResourceHeatmap extends StatelessWidget {
       return _buildEmptyState();
     }
 
+    // Defensive check: ensure the first item has the required dailyHours field
+    final firstDailyHours = workloadData.first['dailyHours'];
+    if (firstDailyHours == null || (firstDailyHours as Map).isEmpty) {
+      return _buildEmptyState();
+    }
+
     // Get unique days from the data (sorted desc)
-    final days = workloadData.first['dailyHours'].keys.toList()
-      ..sort((a, b) => b.compareTo(a));
+    final days = (firstDailyHours as Map).keys.toList()
+      ..sort((a, b) => b.toString().compareTo(a.toString()));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -19,14 +19,16 @@ const getProjectUpdates = async (req, res) => {
 /** POST /api/project-updates/:projectId */
 const createProjectUpdate = async (req, res) => {
   try {
-    const { updateText } = req.body;
-    if (!updateText) return res.status(400).json({ success: false, message: 'Update text is required' });
+    const { title, description, date } = req.body;
+    if (!title) return res.status(400).json({ success: false, message: 'Title is required' });
 
     const update = await prisma.projectUpdate.create({
       data: {
         projectId: req.params.projectId,
         userId: req.user.id,
-        updateText,
+        title,
+        description,
+        date: date ? new Date(date) : new Date(),
       },
       include: { user: { select: { id: true, name: true, profileImageUrl: true } } },
     });

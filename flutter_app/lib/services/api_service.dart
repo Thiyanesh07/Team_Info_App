@@ -1,8 +1,11 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:team_info_app/services/cache_service.dart';
+
+final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();

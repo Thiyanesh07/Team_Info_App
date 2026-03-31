@@ -11,13 +11,32 @@ const getUnifiedActivity = async (req, res) => {
     
     // Fetch all types of activities
     // Note: In a large-scale app, we would use a more optimized approach (Cursor-based pagination or a single denormalized table)
+    // Get admin user IDs to filter them out for non-admin viewers
+    const isAdmin = req.user.role === 'ADMIN';
+    let adminUserIds = [];
+    if (!isAdmin) {
+      const admins = await prisma.user.findMany({
+        where: { role: 'ADMIN' },
+        select: { id: true },
+      });
+      adminUserIds = admins.map(a => a.id);
+    }
+
+    // Add filter to exclude admin activities for non-admin users
+    const userFilter = adminUserIds.length > 0
+      ? { userId: { notIn: adminUserIds } }
+      : {};
+
+    // Fetch all types of activities
     const [daily, updates, reports, system] = await Promise.all([
       prisma.dailyActivity.findMany({
+        where: userFilter,
         take: parseInt(limit),
         include: { user: { select: { id: true, name: true, profileImageUrl: true } } },
         orderBy: { createdAt: 'desc' }
       }),
       prisma.projectUpdate.findMany({
+        where: userFilter,
         take: parseInt(limit),
         include: { 
           user: { select: { id: true, name: true, profileImageUrl: true } },
@@ -26,6 +45,7 @@ const getUnifiedActivity = async (req, res) => {
         orderBy: { createdAt: 'desc' }
       }),
       prisma.taskReport.findMany({
+        where: userFilter,
         take: parseInt(limit),
         include: { 
           user: { select: { id: true, name: true, profileImageUrl: true } },
@@ -34,6 +54,7 @@ const getUnifiedActivity = async (req, res) => {
         orderBy: { createdAt: 'desc' }
       }),
       prisma.systemActivity.findMany({
+        where: userFilter,
         take: parseInt(limit),
         include: { user: { select: { id: true, name: true, profileImageUrl: true } } },
         orderBy: { createdAt: 'desc' }
@@ -54,8 +75,8 @@ const getUnifiedActivity = async (req, res) => {
       ...updates.map(u => ({
         id: u.id,
         userId: u.userId,
-        title: `Updated ${u.project.projectName}`,
-        content: u.updateText,
+        title: `${u.user.name} updated ${u.project.projectName}`,
+        content: u.title + (u.description ? `: ${u.description}` : ''),
         timestamp: u.createdAt,
         type: 'PROJECT_UPDATE',
         user: u.user,

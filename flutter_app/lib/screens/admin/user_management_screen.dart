@@ -186,19 +186,21 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               const SizedBox(height: 12),
               _formField(emailC, 'Google Email', Icons.email_outlined),
               const SizedBox(height: 12),
-              _formField(
-                rewardPointsC,
-                'Initial Reward Points',
-                Icons.stars_rounded,
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 12),
-              _formField(
-                activityPointsC,
-                'Initial Activity Points',
-                Icons.local_fire_department_outlined,
-                keyboardType: TextInputType.number,
-              ),
+              if (selectedRole != 'ADMIN') ...[
+                _formField(
+                  rewardPointsC,
+                  'Initial Reward Points',
+                  Icons.stars_rounded,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                _formField(
+                  activityPointsC,
+                  'Initial Activity Points',
+                  Icons.local_fire_department_outlined,
+                  keyboardType: TextInputType.number,
+                ),
+              ],
               const SizedBox(height: 16),
               const Text(
                 'Assigned Role',
@@ -317,23 +319,25 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             const SizedBox(height: 20),
             _formField(nameC, 'Full Name', Icons.person_outline),
             const SizedBox(height: 12),
-            _formField(regNoC, 'Register No', Icons.badge_outlined),
-            const SizedBox(height: 12),
-            _formField(deptC, 'Department', Icons.business_outlined),
-            const SizedBox(height: 12),
-            _formField(
-              rewardPointsC,
-              'Reward Points',
-              Icons.stars_rounded,
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            _formField(
-              activityPointsC,
-              'Activity Points',
-              Icons.local_fire_department_outlined,
-              keyboardType: TextInputType.number,
-            ),
+            if (user.role != UserRole.admin) ...[
+              _formField(regNoC, 'Register No', Icons.badge_outlined),
+              const SizedBox(height: 12),
+              _formField(deptC, 'Department', Icons.business_outlined),
+              const SizedBox(height: 12),
+              _formField(
+                rewardPointsC,
+                'Reward Points',
+                Icons.stars_rounded,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 12),
+              _formField(
+                activityPointsC,
+                'Activity Points',
+                Icons.local_fire_department_outlined,
+                keyboardType: TextInputType.number,
+              ),
+            ],
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -417,6 +421,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               if (res.success) {
                 Navigator.pop(dialogContext);
                 _loadUsers();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Member deleted successfully')),
+                );
+              } else {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  SnackBar(
+                    content: Text(res.message ?? 'Failed to delete member'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
               }
             },
             child: const Text(
@@ -431,10 +445,24 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   Future<void> _updateUserRole(String userId, String role) async {
     final res = await _api.put(
-      '${ApiConstants.users}/$userId',
+      '${ApiConstants.users}/$userId/role',
       body: {'role': role},
     );
-    if (res.success) _loadUsers();
+    if (res.success) {
+      _loadUsers();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Role updated successfully')),
+        );
+      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res.message ?? 'Failed to update role'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   @override
@@ -580,14 +608,15 @@ class _UserCard extends StatelessWidget {
             margin: const EdgeInsets.symmetric(vertical: 4),
           ),
         ),
-        const PopupMenuItem(
-          value: 'delete',
-          child: _MenuAction(
-            Icons.delete_outline_rounded,
-            'Delete Account',
-            isDestructive: true,
+        if (user.id != _api.getCached(ApiConstants.me)?['id'])
+          const PopupMenuItem(
+            value: 'delete',
+            child: _MenuAction(
+              Icons.delete_outline_rounded,
+              'Delete Account',
+              isDestructive: true,
+            ),
           ),
-        ),
       ],
       onSelected: (v) {
         if (v == 'edit') onEdit();

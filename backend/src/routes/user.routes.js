@@ -9,6 +9,7 @@ router.get('/', isLeader, getAllUsers);
 router.get('/:id', getUserById);
 router.put('/profile', updateProfile);
 router.put('/:id', isAdmin, adminUpdateUser);
+router.put('/:id/role', isAdmin, assignRole);
 router.post('/create', isAdmin, createUser);
 router.delete('/:id', isAdmin, deleteUser);
 

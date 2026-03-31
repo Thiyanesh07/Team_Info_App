@@ -185,7 +185,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                             children: [
                               Text(
                                 _selectedDeadline != null 
-                                  ? "\${_selectedDeadline!.year}-\${_selectedDeadline!.month.toString().padLeft(2, '0')}-\${_selectedDeadline!.day.toString().padLeft(2, '0')}" 
+                                  ? "${_selectedDeadline!.year}-${_selectedDeadline!.month.toString().padLeft(2, '0')}-${_selectedDeadline!.day.toString().padLeft(2, '0')}" 
                                   : 'Select date',
                                 style: TextStyle(color: _selectedDeadline != null ? Colors.white : AppColors.textMuted),
                               ),

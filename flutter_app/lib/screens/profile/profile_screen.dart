@@ -9,7 +9,9 @@ import 'package:team_info_app/models/user_model.dart';
 import 'package:team_info_app/services/api_service.dart';
 import 'package:team_info_app/screens/profile/edit_profile_screen.dart';
 import 'package:team_info_app/screens/skills/skills_screen.dart';
+import 'package:team_info_app/screens/profile/certifications_screen.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:team_info_app/core/enums/user_role.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -194,55 +196,61 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Rank Progress Card
-            _buildRankCard(user),
-            const SizedBox(height: 24),
+            // Rank Progress Card (Hide for Admin)
+            if (user.role != UserRole.admin) ...[
+              _buildRankCard(user),
+              const SizedBox(height: 24),
+            ],
 
-            // Info Cards
-            _InfoSection(
-              title: 'Basic Info',
-              children: [
-                if (user.regNo != null) _InfoTile('Reg No', user.regNo!),
-                if (user.department != null)
-                  _InfoTile('Department', user.department!),
-                if (user.year != null) _InfoTile('Year', user.year!),
-                if (user.mobile != null) _InfoTile('Mobile', user.mobile!),
-                if (user.cgpa != null) _InfoTile('CGPA', user.cgpa.toString()),
-              ],
-            ),
-            const SizedBox(height: 16),
+            // Info Cards (Hide for Admin as they aren't students)
+            if (user.role != UserRole.admin) ...[
+              _InfoSection(
+                title: 'Basic Info',
+                children: [
+                  if (user.regNo != null) _InfoTile('Reg No', user.regNo!),
+                  if (user.department != null)
+                    _InfoTile('Department', user.department!),
+                  if (user.year != null) _InfoTile('Year', user.year!),
+                  if (user.mobile != null) _InfoTile('Mobile', user.mobile!),
+                  if (user.cgpa != null) _InfoTile('CGPA', user.cgpa.toString()),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
 
-            // Stats
-            Row(
-              children: [
-                Expanded(
-                  child: _StatChip(
-                    'Reward Pts',
-                    user.rewardPoints.toString(),
-                    AppColors.primary,
-                    onTap: () => _editPoints(
-                      fieldKey: 'rewardPoints',
-                      label: 'Reward Points',
-                      currentValue: user.rewardPoints,
+            // Stats (Hide for Admin)
+            if (user.role != UserRole.admin) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: _StatChip(
+                      'Reward Pts',
+                      user.rewardPoints.toString(),
+                      AppColors.primary,
+                      onTap: () => _editPoints(
+                        fieldKey: 'rewardPoints',
+                        label: 'Reward Points',
+                        currentValue: user.rewardPoints,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _StatChip(
-                    'Activity Pts',
-                    user.activityPoints.toString(),
-                    AppColors.secondary,
-                    onTap: () => _editPoints(
-                      fieldKey: 'activityPoints',
-                      label: 'Activity Points',
-                      currentValue: user.activityPoints,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _StatChip(
+                      'Activity Pts',
+                      user.activityPoints.toString(),
+                      AppColors.secondary,
+                      onTap: () => _editPoints(
+                        fieldKey: 'activityPoints',
+                        label: 'Activity Points',
+                        currentValue: user.activityPoints,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // Skills Portfolio
             _InfoSection(
@@ -250,23 +258,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               children: [
                 _buildSkillsPreview(context, user),
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SkillsScreen()),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SkillsScreen()),
+                        ),
+                        icon: const Icon(Icons.bolt_rounded, size: 18),
+                        label: const Text('Skills'),
+                      ),
                     ),
-                    icon: const Icon(Icons.bolt_rounded, size: 18),
-                    label: const Text('Manage Portfolio Cards'),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CertificationsScreen()),
+                        ),
+                        icon: const Icon(Icons.workspace_premium_rounded, size: 18),
+                        label: const Text('Certs'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
             const SizedBox(height: 16),
 
-            // Social Links
-            if (_hasSocialLinks(user)) ...[
+            // Social Links (Hide for Admin)
+            if (user.role != UserRole.admin && _hasSocialLinks(user)) ...[
               const SizedBox(height: 16),
               _InfoSection(
                 title: 'Social Links',

@@ -52,7 +52,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   }
 
   Future<void> _loadReports() async {
-    final res = await _api.get('\${ApiConstants.tasks}/\${widget.taskId}/reports');
+    final res = await _api.get("${ApiConstants.tasks}/${widget.taskId}/reports");
     if (res.success && mounted) {
       setState(() {
         _reports = (res.data as List).map((e) => TaskReport.fromJson(e)).toList();
@@ -62,7 +62,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
 
   Future<void> _updateStatus(String newStatus) async {
     final messenger = ScaffoldMessenger.of(context);
-    final res = await _api.put('\${ApiConstants.tasks}/\${widget.taskId}/status', body: {'status': newStatus});
+    final res = await _api.put("${ApiConstants.tasks}/${widget.taskId}/status", body: {'status': newStatus});
     if (!mounted) return;
     if (res.success) {
       messenger.showSnackBar(const SnackBar(content: Text('Status updated')));
@@ -75,7 +75,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   Future<void> _submitReport() async {
     if (_reportController.text.trim().isEmpty) return;
     
-    final res = await _api.post('\${ApiConstants.tasks}/\${widget.taskId}/reports', body: {'reportText': _reportController.text.trim()});
+    final res = await _api.post("${ApiConstants.tasks}/${widget.taskId}/reports", body: {'reportText': _reportController.text.trim()});
     if (res.success) {
       _reportController.clear();
       _loadReports();
@@ -97,7 +97,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     if (!mounted) return;
     if (confirm == true) {
       final nav = Navigator.of(context);
-      final res = await _api.delete('\${ApiConstants.tasks}/\${widget.taskId}');
+      final res = await _api.delete("${ApiConstants.tasks}/${widget.taskId}");
       if (!mounted) return;
       if (res.success) {
         nav.pop(true);
@@ -146,9 +146,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                     const SizedBox(height: 16),
                   ],
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildInfoChip(Icons.person, "To: \${_task!.assignedTo?['name'] ?? 'U'}"),
+                      _buildInfoChip(Icons.person, "To: ${_task!.assignedTo?['name'] ?? 'U'}"),
                       _buildInfoChip(Icons.flag, _task!.priority),
                     ],
                   ),
@@ -156,7 +155,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildInfoChip(Icons.person_outline, "By: \${_task!.assignedBy?['name'] ?? 'U'}"),
+                      _buildInfoChip(Icons.person_outline, "By: ${_task!.assignedBy?['name'] ?? 'U'}"),
                       _buildInfoChip(Icons.watch_later, _task!.status),
                     ],
                   ),
