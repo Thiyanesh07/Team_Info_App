@@ -88,6 +88,7 @@ class _SkillsScreenState extends State<SkillsScreen> {
                     _SkillCard(
                           skill: _skills[i],
                           onDelete: () => _deleteSkill(_skills[i].id),
+                          onEdit: () => _showEditSkillDialog(_skills[i]),
                           onTap: () async {
                             final res = await _api.put(
                               '${ApiConstants.psSkills}/${_skills[i].id}',
@@ -233,6 +234,100 @@ class _SkillsScreenState extends State<SkillsScreen> {
     );
   }
 
+  void _showEditSkillDialog(PsSkill skill) {
+    final nameC = TextEditingController(text: skill.skillName);
+    String type = skill.type;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Edit Skill Card',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: nameC,
+                decoration: const InputDecoration(
+                  hintText: 'Skill Name (e.g. Flutter, UX Design)',
+                ),
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Category',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _TypeChip(
+                    label: 'TECHNICAL',
+                    current: type,
+                    onTap: () => setModalState(() => type = 'TECHNICAL'),
+                  ),
+                  const SizedBox(width: 10),
+                  _TypeChip(
+                    label: 'NON_TECHNICAL',
+                    current: type,
+                    onTap: () => setModalState(() => type = 'NON_TECHNICAL'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (nameC.text.isEmpty) return;
+                    final res = await _api.put(
+                      '${ApiConstants.psSkills}/${skill.id}',
+                      body: {
+                        'skillName': nameC.text,
+                        'type': type,
+                      },
+                    );
+                    if (!context.mounted) return;
+                    if (res.success) {
+                      Navigator.pop(context);
+                      _loadSkills();
+                    }
+                  },
+                  child: const Text('Save Changes'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _deleteSkill(String id) async {
     final res = await _api.delete('${ApiConstants.psSkills}/$id');
     if (res.success) _loadSkills();
@@ -281,11 +376,13 @@ class _TypeChip extends StatelessWidget {
 class _SkillCard extends StatelessWidget {
   final PsSkill skill;
   final VoidCallback onDelete;
+  final VoidCallback onEdit;
   final VoidCallback onTap;
 
   const _SkillCard({
     required this.skill,
     required this.onDelete,
+    required this.onEdit,
     required this.onTap,
   });
 
@@ -368,13 +465,25 @@ class _SkillCard extends StatelessWidget {
             Positioned(
               bottom: -10,
               right: -10,
-              child: IconButton(
-                icon: const Icon(
-                  Icons.delete_outline_rounded,
-                  size: 18,
-                  color: AppColors.textMuted,
-                ),
-                onPressed: onDelete,
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      size: 16,
+                      color: AppColors.textMuted,
+                    ),
+                    onPressed: onEdit,
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      size: 16,
+                      color: AppColors.textMuted,
+                    ),
+                    onPressed: onDelete,
+                  ),
+                ],
               ),
             ),
           ],

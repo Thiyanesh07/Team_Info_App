@@ -22,6 +22,7 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
   late TabController _tabController;
   List<PersonalProject> _personalProjects = [];
   List<TeamProject> _teamProjects = [];
+  List<dynamic> _allUsers = [];
   bool _loadingPersonal = true, _loadingTeam = true;
 
   @override
@@ -34,6 +35,14 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
   Future<void> _loadAll() async {
     _loadPersonalProjects();
     _loadTeamProjects();
+    _loadUsers();
+  }
+
+  Future<void> _loadUsers() async {
+    final res = await _api.get(ApiConstants.users);
+    if (res.success && mounted) {
+      setState(() => _allUsers = res.data as List);
+    }
   }
 
   Future<void> _loadPersonalProjects() async {
@@ -107,8 +116,8 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
         itemBuilder: (_, i) =>
             _PersonalProjectCard(
                   project: _personalProjects[i],
-                  onDelete: () =>
-                      _deletePersonalProject(_personalProjects[i].id),
+                  onDelete: () => _deletePersonalProject(_personalProjects[i].id),
+                  onEdit: () => _showEditPersonalProjectDialog(_personalProjects[i]),
                 )
                 .animate()
                 .fade(duration: 400.ms, delay: (i * 100).ms)
@@ -131,10 +140,19 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: _teamProjects.length,
-        itemBuilder: (_, i) => _TeamProjectCard(project: _teamProjects[i])
-            .animate()
-            .fade(duration: 400.ms, delay: (i * 100).ms)
-            .slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
+        itemBuilder: (_, i) {
+          final user = ref.read(authProvider).user;
+          final isCreator = _teamProjects[i].createdBy?['id'] == user?.id;
+          final isAdmin = user?.role == UserRole.admin;
+          return _TeamProjectCard(
+                project: _teamProjects[i],
+                onDelete: (isCreator || isAdmin) ? () => _deleteTeamProject(_teamProjects[i].id) : null,
+                onEdit: (isCreator || isAdmin) ? () => _showEditTeamProjectDialog(_teamProjects[i]) : null,
+              )
+              .animate()
+              .fade(duration: 400.ms, delay: (i * 100).ms)
+              .slideY(begin: 0.1, end: 0, curve: Curves.easeOut);
+        },
       ),
     );
   }
@@ -256,15 +274,13 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
               child: ElevatedButton(
                 onPressed: () async {
                   if (nameC.text.isEmpty) return;
-                  final res = await _api.post(
-                    ApiConstants.personalProjects,
-                    body: {
-                      'name': nameC.text,
-                      'description': descC.text,
-                      'githubLink': githubC.text,
-                      'liveLink': liveC.text,
-                    },
-                  );
+                  final body = {
+                    'name': nameC.text,
+                    'description': descC.text,
+                    'githubLink': githubC.text,
+                    'liveLink': liveC.text,
+                  };
+                  final res = await _api.post(ApiConstants.personalProjects, body: body);
                   if (!context.mounted) return;
                   if (res.success) {
                     Navigator.pop(context);
@@ -280,10 +296,11 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
     );
   }
 
-  void _showAddTeamProjectDialog(BuildContext context) {
-    final nameC = TextEditingController();
-    final domainC = TextEditingController();
-    final problemC = TextEditingController();
+  void _showEditPersonalProjectDialog(PersonalProject project) {
+    final nameC = TextEditingController(text: project.name);
+    final descC = TextEditingController(text: project.description);
+    final githubC = TextEditingController(text: project.githubLink);
+    final liveC = TextEditingController(text: project.liveLink);
 
     showModalBottomSheet(
       context: context,
@@ -304,7 +321,7 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Create Team Project',
+              'Edit Personal Project',
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -319,16 +336,22 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: domainC,
-              decoration: const InputDecoration(hintText: 'Domain'),
+              controller: descC,
+              decoration: const InputDecoration(hintText: 'Description'),
+              style: const TextStyle(color: Colors.white),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: githubC,
+              decoration: const InputDecoration(hintText: 'GitHub Link'),
               style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: problemC,
-              decoration: const InputDecoration(hintText: 'Problem Statement'),
+              controller: liveC,
+              decoration: const InputDecoration(hintText: 'Live Link'),
               style: const TextStyle(color: Colors.white),
-              maxLines: 3,
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -337,27 +360,319 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
               child: ElevatedButton(
                 onPressed: () async {
                   if (nameC.text.isEmpty) return;
-                  final res = await _api.post(
-                    ApiConstants.teamProjects,
-                    body: {
-                      'projectName': nameC.text,
-                      'domain': domainC.text,
-                      'problemStatement': problemC.text,
-                    },
-                  );
+                  final body = {
+                    'name': nameC.text,
+                    'description': descC.text,
+                    'githubLink': githubC.text,
+                    'liveLink': liveC.text,
+                  };
+                  final res = await _api.put('${ApiConstants.personalProjects}/${project.id}', body: body);
                   if (!context.mounted) return;
                   if (res.success) {
                     Navigator.pop(context);
-                    if (mounted) _loadTeamProjects();
+                    if (mounted) _loadPersonalProjects();
                   }
                 },
-                child: const Text('Create Project'),
+                child: const Text('Save Changes'),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _showAddTeamProjectDialog(BuildContext context) {
+    if (_allUsers.isEmpty) _loadUsers();
+    final nameC = TextEditingController();
+    final domainC = TextEditingController();
+    final problemC = TextEditingController();
+    String? selectedCaptainId;
+    List<String> selectedMemberIds = [];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Create Team Project',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameC,
+                  decoration: const InputDecoration(hintText: 'Project Name *'),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: domainC,
+                  decoration: const InputDecoration(hintText: 'Domain'),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: problemC,
+                  decoration: const InputDecoration(hintText: 'Problem Statement'),
+                  style: const TextStyle(color: Colors.white),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 20),
+                Text('Assigned Captain', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardDark,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.divider),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedCaptainId,
+                      isExpanded: true,
+                      dropdownColor: AppColors.surface,
+                      hint: const Text('Select captain', style: TextStyle(color: AppColors.textMuted)),
+                      items: _allUsers.map((u) => DropdownMenuItem(
+                        value: u['id'] as String,
+                        child: Text(u['name'], style: const TextStyle(color: Colors.white)),
+                      )).toList(),
+                      onChanged: (val) => setModalState(() => selectedCaptainId = val),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text('Team Members', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: _allUsers.map((u) {
+                    final isSelected = selectedMemberIds.contains(u['id']);
+                    return FilterChip(
+                      label: Text(u['name'], style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontSize: 12)),
+                      selected: isSelected,
+                      onSelected: (val) {
+                        setModalState(() {
+                          if (val) {
+                            selectedMemberIds.add(u['id']);
+                          } else {
+                            selectedMemberIds.remove(u['id']);
+                          }
+                        });
+                      },
+                      selectedColor: AppColors.primary.withAlpha(100),
+                      checkmarkColor: Colors.white,
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 30),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (nameC.text.isEmpty) return;
+                      final res = await _api.post(
+                        ApiConstants.teamProjects,
+                        body: {
+                          'projectName': nameC.text,
+                          'domain': domainC.text,
+                          'problemStatement': problemC.text,
+                          'assignedCaptainId': selectedCaptainId,
+                          'memberIds': selectedMemberIds,
+                        },
+                      );
+                      if (!context.mounted) return;
+                      if (res.success) {
+                        Navigator.pop(context);
+                        if (mounted) _loadTeamProjects();
+                      }
+                    },
+                    child: const Text('Create Project'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditTeamProjectDialog(TeamProject project) {
+    final nameC = TextEditingController(text: project.projectName);
+    final domainC = TextEditingController(text: project.domain);
+    final problemC = TextEditingController(text: project.problemStatement);
+    String? selectedCaptainId = project.assignedCaptain?['id'];
+    List<String> selectedMemberIds = project.members.map((m) => m.userId).toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Edit Team Project',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameC,
+                  decoration: const InputDecoration(hintText: 'Project Name *'),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: domainC,
+                  decoration: const InputDecoration(hintText: 'Domain'),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: problemC,
+                  decoration: const InputDecoration(hintText: 'Problem Statement'),
+                  style: const TextStyle(color: Colors.white),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 20),
+                Text('Assigned Captain', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardDark,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.divider),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedCaptainId,
+                      isExpanded: true,
+                      dropdownColor: AppColors.surface,
+                      hint: const Text('Select captain', style: TextStyle(color: AppColors.textMuted)),
+                      items: _allUsers.map((u) => DropdownMenuItem(
+                        value: u['id'] as String,
+                        child: Text(u['name'], style: const TextStyle(color: Colors.white)),
+                      )).toList(),
+                      onChanged: (val) => setModalState(() => selectedCaptainId = val),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text('Team Members', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: _allUsers.map((u) {
+                    final isSelected = selectedMemberIds.contains(u['id']);
+                    return FilterChip(
+                      label: Text(u['name'], style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontSize: 12)),
+                      selected: isSelected,
+                      onSelected: (val) {
+                        setModalState(() {
+                          if (val) {
+                            selectedMemberIds.add(u['id']);
+                          } else {
+                            selectedMemberIds.remove(u['id']);
+                          }
+                        });
+                      },
+                      selectedColor: AppColors.primary.withAlpha(100),
+                      checkmarkColor: Colors.white,
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 30),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (nameC.text.isEmpty) return;
+                      final res = await _api.put(
+                        '${ApiConstants.teamProjects}/${project.id}',
+                        body: {
+                          'projectName': nameC.text,
+                          'domain': domainC.text,
+                          'problemStatement': problemC.text,
+                          'assignedCaptainId': selectedCaptainId,
+                          'memberIds': selectedMemberIds,
+                        },
+                      );
+                      if (!context.mounted) return;
+                      if (res.success) {
+                        Navigator.pop(context);
+                        if (mounted) _loadTeamProjects();
+                      }
+                    },
+                    child: const Text('Save Changes'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteTeamProject(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Delete Project', style: TextStyle(color: Colors.white)),
+        content: const Text('Are you sure you want to delete this team project?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: AppColors.error))),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final res = await _api.delete('${ApiConstants.teamProjects}/$id');
+      if (res.success) _loadTeamProjects();
+    }
   }
 
   Future<void> _deletePersonalProject(String id) async {
@@ -375,8 +690,13 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
 class _PersonalProjectCard extends StatelessWidget {
   final PersonalProject project;
   final VoidCallback onDelete;
+  final VoidCallback onEdit;
 
-  const _PersonalProjectCard({required this.project, required this.onDelete});
+  const _PersonalProjectCard({
+    required this.project,
+    required this.onDelete,
+    required this.onEdit,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -425,6 +745,13 @@ class _PersonalProjectCard extends StatelessWidget {
                 color: AppColors.surface,
                 itemBuilder: (_) => [
                   const PopupMenuItem(
+                    value: 'edit',
+                    child: Text(
+                      'Edit',
+                      style: TextStyle(color: AppColors.primary),
+                    ),
+                  ),
+                  const PopupMenuItem(
                     value: 'delete',
                     child: Text(
                       'Delete',
@@ -433,6 +760,7 @@ class _PersonalProjectCard extends StatelessWidget {
                   ),
                 ],
                 onSelected: (v) {
+                  if (v == 'edit') onEdit();
                   if (v == 'delete') onDelete();
                 },
               ),
@@ -473,7 +801,9 @@ class _PersonalProjectCard extends StatelessWidget {
 
 class _TeamProjectCard extends StatelessWidget {
   final TeamProject project;
-  const _TeamProjectCard({required this.project});
+  final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
+  const _TeamProjectCard({required this.project, this.onDelete, this.onEdit});
 
   Color get _statusColor {
     switch (project.status) {
@@ -593,6 +923,37 @@ class _TeamProjectCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (onEdit != null || onDelete != null)
+                          PopupMenuButton(
+                            icon: const Icon(
+                              Icons.more_vert,
+                              color: AppColors.textMuted,
+                              size: 20,
+                            ),
+                            color: AppColors.surface,
+                            itemBuilder: (_) => [
+                              if (onEdit != null)
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: Text(
+                                    'Edit',
+                                    style: TextStyle(color: AppColors.primary),
+                                  ),
+                                ),
+                              if (onDelete != null)
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text(
+                                    'Delete',
+                                    style: TextStyle(color: AppColors.error),
+                                  ),
+                                ),
+                            ],
+                            onSelected: (v) {
+                              if (v == 'edit') onEdit!();
+                              if (v == 'delete') onDelete!();
+                            },
+                          ),
                       ],
                     ),
                     if (project.members.isNotEmpty) ...[

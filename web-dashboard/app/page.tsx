@@ -97,8 +97,8 @@ export default function Dashboard() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <h1 className="text-4xl font-black tracking-tighter text-white">Team Pulse</h1>
-            <p className="text-slate-400 mt-2 font-medium">Real-time administrative oversight and system health.</p>
+            <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic">Engineering Pulse</h1>
+            <p className="text-slate-400 mt-2 font-medium italic">High-fidelity administrative oversight and tactical system health.</p>
           </motion.div>
           <div className="flex gap-3">
              <div className="px-4 py-2 bg-slate-900 border border-slate-800 rounded-2xl flex items-center gap-2">
@@ -232,37 +232,51 @@ export default function Dashboard() {
             </div>
           </motion.div>
 
-          {/* Recent Activity */}
-          <motion.div 
+           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8 }}
-            className="bg-slate-900 border border-slate-800 rounded-3xl p-8 backdrop-blur-xl"
+            className="bg-slate-900 border border-slate-800 rounded-3xl p-8 backdrop-blur-xl relative overflow-hidden"
           >
+            <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+               <Activity size={120} className="text-blue-500" />
+            </div>
             <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2">
-               <History size={20} className="text-slate-400" />
-               System Timeline
+               <History size={20} className="text-blue-500" />
+               Pulse Activity Stream
             </h3>
-            <div className="space-y-6">
+            <div className="space-y-6 relative z-10">
                {data.recentActivities?.length > 0 ? data.recentActivities.map((activity: any) => (
                  <div key={activity.id} className="flex gap-4 group">
                     <div className="flex flex-col items-center">
-                       <div className="h-8 w-8 bg-slate-950 border border-slate-800 rounded-lg flex items-center justify-center text-blue-500 shadow-lg">
-                          <Activity size={14} />
+                       <div className="h-10 w-10 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-center text-blue-500 shadow-xl group-hover:border-blue-500/30 transition-all">
+                          <Zap size={16} className={cn(
+                             activity.type.includes('COMPLETED') ? "text-emerald-500" : 
+                             activity.type.includes('ADDED') ? "text-blue-500" : "text-amber-500"
+                          )} />
                        </div>
                        <div className="w-px flex-1 bg-slate-800/50 my-2" />
                     </div>
-                    <div className="pb-6">
-                       <p className="text-sm font-medium text-slate-300">
-                          <span className="text-blue-400 font-bold">@{activity.user?.name || 'System'}</span> {activity.content}
+                    <div className="pb-4">
+                       <p className="text-base font-bold text-slate-200 leading-snug">
+                          <span className="text-blue-400 font-black tracking-tight">@{activity.user?.name || 'SYSTEM'}</span> {activity.content}
                        </p>
-                       <p className="text-[10px] font-black text-slate-600 uppercase mt-1 tracking-widest">
-                          {new Date(activity.createdAt).toLocaleTimeString()} • {activity.type}
-                       </p>
+                       <div className="flex items-center gap-3 mt-1.5">
+                          <span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
+                             {new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <div className="h-1 w-1 rounded-full bg-slate-700" />
+                          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-[8px] font-black text-blue-500/80 border border-blue-500/10 uppercase tracking-widest leading-none">
+                             {activity.type.replace('_', ' ')}
+                          </span>
+                       </div>
                     </div>
                  </div>
                )) : (
-                 <p className="text-sm italic text-slate-500 p-4 border border-slate-800 border-dashed rounded-2xl text-center">System logs are empty</p>
+                 <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-3xl">
+                    <Activity size={40} className="mx-auto mb-4 opacity-10" />
+                    <p className="text-sm italic text-slate-600 font-bold uppercase tracking-widest">Awaiting Pulse Signal...</p>
+                 </div>
                )}
             </div>
           </motion.div>

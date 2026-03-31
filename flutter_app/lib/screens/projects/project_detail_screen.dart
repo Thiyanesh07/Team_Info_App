@@ -19,12 +19,19 @@ class ProjectDetailScreen extends ConsumerStatefulWidget {
 
 class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
   List<ProjectMilestone> _milestones = [];
+  List<ProjectUpdate> _updates = [];
   bool _loadingMilestones = true;
+  bool _loadingUpdates = true;
 
   @override
   void initState() {
     super.initState();
+    _loadAll();
+  }
+
+  Future<void> _loadAll() async {
     _loadMilestones();
+    _loadUpdates();
   }
 
   Future<void> _loadMilestones() async {
@@ -35,6 +42,18 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
         _milestones = milestones;
         _loadingMilestones = false;
       });
+    }
+  }
+
+  Future<void> _loadUpdates() async {
+    final res = await ApiService().get('${ApiConstants.teamProjects}/${widget.project.id}/progress');
+    if (res.success && mounted) {
+      setState(() {
+        _updates = (res.data as List).map((e) => ProjectUpdate.fromJson(e)).toList();
+        _loadingUpdates = false;
+      });
+    } else if (mounted) {
+      setState(() => _loadingUpdates = false);
     }
   }
 
@@ -63,6 +82,22 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
                   _buildSectionTitle('Strike Team', Icons.groups_rounded),
                   const SizedBox(height: 16),
                   _buildMembersList(),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildSectionTitle('Recent Activity', Icons.history_rounded),
+                      if (_isMemberOrAdmin())
+                        TextButton.icon(
+                          onPressed: () => _showAddUpdateDialog(),
+                          icon: const Icon(Icons.add_circle_outline, size: 18),
+                          label: const Text('New Update'),
+                          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildUpdatesList(),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -70,6 +105,152 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  bool _isMemberOrAdmin() {
+    final user = ref.read(authProvider).user;
+    if (user?.role == UserRole.admin) return true;
+    final isCaptain = widget.project.assignedCaptain?['id'] == user?.id;
+    final isMember = widget.project.members.any((m) => m.userId == user?.id);
+    return isCaptain || isMember;
+  }
+
+  void _showAddUpdateDialog() {
+    final titleC = TextEditingController();
+    final descC = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Post Progress Update',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: titleC,
+              decoration: const InputDecoration(hintText: 'Update Title (e.g., Completed API integration) *'),
+              style: const TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descC,
+              decoration: const InputDecoration(hintText: 'Detailed description...'),
+              style: const TextStyle(color: Colors.white),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (titleC.text.isEmpty) return;
+                  final res = await ApiService().post(
+                    '${ApiConstants.teamProjects}/${widget.project.id}/progress',
+                    body: {
+                      'title': titleC.text,
+                      'description': descC.text,
+                    },
+                  );
+                  if (!context.mounted) return;
+                  if (res.success) {
+                    Navigator.pop(context);
+                    _loadUpdates();
+                  }
+                },
+                child: const Text('Post Update'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpdatesList() {
+    if (_loadingUpdates) return const Center(child: CircularProgressIndicator());
+    if (_updates.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Text(
+            'No progress updates yet.',
+            style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: _updates.map((update) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLight.withAlpha(50),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.divider.withAlpha(50)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 12,
+                  backgroundColor: AppColors.secondary.withAlpha(30),
+                  child: Text(
+                    (update.user?['name'] ?? 'U')[0],
+                    style: const TextStyle(fontSize: 10, color: AppColors.secondary, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  update.user?['name'] ?? 'Unknown',
+                  style: GoogleFonts.inter(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const Spacer(),
+                Text(
+                  update.createdAt?.split('T')[0] ?? '',
+                  style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 10),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              update.title,
+              style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+            if (update.description != null && update.description!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                update.description!,
+                style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, height: 1.4),
+              ),
+            ],
+          ],
+        ),
+      )).toList(),
     );
   }
 

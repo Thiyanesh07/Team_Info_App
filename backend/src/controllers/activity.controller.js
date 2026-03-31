@@ -45,7 +45,9 @@ const getUserActivities = async (req, res) => {
     }
 
     const activities = await prisma.dailyActivity.findMany({
-      where, orderBy: { date: 'desc' },
+      where,
+      include: { user: { select: { id: true, name: true, profileImageUrl: true } } },
+      orderBy: { date: 'desc' },
     });
     res.json({ success: true, data: activities });
   } catch (error) {

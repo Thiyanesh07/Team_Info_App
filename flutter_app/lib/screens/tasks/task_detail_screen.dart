@@ -62,7 +62,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
 
   Future<void> _updateStatus(String newStatus) async {
     final messenger = ScaffoldMessenger.of(context);
-    final res = await _api.put("${ApiConstants.tasks}/${widget.taskId}/status", body: {'status': newStatus});
+    final res = await _api.patch("${ApiConstants.tasks}/${widget.taskId}/status", body: {'status': newStatus});
     if (!mounted) return;
     if (res.success) {
       messenger.showSnackBar(const SnackBar(content: Text('Status updated')));
@@ -221,6 +221,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                   Expanded(
                     child: TextField(
                       controller: _reportController,
+                      maxLines: null,
+                      keyboardType: TextInputType.multiline,
                       decoration: InputDecoration(
                         hintText: 'Add a progress report...',
                         filled: true,

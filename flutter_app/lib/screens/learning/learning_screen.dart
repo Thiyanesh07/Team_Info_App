@@ -67,6 +67,8 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
                 itemBuilder: (_, i) =>
                     _LearningCard(
                           learning: _learnings[i],
+                          onDelete: () => _deleteLearning(_learnings[i].id),
+                          onEdit: () => _showEditLearningDialog(_learnings[i]),
                           onRefresh: _loadLearnings,
                         )
                         .animate()
@@ -108,6 +110,141 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
               .fade(duration: 600.ms)
               .scale(duration: 600.ms, curve: Curves.easeOutBack),
     );
+  }
+
+  void _showEditLearningDialog(Learning learning) {
+    final skillC = TextEditingController(text: learning.skillName);
+    final topicsC = TextEditingController(text: learning.topics.join(', '));
+    String level = learning.level;
+    String status = learning.status;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cardDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Edit Skill tracker',
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: skillC,
+                decoration: const InputDecoration(
+                  hintText: 'Skill Name (e.g., Flutter, Node.js) *',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: topicsC,
+                decoration: const InputDecoration(
+                  hintText: 'Topics covered (comma separated)',
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('Level', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED']
+                    .map((l) => GestureDetector(
+                  onTap: () => setModalState(() => level = l),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: level == l ? AppColors.primary.withAlpha(30) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: level == l ? AppColors.primary : AppColors.divider),
+                    ),
+                    child: Text(l, style: TextStyle(color: level == l ? AppColors.primary : Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+                )).toList(),
+              ),
+              const SizedBox(height: 16),
+              const Text('Status', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              const SizedBox(height: 8),
+              Row(
+                children: ['ONGOING', 'COMPLETED'].map((s) => GestureDetector(
+                  onTap: () => setModalState(() => status = s),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: status == s ? AppColors.success.withAlpha(30) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: status == s ? AppColors.success : AppColors.divider),
+                    ),
+                    child: Text(s, style: TextStyle(color: status == s ? AppColors.success : Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+                )).toList(),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (skillC.text.isEmpty) return;
+                    final res = await _api.put(
+                      '${ApiConstants.learning}/${learning.id}',
+                      body: {
+                        'skillName': skillC.text,
+                        'level': level,
+                        'topics': topicsC.text.split(',').map((e) => e.trim()).toList(),
+                        'status': status,
+                      },
+                    );
+                    if (!context.mounted) return;
+                    if (res.success) {
+                      Navigator.pop(context);
+                      _loadLearnings();
+                    }
+                  },
+                  child: const Text('Save Changes'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteLearning(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Delete Tracker', style: TextStyle(color: Colors.white)),
+        content: const Text('Are you sure you want to delete this learning tracker?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: AppColors.error))),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      final res = await _api.delete('${ApiConstants.learning}/$id');
+      if (res.success) _loadLearnings();
+    }
   }
 
   void _showAddLearningDialog(BuildContext context) {
@@ -239,7 +376,15 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
 class _LearningCard extends StatelessWidget {
   final Learning learning;
   final VoidCallback onRefresh;
-  const _LearningCard({required this.learning, required this.onRefresh});
+  final VoidCallback onDelete;
+  final VoidCallback onEdit;
+
+  const _LearningCard({
+    required this.learning,
+    required this.onRefresh,
+    required this.onDelete,
+    required this.onEdit,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -299,7 +444,18 @@ class _LearningCard extends StatelessWidget {
                   ],
                 ),
               ),
-              _statusBadge(learning.status),
+              PopupMenuButton(
+                icon: const Icon(Icons.more_vert, color: AppColors.textMuted, size: 20),
+                color: AppColors.surface,
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'edit', child: Text('Edit', style: TextStyle(color: AppColors.primary))),
+                  const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+                ],
+                onSelected: (v) {
+                  if (v == 'edit') onEdit();
+                  if (v == 'delete') onDelete();
+                },
+              ),
             ],
           ),
           if (learning.topics.isNotEmpty) ...[

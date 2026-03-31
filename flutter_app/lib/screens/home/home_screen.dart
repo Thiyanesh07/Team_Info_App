@@ -651,12 +651,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Please navigate to the Tasks tab from the bottom menu.',
-                    ),
-                  ),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TasksScreen()),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -1006,6 +1003,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const LearningScreen()),
+          ),
+        ),
+        _QuickAction(
+          icon: Icons.workspace_premium_outlined,
+          label: 'Certs',
+          color: AppColors.secondary,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CertificationsScreen()),
           ),
         ),
       ],

@@ -131,17 +131,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
                 itemCount: _filteredUsers.length,
-                itemBuilder: (_, i) =>
-                    _UserCard(
+                itemBuilder: (_, i) {
+                  final currentUserId = _api.getCached(ApiConstants.me)?['id'] as String?;
+                  return _UserCard(
                           user: _filteredUsers[i],
                           onEdit: () => _showEditUserDialog(_filteredUsers[i]),
                           onDelete: () => _confirmDelete(_filteredUsers[i]),
                           onRoleChange: (r) =>
                               _updateUserRole(_filteredUsers[i].id, r),
+                          currentUserId: currentUserId,
                         )
                         .animate()
                         .fade(delay: (i * 50).ms, duration: 300.ms)
-                        .slideX(begin: 0.05, end: 0),
+                        .slideX(begin: 0.05, end: 0);
+                },
               ),
             ),
     );
@@ -477,12 +480,14 @@ class _UserCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final Function(String) onRoleChange;
+  final String? currentUserId;
 
   const _UserCard({
     required this.user,
     required this.onEdit,
     required this.onDelete,
     required this.onRoleChange,
+    required this.currentUserId,
   });
 
   @override
@@ -608,7 +613,7 @@ class _UserCard extends StatelessWidget {
             margin: const EdgeInsets.symmetric(vertical: 4),
           ),
         ),
-        if (user.id != _api.getCached(ApiConstants.me)?['id'])
+        if (user.id != currentUserId)
           const PopupMenuItem(
             value: 'delete',
             child: _MenuAction(

@@ -191,6 +191,13 @@ const assignMembers = async (req, res) => {
 /** DELETE /api/team-projects/:id */
 const deleteTeamProject = async (req, res) => {
   try {
+    const project = await prisma.teamProject.findUnique({ where: { id: req.params.id } });
+    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+
+    if (project.createdById !== req.user.id && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'Only creator or ADMIN can delete' });
+    }
+
     await prisma.teamProject.delete({ where: { id: req.params.id } });
     res.json({ success: true, message: 'Project deleted' });
   } catch (error) {
@@ -199,4 +206,39 @@ const deleteTeamProject = async (req, res) => {
   }
 };
 
-module.exports = { getTeamProjects, getTeamProjectById, createTeamProject, updateTeamProject, assignMembers, deleteTeamProject };
+/** POST /api/team-projects/:id/progress */
+const addProgressUpdate = async (req, res) => {
+  try {
+    const { title, description } = req.body;
+    if (!title) return res.status(400).json({ success: false, message: 'Title is required' });
+
+    const project = await prisma.teamProject.findUnique({
+      where: { id: req.params.id },
+      include: { members: true },
+    });
+    if (!project) return res.status(404).json({ success: false, message: 'Project not found' });
+
+    const isMember = project.members.some(m => m.userId === req.user.id);
+    const isCaptain = project.assignedCaptainId === req.user.id;
+    if (!isMember && !isCaptain && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'Not authorized to add progress' });
+    }
+
+    const update = await prisma.projectUpdate.create({
+      data: {
+        projectId: req.params.id,
+        userId: req.user.id,
+        title,
+        description,
+      },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+
+    res.status(201).json({ success: true, message: 'Progress added', data: update });
+  } catch (error) {
+    console.error('AddProgress error:', error);
+    res.status(500).json({ success: false, message: 'Failed to add progress' });
+  }
+};
+
+module.exports = { getTeamProjects, getTeamProjectById, createTeamProject, updateTeamProject, assignMembers, deleteTeamProject, addProgressUpdate };

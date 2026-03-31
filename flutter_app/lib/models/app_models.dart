@@ -91,7 +91,8 @@ class ProjectUpdate {
   final String id;
   final String projectId;
   final String userId;
-  final String updateText;
+  final String title;
+  final String? description;
   final Map<String, dynamic>? user;
   final String? createdAt;
 
@@ -99,7 +100,8 @@ class ProjectUpdate {
     required this.id,
     required this.projectId,
     required this.userId,
-    required this.updateText,
+    required this.title,
+    this.description,
     this.user,
     this.createdAt,
   });

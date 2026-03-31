@@ -12,12 +12,32 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const [formData, setFormData] = useState({ status: 'ONGOING', projectName: '', problemStatement: '' });
+  const [users, setUsers] = useState<any[]>([]);
+  const [formData, setFormData] = useState({ 
+    status: 'ONGOING', 
+    projectName: '', 
+    problemStatement: '',
+    assignedCaptainId: '',
+    memberIds: [] as string[]
+  });
 
   useEffect(() => {
     fetchProjects();
+    fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get('/users');
+      if (res.data.success) {
+        setUsers(res.data.data);
+      }
+    } catch (err) {
+      console.error('Fetch users error:', err);
+    }
+  };
 
   const fetchProjects = async () => {
     try {
@@ -59,13 +79,38 @@ export default function ProjectsPage() {
         alert("Cannot modify demonstration data.");
         return;
       }
-      const res = await api.put(`/admin/manage/projects/${selectedProject.id}`, formData);
+      const res = await api.put(`/admin/manage/projects/${selectedProject.id}`, {
+        projectName: formData.projectName,
+        status: formData.status,
+        problemStatement: formData.problemStatement,
+        assignedCaptainId: formData.assignedCaptainId,
+        memberIds: formData.memberIds
+      });
       if (res.data.success) {
         setShowEdit(false);
         fetchProjects();
       }
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to update project');
+    }
+  };
+
+  const handleCreate = async (e: any) => {
+    e.preventDefault();
+    try {
+      const res = await api.post('/admin/manage/projects', {
+        projectName: formData.projectName,
+        status: formData.status,
+        problemStatement: formData.problemStatement,
+        assignedCaptainId: formData.assignedCaptainId,
+        memberIds: formData.memberIds
+      });
+      if (res.data.success) {
+        setShowCreate(false);
+        fetchProjects();
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to create project');
     }
   };
 
@@ -142,12 +187,29 @@ export default function ProjectsPage() {
       <main className="flex-1 p-8">
         <header className="mb-10 flex justify-between items-end">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-            <h2 className="text-3xl font-black tracking-tight text-white">Project Oversight</h2>
-            <p className="text-slate-400 mt-1">Global monitoring of all team-led developments.</p>
+            <h2 className="text-3xl font-black tracking-tight text-white uppercase">Project Oversight</h2>
+            <p className="text-slate-400 mt-1 font-medium italic">Global monitoring and regulation of team-led initiatives.</p>
           </motion.div>
-          <div className="px-4 py-2 bg-slate-900 border border-slate-800 rounded-2xl flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Tracking {displayProjects.length} Initiatives</span>
+          <div className="flex gap-4 items-center">
+            <button 
+              onClick={() => {
+                setFormData({ 
+                  status: 'NOT_STARTED', 
+                  projectName: '', 
+                  problemStatement: '',
+                  assignedCaptainId: '',
+                  memberIds: []
+                });
+                setShowCreate(true);
+              }}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-2xl text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
+            >
+              New Initiative +
+            </button>
+            <div className="px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl flex items-center gap-3">
+              <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+              <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Tracking {displayProjects.length} Units</span>
+            </div>
           </div>
         </header>
 
@@ -172,8 +234,10 @@ export default function ProjectsPage() {
                     setFormData({ 
                       status: project.status, 
                       projectName: project.projectName || project.title, 
-                      problemStatement: project.problemStatement || project.description || '' 
-                    }); 
+                      problemStatement: project.problemStatement || project.description || '',
+                      assignedCaptainId: project.assignedCaptain?.id || '',
+                      memberIds: project.members?.map((m: any) => m.userId || m.id) || []
+                    });
                     setShowEdit(true); 
                   }}
                   className="p-3 bg-slate-950/80 backdrop-blur-md border border-slate-700/50 rounded-xl text-slate-400 hover:text-blue-400 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 transition-all active:scale-95"
@@ -328,10 +392,10 @@ export default function ProjectsPage() {
                          </h4>
                          <div className="p-5 bg-slate-950/50 border border-slate-800 rounded-3xl flex items-center gap-4">
                             <div className="h-10 w-10 bg-slate-800 rounded-xl flex items-center justify-center font-bold text-blue-400 border border-slate-700">
-                               {selectedProject.assignedCaptain?.name[0]}
+                               {selectedProject.assignedCaptain?.name?.[0] || 'U'}
                             </div>
                             <div>
-                               <p className="text-sm font-bold text-white">{selectedProject.assignedCaptain?.name}</p>
+                               <p className="text-sm font-bold text-white">{selectedProject.assignedCaptain?.name || 'Unassigned'}</p>
                                <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Lead Captain</p>
                             </div>
                          </div>
@@ -345,7 +409,7 @@ export default function ProjectsPage() {
                             {selectedProject.members?.map((member: any) => (
                                <div key={member.id} className="flex items-center gap-3 p-3 bg-slate-950/30 border border-slate-800/50 rounded-2xl group hover:border-slate-700 transition-colors">
                                   <div className="h-8 w-8 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-center text-[10px] font-black text-slate-500 uppercase">
-                                     {member.user?.name[0]}
+                                     {member.user?.name?.[0] || 'A'}
                                   </div>
                                   <div className="flex-1 min-w-0">
                                      <p className="text-[11px] font-bold text-slate-200 truncate">{member.user?.name}</p>
@@ -366,6 +430,44 @@ export default function ProjectsPage() {
             </div>
           )}
 
+          {showCreate && (
+             <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-xl">
+                <motion.div 
+                   initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                   animate={{ opacity: 1, scale: 1, y: 0 }}
+                   exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                   className="relative w-full max-w-xl bg-slate-900 border border-slate-700/50 rounded-[2.5rem] shadow-2xl overflow-hidden"
+                >
+                   <div className="p-8 pb-0 flex justify-between items-start">
+                      <div>
+                         <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Initiate Project</h3>
+                         <p className="text-slate-400 text-sm mt-1">Define new operational objective and deployment.</p>
+                      </div>
+                      <button onClick={() => setShowCreate(false)} className="p-2 hover:bg-slate-800 rounded-full text-slate-500 transition-colors">
+                         <X size={20} />
+                      </button>
+                   </div>
+                   <form onSubmit={handleCreate} className="p-8 pb-10">
+                      <ProjectForm formData={formData} setFormData={setFormData} users={users} />
+                      <div className="flex gap-4 pt-8 border-t border-slate-800 mt-6">
+                         <button 
+                            type="button" onClick={() => setShowCreate(false)}
+                            className="flex-1 px-6 py-4 bg-slate-800 hover:bg-slate-750 text-white rounded-2xl font-bold transition-all active:scale-95"
+                         >
+                            Abort
+                         </button>
+                         <button 
+                            type="submit"
+                            className="flex-1 px-6 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold transition-all shadow-lg shadow-blue-600/20 active:scale-95"
+                         >
+                            Execute Launch
+                         </button>
+                      </div>
+                   </form>
+                </motion.div>
+             </div>
+          )}
+
           {showEdit && selectedProject && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-xl">
               <motion.div 
@@ -376,7 +478,7 @@ export default function ProjectsPage() {
               >
                 <div className="p-8 pb-0 flex justify-between items-start">
                   <div>
-                    <h3 className="text-2xl font-black text-white">Modify Parameters</h3>
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Modify Parameters</h3>
                     <p className="text-slate-400 text-sm mt-1">Adjust operational metadata and active status.</p>
                   </div>
                   <button onClick={() => setShowEdit(false)} className="p-2 hover:bg-slate-800 rounded-full text-slate-500 transition-colors">
@@ -384,41 +486,9 @@ export default function ProjectsPage() {
                   </button>
                 </div>
 
-                <form onSubmit={handleUpdate} className="p-8 space-y-6">
-                  <div className="space-y-2 col-span-2">
-                    <label className="text-[10px] uppercase font-black tracking-widest text-slate-500 ml-1">Initiative Title</label>
-                    <input 
-                      type="text" required
-                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all font-bold text-white shadow-inner"
-                      value={formData.projectName}
-                      onChange={e => setFormData({...formData, projectName: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-black tracking-widest text-slate-500 ml-1">Current Status</label>
-                    <select 
-                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/50 transition-all font-bold text-emerald-400 appearance-none shadow-inner"
-                      value={formData.status}
-                      onChange={e => setFormData({...formData, status: e.target.value})}
-                    >
-                      <option value="NOT_STARTED">NOT STARTED</option>
-                      <option value="IN_PROGRESS">IN PROGRESS (ONGOING)</option>
-                      <option value="COMPLETED">COMPLETED</option>
-                      <option value="ON_HOLD">ON HOLD</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-black tracking-widest text-slate-500 ml-1">Mission Briefing</label>
-                    <textarea 
-                      className="w-full h-32 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all font-medium text-slate-300 resize-none shadow-inner"
-                      value={formData.problemStatement}
-                      onChange={e => setFormData({...formData, problemStatement: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="flex gap-4 pt-4">
+                <form onSubmit={handleUpdate} className="p-8 pb-10">
+                  <ProjectForm formData={formData} setFormData={setFormData} users={users} />
+                  <div className="flex gap-4 pt-8 border-t border-slate-800 mt-6">
                     <button 
                       type="button" onClick={() => setShowEdit(false)}
                       className="flex-1 px-6 py-4 bg-slate-800 hover:bg-slate-750 text-white rounded-2xl font-bold transition-all active:scale-95"
@@ -475,11 +545,94 @@ export default function ProjectsPage() {
         {displayProjects.length === 0 && !loading && (
           <div className="p-32 text-center text-slate-500 border-2 border-dashed border-slate-800 rounded-[3rem]">
             <Rocket size={48} className="mx-auto mb-4 opacity-10" />
-            <p className="font-bold text-lg text-slate-400">Tactical Silence</p>
+            <p className="font-bold text-lg text-slate-400 uppercase tracking-widest">Tactical Silence</p>
             <p className="text-sm mt-1">No operational initiatives registered in the mainframe.</p>
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function ProjectForm({ formData, setFormData, users }: any) {
+  return (
+    <div className="space-y-6 max-h-[60vh] overflow-y-auto px-1 pr-4">
+      <div className="space-y-2">
+        <label className="text-[10px] uppercase font-black tracking-widest text-slate-500 ml-1">Initiative Title</label>
+        <input 
+          type="text" required
+          className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all font-bold text-white shadow-inner"
+          value={formData.projectName}
+          onChange={e => setFormData({...formData, projectName: e.target.value})}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-[10px] uppercase font-black tracking-widest text-slate-500 ml-1">Operational Status</label>
+          <select 
+            className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all font-bold text-white appearance-none shadow-inner"
+            value={formData.status}
+            onChange={e => setFormData({...formData, status: e.target.value})}
+          >
+            <option value="NOT_STARTED">NOT STARTED</option>
+            <option value="IN_PROGRESS">IN PROGRESS</option>
+            <option value="COMPLETED">COMPLETED</option>
+            <option value="ON_HOLD">ON HOLD</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] uppercase font-black tracking-widest text-slate-500 ml-1">Lead Captain</label>
+          <select 
+            className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all font-bold text-white appearance-none shadow-inner"
+            value={formData.assignedCaptainId}
+            onChange={e => setFormData({...formData, assignedCaptainId: e.target.value})}
+          >
+            <option value="">Unassigned</option>
+            {users.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-[10px] uppercase font-black tracking-widest text-slate-500 ml-1 flex justify-between items-center">
+          Agent Deployment
+          <span className="text-[9px] text-slate-600 lowercase tracking-normal font-medium">{formData.memberIds.length} agents selected</span>
+        </label>
+        <div className="grid grid-cols-3 gap-2 p-4 bg-slate-950 border border-slate-800 rounded-2xl shadow-inner max-h-48 overflow-y-auto">
+          {users.map((u: any) => {
+            const selected = formData.memberIds.includes(u.id);
+            return (
+              <button
+                key={u.id}
+                type="button"
+                onClick={() => {
+                  const next = selected 
+                    ? formData.memberIds.filter((id: string) => id !== u.id)
+                    : [...formData.memberIds, u.id];
+                  setFormData({...formData, memberIds: next});
+                }}
+                className={cn(
+                  "px-3 py-2 rounded-xl text-[10px] font-bold border transition-all truncate text-left",
+                  selected ? "bg-blue-600/10 border-blue-500 text-blue-400 shadow-lg shadow-blue-500/5" : "bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-700"
+                )}
+              >
+                {u.name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-[10px] uppercase font-black tracking-widest text-slate-500 ml-1">Mission Briefing</label>
+        <textarea 
+          className="w-full h-24 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all font-medium text-slate-300 resize-none shadow-inner"
+          value={formData.problemStatement}
+          onChange={e => setFormData({...formData, problemStatement: e.target.value})}
+        />
+      </div>
     </div>
   );
 }

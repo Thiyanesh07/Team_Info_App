@@ -13,7 +13,13 @@ const userSelect = {
 /** GET /api/users - Get all users (leaders & admin) */
 const getAllUsers = async (req, res) => {
   try {
+    const where = {};
+    if (req.user && req.user.role !== 'ADMIN') {
+      where.role = { not: 'ADMIN' };
+    }
+
     const users = await prisma.user.findMany({
+      where,
       select: userSelect,
       orderBy: { name: 'asc' },
     });
