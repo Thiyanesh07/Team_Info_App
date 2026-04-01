@@ -317,6 +317,9 @@ class TeamMessage {
       _$TeamMessageFromJson(json);
 
   Map<String, dynamic> toJson() => _$TeamMessageToJson(this);
+
+  // Tactical ID getter
+  String get senderId => sender?['id'] ?? '';
 }
 
 @JsonSerializable()

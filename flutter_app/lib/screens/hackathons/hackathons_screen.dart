@@ -210,7 +210,7 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
                             );
                             if (d != null) setModalState(() => selectedDate = d);
                           },
-                          child: _fakeField('Date: ${DateFormat('dd MMM yyyy').format(selectedDate)}', Icons.calendar_month),
+                          child: _fakeField(DateFormat('dd MMM yyyy').format(selectedDate), Icons.calendar_month),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -301,7 +301,7 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
                         ],
                       ),
                     );
-                  }).toList(),
+                  }),
 
                   const SizedBox(height: 32),
                   SizedBox(
@@ -379,7 +379,7 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
 
   Widget _fakeField(String t, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
       decoration: BoxDecoration(
         color: AppColors.surfaceLight.withAlpha(50),
         borderRadius: BorderRadius.circular(12),
@@ -387,9 +387,16 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
       ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: AppColors.textMuted),
-          const SizedBox(width: 12),
-          Text(t, style: const TextStyle(color: Colors.white, fontSize: 14)),
+          Icon(icon, size: 16, color: AppColors.textMuted),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              t, 
+              maxLines: 1,
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
@@ -397,7 +404,7 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
 
   Widget _dropdownField({required String value, required List<String> items, required Function(String?) onChanged}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: AppColors.surfaceLight.withAlpha(50),
         borderRadius: BorderRadius.circular(12),
@@ -406,10 +413,14 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
+          isDense: true,
           dropdownColor: AppColors.cardDark,
           isExpanded: true,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
-          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          style: const TextStyle(color: Colors.white, fontSize: 12),
+          items: items.map((e) => DropdownMenuItem(
+            value: e, 
+            child: Text(e, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12))
+          )).toList(),
           onChanged: onChanged,
         ),
       ),

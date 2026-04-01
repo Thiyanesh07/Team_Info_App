@@ -150,6 +150,21 @@ class ApiService {
   }
 
   // ─── Multipart Upload ──────────────────────
+  Future<ApiResponse> uploadFile(String endpoint, String filePath, {String fieldName = 'file'}) async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+      final request = http.MultipartRequest('POST', uri);
+      final token = await getToken();
+      if (token != null) request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(await http.MultipartFile.fromPath(fieldName, filePath));
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      return _handleResponse(response);
+    } catch (e) {
+      return ApiResponse(success: false, message: 'Upload error: $e');
+    }
+  }
+
   Future<ApiResponse> uploadImage(String filePath) async {
     try {
       final uri = Uri.parse(
@@ -158,7 +173,7 @@ class ApiService {
       final request = http.MultipartRequest('POST', uri);
       final token = await getToken();
       if (token != null) request.headers['Authorization'] = 'Bearer $token';
-      request.files.add(await http.MultipartFile.fromPath('image', filePath));
+      request.files.add(await http.MultipartFile.fromPath('file', filePath));
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
       return _handleResponse(response);

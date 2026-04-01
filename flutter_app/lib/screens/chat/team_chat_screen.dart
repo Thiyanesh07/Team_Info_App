@@ -11,7 +11,7 @@ import 'package:team_info_app/providers/auth_provider.dart';
 import 'package:team_info_app/screens/chat/widgets/chat_widgets.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+
 import 'package:team_info_app/widgets/empty_states.dart';
 
 class TeamChatScreen extends ConsumerStatefulWidget {

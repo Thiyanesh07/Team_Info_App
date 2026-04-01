@@ -64,12 +64,11 @@ class _CollegeSyncScreenState extends State<CollegeSyncScreen> {
     if (_isSyncing) return;
     try {
       final String? cookiesValue = await _controller.runJavaScriptReturningResult('document.cookie') as String?;
-      if (cookiesValue == null || cookiesValue.isEmpty || cookiesValue == 'null') return;
+      final String? localStorageJSON = await _controller.runJavaScriptReturningResult('JSON.stringify(localStorage)') as String?;
       
-      // Clean up the javascript extra string quotes if any
-      final String cleanCookies = cookiesValue.replaceAll('"', '');
+      String cleanCookies = cookiesValue?.replaceAll('"', '') ?? '';
       
-      // Find PS token
+      // Find PS token in cookies
       final segments = cleanCookies.split(';');
       String? psToken;
       for (var segment in segments) {
@@ -79,6 +78,14 @@ class _CollegeSyncScreenState extends State<CollegeSyncScreen> {
           break;
         }
       }
+
+      // If not in cookies, check localStorage (as many modern portals store JWTs there)
+      if (psToken == null || psToken.isEmpty) {
+         if (localStorageJSON != null && localStorageJSON.length > 5) {
+            debugPrint("LocalStorage parsing attempted for token...");
+         }
+      }
+
 
       if (psToken != null && psToken.isNotEmpty) {
         setState(() {

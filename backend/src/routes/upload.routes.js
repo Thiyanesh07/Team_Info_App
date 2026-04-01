@@ -35,11 +35,11 @@ const upload = multer({
   },
 });
 
-/** POST /api/upload/image */
-router.post('/image', authenticate, upload.single('image'), async (req, res) => {
+/** POST /api/upload/image (Now supports any file under 'file' name) */
+router.post('/image', authenticate, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No image file provided' });
+      return res.status(400).json({ success: false, message: 'No file provided' });
     }
 
     // Upload to Cloudinary

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
-import 'package:team_info_app/models/app_models.dart';
+
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:ui';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:io';
+
 import 'package:any_link_preview/any_link_preview.dart';
 
 class PremiumMessageBubble extends StatefulWidget {
@@ -278,7 +278,7 @@ class GlassmorphicChatInput extends StatefulWidget {
 class _GlassmorphicChatInputState extends State<GlassmorphicChatInput> {
   final AudioRecorder _recorder = AudioRecorder();
   bool _isRecording = false;
-  String? _recordingPath;
+
 
   Future<void> _startRecording() async {
     try {
@@ -288,11 +288,10 @@ class _GlassmorphicChatInputState extends State<GlassmorphicChatInput> {
         await _recorder.start(const RecordConfig(), path: path);
         setState(() {
           _isRecording = true;
-          _recordingPath = path;
         });
       }
     } catch (e) {
-      print('Error starting recording: $e');
+      debugPrint('Error starting recording: $e');
     }
   }
 

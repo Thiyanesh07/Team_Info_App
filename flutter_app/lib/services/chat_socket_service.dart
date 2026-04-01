@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:flutter/foundation.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:team_info_app/models/app_models.dart';
 
@@ -8,7 +9,7 @@ class ChatSocketService {
   factory ChatSocketService() => _instance;
   ChatSocketService._internal();
 
-  IO.Socket? _socket;
+  io.Socket? _socket;
   final _messageController = StreamController<dynamic>.broadcast();
   final _typingController = StreamController<Map<String, dynamic>>.broadcast();
   final _reactionController = StreamController<Map<String, dynamic>>.broadcast();
@@ -24,14 +25,14 @@ class ChatSocketService {
 
     String socketUrl = ApiConstants.socketUrl;
 
-    _socket = IO.io(socketUrl, IO.OptionBuilder()
+    _socket = io.io(socketUrl, io.OptionBuilder()
       .setTransports(['websocket'])
       .setAuth({'token': token})
       .enableAutoConnect()
       .build());
 
     _socket!.onConnect((_) {
-      print('🚀 Chat Sockets Connected');
+      debugPrint('🚀 Chat Sockets Connected');
     });
 
     _socket!.on('personal-message', (data) {
@@ -47,8 +48,8 @@ class ChatSocketService {
     _socket!.on('reaction-updated', (data) => _reactionController.add(data));
     _socket!.on('messages-read', (data) => _readController.add(data));
 
-    _socket!.onDisconnect((_) => print('🔌 Chat Sockets Disconnected'));
-    _socket!.onConnectError((err) => print('❌ Socket Connection Error: $err'));
+    _socket!.onDisconnect((_) => debugPrint('🔌 Chat Sockets Disconnected'));
+    _socket!.onConnectError((err) => debugPrint('❌ Socket Connection Error: $err'));
   }
 
   void joinConversation(String conversationId) {
