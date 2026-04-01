@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+
 
 /**
  * GET /api/activities/unified
@@ -129,3 +129,4 @@ const logSystemActivity = async (userId, title, content, type, metadata = null) 
 };
 
 module.exports = { getUnifiedActivity, logSystemActivity };
+

@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+
 const { logSystemActivity } = require('./systemActivity.controller');
 
 const taskInclude = {
@@ -294,3 +294,4 @@ module.exports = {
   createTask, updateTask, updateTaskStatus,
   addReport, getTaskReports, exportReports, deleteTask,
 };
+

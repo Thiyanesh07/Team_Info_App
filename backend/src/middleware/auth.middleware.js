@@ -1,7 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 /**
  * Authentication middleware - verifies JWT token
@@ -23,6 +21,7 @@ const authenticate = async (req, res, next) => {
         email: true,
         name: true,
         role: true,
+        lastActive: true, // Needed for throttling check
       },
     });
 
@@ -30,11 +29,14 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'User not found' });
     }
 
-    // Update presence in the background (no await to avoid latency)
-    prisma.user.update({
-      where: { id: user.id },
-      data: { lastActive: new Date() },
-    }).catch(err => console.error('Presence update error:', err));
+    // Phase 2: Throttle lastActive update (only update if > 5 mins ago)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    if (!user.lastActive || user.lastActive < fiveMinutesAgo) {
+      prisma.user.update({
+        where: { id: user.id },
+        data: { lastActive: new Date() },
+      }).catch(err => console.error('Presence update error:', err));
+    }
 
     req.user = user;
     next();

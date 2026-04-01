@@ -244,6 +244,7 @@ model Certification {
   skill       String
   provider    String?
   description String?
+  proofUrl    String?
   issuedDate  DateTime?
   createdAt   DateTime  @default(now())
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -267,13 +268,20 @@ model PsSkill {
 }
 
 model TeamMessage {
-  id        String   @id @default(uuid())
-  senderId  String
-  message   String?
-  imageUrl  String?
-  isPinned  Boolean  @default(false)
-  timestamp DateTime @default(now())
-  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  id           String   @id @default(uuid())
+  senderId     String
+  message      String?
+  imageUrl     String?
+  fileUrl      String?
+  fileName     String?
+  fileType     String?  // IMAGE, VIDEO, AUDIO, DOCUMENT, VOICE
+  replyToId    String?
+  reactions    Json?    @default("{}")
+  isPinned     Boolean  @default(false)
+  isRead       Boolean  @default(false)
+  isDelivered  Boolean  @default(false)
+  timestamp    DateTime @default(now())
+  sender       User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@map("team_messages")
 }
@@ -305,8 +313,15 @@ model ChatMessage {
   senderId       String
   message        String?
   imageUrl       String?
+  fileUrl        String?
+  fileName       String?
+  fileType       String?  // IMAGE, VIDEO, AUDIO, DOCUMENT, VOICE
+  replyToId      String?
+  reactions      Json?    @default("{}")
   timestamp      DateTime         @default(now())
   isPinned       Boolean          @default(false)
+  isRead         Boolean          @default(false)
+  isDelivered    Boolean          @default(false)
   conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User             @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
@@ -363,6 +378,8 @@ enum ActivityType {
 enum HackathonStatus {
   UPCOMING
   COMPLETED
+  PARTICIPATED
+  WINNER
 }
 
 enum SkillType {
@@ -427,4 +444,15 @@ model ReportSubmission {
 
   @@unique([reportRequestId, userId])
   @@map("report_submissions")
+}
+
+model YearlyTarget {
+  id              String   @id @default(uuid())
+  year            String   @unique // e.g., 'I', 'II', 'III', 'IV', 'OVERALL'
+  target          Float
+  lastSyncStatus  String?  @default("SUCCESS") // 'SUCCESS' or 'FAILED'
+  lastSyncError   String?
+  updatedAt       DateTime @updatedAt
+
+  @@map("yearly_targets")
 }

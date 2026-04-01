@@ -45,7 +45,7 @@ router.post('/image', authenticate, upload.single('image'), async (req, res) => 
     // Upload to Cloudinary
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: 'team-info-app', resource_type: 'auto' },
+        { folder: 'team_info_app', resource_type: 'auto' },
         (error, result) => {
           if (error) reject(error);
           else resolve(result);

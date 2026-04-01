@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import api, { downloadExcel } from '@/lib/api';
-import { Users, MoreVertical, Shield, Mail, Building, Plus, Trash2, Edit3, X, Check, Search, Star, Flame, LayoutList, GraduationCap, BookOpen, Trash, Hexagon, FileSpreadsheet } from 'lucide-react';
+import { Users, MoreVertical, Shield, Mail, Building, Plus, Trash2, Edit3, X, Check, Search, Star, Flame, LayoutList, GraduationCap, BookOpen, Trash, Hexagon, FileSpreadsheet, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -663,9 +663,22 @@ export default function MembersPage() {
                                 <p className="text-xs text-amber-500 font-bold italic mt-2">Validated by: {c.provider}</p>
                               </div>
                             </div>
-                            <button onClick={() => handleDeleteSubItem('cert', c.id)} className="opacity-0 group-hover:opacity-100 p-3 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all active:scale-90">
-                              <Trash size={20} />
-                            </button>
+                            <div className="flex gap-2">
+                              {c.fileUrl && (
+                                <a 
+                                  href={c.fileUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="p-3 text-blue-500 hover:bg-blue-500/10 rounded-xl transition-all active:scale-90 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border border-transparent hover:border-blue-500/20"
+                                >
+                                  <ExternalLink size={18} />
+                                  Proof
+                                </a>
+                              )}
+                              <button onClick={() => handleDeleteSubItem('cert', c.id)} className="opacity-0 group-hover:opacity-100 p-3 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all active:scale-90">
+                                <Trash size={20} />
+                              </button>
+                            </div>
                           </div>
                         ))}
                         {portfolioData.certs.length === 0 && (

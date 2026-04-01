@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAdminOverview, getAdminUserDetail, updateUser, updateProject, deleteProject, syncRewardsFromSheets } = require('../controllers/admin.controller');
+const { getAdminOverview, getAdminUserDetail, updateUser, updateProject, deleteProject, syncRewardsFromSheets, getSyncStatus, updateYearlyTargets } = require('../controllers/admin.controller');
 const { authenticate, isAdmin } = require('../middleware/auth.middleware');
 
 // Protect all admin routes
@@ -35,6 +35,18 @@ router.put('/manage/projects/:id', updateProject);
  * @desc Sync reward points for all users from Google Sheets
  */
 router.post('/sync/rewards-sheets', syncRewardsFromSheets);
+
+/**
+ * @route GET /api/admin/sync-status
+ * @desc Check if Reward Benchmarks sync failed
+ */
+router.get('/sync-status', getSyncStatus);
+
+/**
+ * @route PATCH /api/admin/manage/yearly-targets
+ * @desc Manual override of reward point benchmarks
+ */
+router.patch('/manage/yearly-targets', updateYearlyTargets);
 
 router.delete('/manage/projects/:id', deleteProject);
 

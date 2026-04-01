@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import api, { downloadExcel } from '@/lib/api';
-import { Trophy, Target, Users, Calendar, ExternalLink, Shield, X, Clock, Activity, Hexagon, FileSpreadsheet } from 'lucide-react';
+import { Trophy, Target, Users, Calendar, ExternalLink, Shield, X, Clock, Activity, Hexagon, FileSpreadsheet, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -98,47 +98,74 @@ export default function HackathonsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 hover:border-amber-500/30 transition-all group flex flex-col h-full relative overflow-hidden"
+              className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 hover:border-blue-500/30 transition-all group flex flex-col h-full relative overflow-hidden shadow-2xl"
             >
               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                 <Trophy size={80} />
+                 <Trophy size={80} className={cn(hack.status === 'WINNER' ? 'text-amber-500' : 'text-slate-400')} />
               </div>
 
               <div className="flex justify-between items-start mb-6">
                 <div className={cn(
                   "p-4 rounded-[1.25rem] border shadow-lg",
-                  hack.status === 'COMPLETED' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-amber-500/10 border-amber-500/20 text-amber-500"
+                  hack.status === 'WINNER' ? "bg-amber-500/10 border-amber-500/20 text-amber-500 shadow-amber-500/10" :
+                  hack.status === 'COMPLETED' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 shadow-emerald-500/10" :
+                  hack.status === 'PARTICIPATED' ? "bg-purple-500/10 border-purple-500/20 text-purple-500 shadow-purple-500/10" :
+                  hack.status === 'ONGOING' ? "bg-blue-500/10 border-blue-500/20 text-blue-500 shadow-blue-500/10" :
+                  "bg-slate-500/10 border-slate-500/20 text-slate-500"
                 )}>
-                  <Trophy size={24} />
+                  {hack.status === 'WINNER' ? <Star size={24} /> : <Trophy size={24} />}
                 </div>
                 <div className={cn(
                   "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border backdrop-blur-md",
-                  hack.status === 'COMPLETED' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                  hack.status === 'WINNER' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                  hack.status === 'COMPLETED' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
+                  hack.status === 'PARTICIPATED' ? "bg-purple-500/10 text-purple-500 border-purple-500/20" :
+                  hack.status === 'ONGOING' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
+                  "bg-slate-500/10 text-slate-500 border-slate-500/20"
                 )}>
                   {hack.status}
                 </div>
               </div>
 
-              <h3 className="text-2xl font-black text-white mb-3 group-hover:text-amber-400 transition-colors uppercase tracking-tight leading-none">
-                {hack.name}
+              <h3 className="text-2xl font-black text-white mb-2 group-hover:text-blue-400 transition-colors uppercase tracking-tight leading-none">
+                {hack.hackName || hack.name}
               </h3>
-              <p className="text-xs text-slate-500 font-black uppercase tracking-widest mb-4">Team: {hack.teamName}</p>
-              <p className="text-sm text-slate-500 line-clamp-2 mb-8 flex-1 italic leading-relaxed font-medium">
-                "{hack.problemStatement || 'No mission briefing defined.'}"
+              <p className="text-xs text-blue-500 font-bold uppercase tracking-widest mb-1">Mission: {hack.projectName || hack.teamName}</p>
+              
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(hack.skillsUsed || []).map((skill: string) => (
+                  <span key={skill} className="px-2 py-0.5 bg-slate-800 border border-slate-700/50 rounded-md text-[8px] font-black text-slate-400 uppercase tracking-tighter">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+
+              <p className="text-sm text-slate-400 line-clamp-2 mb-8 flex-1 italic leading-relaxed font-medium">
+                "{hack.description || hack.problemStatement || 'No mission briefing defined.'}"
               </p>
 
-              <div className="pt-8 border-t border-slate-800/50 space-y-5">
+              <div className="pt-8 border-t border-slate-800/50 space-y-4">
+                {hack.contribution && (
+                   <div className="bg-slate-950/50 p-4 rounded-2xl border border-slate-800/50">
+                      <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1.5 opacity-50">Impact Contribution</p>
+                      <p className="text-xs text-slate-300 font-medium leading-relaxed italic">{hack.contribution}</p>
+                   </div>
+                )}
+
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-slate-500 flex items-center gap-2 font-black uppercase tracking-widest">
-                    <Hexagon size={14} className="text-amber-500" /> Domain
+                    <Users size={14} className="text-slate-400" /> Active Agents
                   </span>
-                  <span className="text-sm text-slate-200 font-bold">{hack.domain || 'General'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-slate-500 flex items-center gap-2 font-black uppercase tracking-widest">
-                    <Users size={14} className="text-slate-400" /> Deployment
-                  </span>
-                  <span className="text-sm text-white font-black">{hack.members?.length || 0} Agents</span>
+                  <div className="flex -space-x-2">
+                    {(hack.teamMembers || []).map((member: string, idx: number) => (
+                       <div key={idx} className="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-900 flex items-center justify-center text-[10px] font-black text-slate-400 ring-2 ring-slate-800/50" title={member}>
+                          {member[0].toUpperCase()}
+                       </div>
+                    ))}
+                    {(!hack.teamMembers || hack.teamMembers.length === 0) && (
+                      <span className="text-xs font-bold text-white">{hack.isTeam ? 'Squad Operation' : 'Solo Op'}</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
@@ -16,13 +17,14 @@ class _CollegeSyncScreenState extends State<CollegeSyncScreen> {
   late final WebViewController _controller;
   bool _isLoading = true;
   bool _isSyncing = false;
+  Timer? _cookieTimer;
 
   @override
   void initState() {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
+      ..setUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1")
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (String url) {
@@ -34,20 +36,38 @@ class _CollegeSyncScreenState extends State<CollegeSyncScreen> {
             setState(() {
               _isLoading = false;
             });
-            _extractCookieAndSync();
+            // First manual check on finish
+            await _extractCookieAndSync();
+          },
+          onWebResourceError: (WebResourceError error) {
+            debugPrint("Portal Error: ${error.description}");
           },
         ),
       )
       ..loadRequest(Uri.parse('https://ps.bitsathy.ac.in/dashboard'));
+
+    // PROACTIVE SCAN: Check for session cookie every 2 seconds
+    _cookieTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (!_isSyncing) {
+        _extractCookieAndSync();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _cookieTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _extractCookieAndSync() async {
     if (_isSyncing) return;
     try {
-      final String cookies = await _controller.runJavaScriptReturningResult('document.cookie') as String;
+      final String? cookiesValue = await _controller.runJavaScriptReturningResult('document.cookie') as String?;
+      if (cookiesValue == null || cookiesValue.isEmpty || cookiesValue == 'null') return;
       
       // Clean up the javascript extra string quotes if any
-      final cleanCookies = cookies.replaceAll('"', '');
+      final String cleanCookies = cookiesValue.replaceAll('"', '');
       
       // Find PS token
       final segments = cleanCookies.split(';');

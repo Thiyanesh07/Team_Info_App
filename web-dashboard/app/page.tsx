@@ -43,6 +43,10 @@ export default function Dashboard() {
   const [syncing, setSyncing] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [health, setHealth] = useState<any>({ status: 'ok', database: 'connected' });
+  const [syncStatus, setSyncStatus] = useState<any>(null);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [editingTargets, setEditingTargets] = useState(false);
+  const [manualTargets, setManualTargets] = useState<any>([]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -54,6 +58,27 @@ export default function Dashboard() {
       setHealth(h);
     };
     runHealthCheck();
+
+    // Check Sync Status and trigger Alert if failed
+    const checkSyncStatus = async () => {
+      try {
+        const res = await api.get('/admin/sync-status');
+        if (res.data.success) {
+          setSyncStatus(res.data.data);
+          setManualTargets(res.data.data.details || []);
+          if (res.data.data.status === 'FAILED') {
+            setShowSyncModal(true);
+            toast.error('Sync Interrupted', {
+              description: 'The automated benchmark scraper was blocked by Google security.',
+              duration: 10000,
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Sync status check failed:', err);
+      }
+    };
+    checkSyncStatus();
 
     // Periodic health check every 2 minutes
     const interval = setInterval(runHealthCheck, 120000);
@@ -104,6 +129,24 @@ export default function Dashboard() {
     }
   };
 
+  const handleUpdateTargets = async () => {
+    try {
+      setSyncing(true);
+      const res = await api.patch('/admin/manage/yearly-targets', {
+        targets: manualTargets.map((t: any) => ({ year: t.year, target: t.target }))
+      });
+      if (res.data.success) {
+        toast.success('Benchmarks Updated Successfully');
+        setEditingTargets(false);
+        setShowSyncModal(false);
+      }
+    } catch (err: any) {
+      toast.error('Update Failed', { description: 'Failed to manually override benchmarks.' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) return (
     <div className="flex h-screen bg-slate-950 items-center justify-center">
       <div className="flex flex-col items-center gap-4">
@@ -137,6 +180,70 @@ export default function Dashboard() {
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-50">
       <Sidebar />
+
+      {/* SYNC FAILURE POPUP */}
+      {showSyncModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-md">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-[3rem] p-10 shadow-3xl text-center relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-10 opacity-5">
+              <Zap size={150} className="text-rose-500" />
+            </div>
+
+            <div className="h-20 w-20 bg-rose-500/10 border border-rose-500/20 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-pulse">
+               <ShieldCheck size={32} className="text-rose-500" />
+            </div>
+
+            <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase mb-2">Sync Decoupled</h2>
+            <p className="text-slate-400 text-sm leading-relaxed mb-8 max-w-md mx-auto">
+              The automated benchmarking service encountered a security challenge from Google (likely a CAPTCHA). 
+              <br/><br/>
+              <span className="text-rose-400 font-bold">Error:</span> {syncStatus?.error || 'Unknown Scraper Error'}
+            </p>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4 mb-8">
+                {manualTargets.map((t: any, idx: number) => (
+                  <div key={t.year} className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Year {t.year}</p>
+                    <input 
+                      type="number"
+                      value={t.target}
+                      onChange={(e) => {
+                        const newTargets = [...manualTargets];
+                        newTargets[idx].target = parseFloat(e.target.value);
+                        setManualTargets(newTargets);
+                      }}
+                      className="w-full bg-transparent text-lg font-black text-white text-center focus:outline-none focus:text-blue-400 transition-colors"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-4">
+                <button 
+                  onClick={handleUpdateTargets}
+                  className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 rounded-2xl text-xs font-black uppercase tracking-widest text-white transition-all shadow-lg shadow-blue-600/20 active:scale-95"
+                >
+                  Confirm Manual Override
+                </button>
+                <button 
+                  onClick={() => setShowSyncModal(false)}
+                  className="px-8 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-300 transition-all border border-slate-700"
+                >
+                  Dismiss
+                </button>
+              </div>
+              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-6">
+                Last Successful Sync: {syncStatus?.lastSync ? new Date(syncStatus.lastSync).toLocaleString() : 'Never'}
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
       
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="mb-10 flex justify-between items-end">

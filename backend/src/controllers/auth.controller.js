@@ -1,9 +1,9 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { OAuth2Client } = require('google-auth-library');
 
-const prisma = new PrismaClient();
+
 const configuredClientIds = (
   process.env.GOOGLE_CLIENT_ID || process.env['GOOGLE_CLIENT_ID '] || ''
 )

@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 /** GET /api/certifications */
 const getMyCertifications = async (req, res) => {
@@ -28,12 +27,12 @@ const getUserCertifications = async (req, res) => {
 /** POST /api/certifications */
 const createCertification = async (req, res) => {
   try {
-    const { skill, provider, description, issuedDate } = req.body;
+    const { skill, provider, description, issuedDate, proofUrl } = req.body;
     if (!skill) return res.status(400).json({ success: false, message: 'Skill is required' });
 
     const cert = await prisma.certification.create({
       data: {
-        userId: req.user.id, skill, provider, description,
+        userId: req.user.id, skill, provider, description, proofUrl,
         issuedDate: issuedDate ? new Date(issuedDate) : null,
       },
     });

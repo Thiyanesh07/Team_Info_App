@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+
 
 /** GET /api/personal-projects - Get projects (own for member, any for leader, all for admin) */
 const getMyProjects = async (req, res) => {
@@ -101,3 +101,4 @@ const deleteProject = async (req, res) => {
 };
 
 module.exports = { getMyProjects, getUserProjects, createProject, updateProject, deleteProject };
+

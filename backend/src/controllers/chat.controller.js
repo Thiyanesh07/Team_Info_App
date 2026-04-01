@@ -1,9 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 const isConversationParticipant = async (conversationId, userId) => {
-  const participant = await prisma.chatParticipant.findFirst({
-    where: { conversationId, userId },
+  const participant = await prisma.chatParticipant.findUnique({
+    where: { conversationId_userId: { conversationId, userId } },
     select: { id: true },
   });
   return Boolean(participant);
@@ -172,14 +171,19 @@ const sendConversationMessage = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized for this conversation' });
     }
 
-    const { message, imageUrl } = req.body;
-    if (!message && !imageUrl) return res.status(400).json({ success: false, message: 'Message or image required' });
+    const { message, imageUrl, fileUrl, fileName, fileType, replyToId } = req.body;
+    if (!message && !imageUrl && !fileUrl) return res.status(400).json({ success: false, message: 'Message, image, or file required' });
 
     const msg = await prisma.chatMessage.create({
       data: {
         conversationId: req.params.id,
         senderId: req.user.id,
-        message, imageUrl,
+        message, 
+        imageUrl,
+        fileUrl,
+        fileName,
+        fileType,
+        replyToId
       },
       include: { sender: { select: { id: true, name: true, profileImageUrl: true } } },
     });
@@ -192,6 +196,7 @@ const sendConversationMessage = async (req, res) => {
 
     res.status(201).json({ success: true, data: msg });
   } catch (error) {
+    console.error('sendConversationMessage error:', error);
     res.status(500).json({ success: false, message: 'Failed to send message' });
   }
 };

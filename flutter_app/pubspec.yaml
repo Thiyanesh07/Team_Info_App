@@ -2,7 +2,7 @@ name: team_info_app
 description: "Team Management & Productivity Application"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ^3.10.3
@@ -56,6 +56,9 @@ dependencies:
   hive_flutter: ^1.1.0
   webview_flutter: ^4.13.1
   file_picker: ^8.1.7
+  record: ^6.2.0
+  audioplayers: ^6.6.0
+  any_link_preview: ^3.0.3
 
 dev_dependencies:
   flutter_test:

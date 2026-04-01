@@ -1,6 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const excelService = require('../services/excel.service');
-const prisma = new PrismaClient();
+
 
 /**
  * Handle RBAC for exports and determine the target userId list
@@ -255,3 +255,4 @@ const exportMethods = {
 };
 
 module.exports = exportMethods;
+

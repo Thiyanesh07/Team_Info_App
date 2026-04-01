@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+
 
 /** GET /api/project-updates/:projectId */
 const getProjectUpdates = async (req, res) => {
@@ -85,3 +85,4 @@ const updateProjectUpdate = async (req, res) => {
 };
 
 module.exports = { getProjectUpdates, createProjectUpdate, updateProjectUpdate, deleteProjectUpdate };
+

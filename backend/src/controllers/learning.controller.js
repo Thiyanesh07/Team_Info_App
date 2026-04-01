@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+
 
 /** GET /api/learning */
 const getMyLearnings = async (req, res) => {
@@ -85,3 +85,4 @@ const deleteLearning = async (req, res) => {
 };
 
 module.exports = { getMyLearnings, getUserLearnings, createLearning, updateLearning, deleteLearning };
+

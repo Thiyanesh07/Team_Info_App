@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+
 
 /**
  * Leader/Admin: Create a new report request
@@ -254,3 +254,4 @@ exports.deleteRequest = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to delete request' });
   }
 };
+

@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+
 const { logSystemActivity } = require('./systemActivity.controller');
 
 /** GET /api/team-projects/:projectId/milestones */
@@ -71,3 +71,4 @@ const updateMilestoneStatus = async (req, res) => {
 };
 
 module.exports = { getProjectMilestones, createMilestone, updateMilestoneStatus };
+

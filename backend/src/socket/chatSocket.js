@@ -25,8 +25,22 @@ const setupSocketHandlers = (io, prisma) => {
     socket.join('team-chat');
 
     // Join personal conversation rooms
-    socket.on('join-conversation', (conversationId) => {
-      socket.join(`conversation-${conversationId}`);
+    socket.on('join-conversation', async (conversationId) => {
+      try {
+        // Phase 2: Security Hardening (Verify participant)
+        const participant = await prisma.chatParticipant.findUnique({
+          where: { conversationId_userId: { conversationId, userId: socket.userId } }
+        });
+
+        if (participant) {
+          socket.join(`conversation-${conversationId}`);
+        } else {
+          console.warn(`🔒 Unauthorized join attempt to room: conversation-${conversationId} by user: ${socket.userId}`);
+          socket.emit('error', { message: 'Unauthorized room access denied' });
+        }
+      } catch (error) {
+        console.error('Socket join-conversation error:', error);
+      }
     });
 
     socket.on('leave-conversation', (conversationId) => {
@@ -41,6 +55,10 @@ const setupSocketHandlers = (io, prisma) => {
             senderId: socket.userId,
             message: data.message,
             imageUrl: data.imageUrl,
+            fileUrl: data.fileUrl,
+            fileName: data.fileName,
+            fileType: data.fileType,
+            replyToId: data.replyToId,
           },
           include: {
             sender: { select: { id: true, name: true, profileImageUrl: true } },
@@ -63,6 +81,10 @@ const setupSocketHandlers = (io, prisma) => {
             senderId: socket.userId,
             message: data.message,
             imageUrl: data.imageUrl,
+            fileUrl: data.fileUrl,
+            fileName: data.fileName,
+            fileType: data.fileType,
+            replyToId: data.replyToId,
           },
           include: {
             sender: { select: { id: true, name: true, profileImageUrl: true } },
@@ -82,15 +104,63 @@ const setupSocketHandlers = (io, prisma) => {
       }
     });
 
-    // ─── Typing indicators ──────────────────────
-    socket.on('typing-team', () => {
-      socket.to('team-chat').emit('typing-team', { userId: socket.userId });
+    // ─── Reactions ──────────────────────────────
+    socket.on('add-reaction', async (data) => {
+      try {
+        const { messageId, type, emoji } = data; // type: 'personal' or 'team'
+        const table = type === 'personal' ? 'chatMessage' : 'teamMessage';
+        
+        const msg = await prisma[table].findUnique({ where: { id: messageId } });
+        let reactions = msg.reactions || {};
+        if (typeof reactions === 'string') reactions = JSON.parse(reactions);
+        
+        // Structure: { emoji: [userId1, userId2] }
+        if (!reactions[emoji]) reactions[emoji] = [];
+        if (!reactions[emoji].includes(socket.userId)) {
+          reactions[emoji].push(socket.userId);
+        }
+        
+        const updated = await prisma[table].update({
+          where: { id: messageId },
+          data: { reactions },
+        });
+
+        const room = type === 'personal' ? `conversation-${updated.conversationId}` : 'team-chat';
+        io.to(room).emit('reaction-updated', { messageId, reactions, type });
+      } catch (error) {
+        console.error('Socket add-reaction error:', error);
+      }
     });
 
-    socket.on('typing-personal', (conversationId) => {
+    // ─── Read Receipts ──────────────────────────
+    socket.on('mark-read', async (data) => {
+      try {
+        const { conversationId, type } = data; // type: 'personal' or 'team'
+        if (type === 'personal') {
+          await prisma.chatMessage.updateMany({
+            where: { conversationId, senderId: { not: socket.userId }, isRead: false },
+            data: { isRead: true },
+          });
+          io.to(`conversation-${conversationId}`).emit('messages-read', { conversationId, userId: socket.userId });
+        } else {
+          // Team chat read receipts are usually per-user, skipping for now to keep simple
+        }
+      } catch (error) {
+        console.error('Socket mark-read error:', error);
+      }
+    });
+
+    // ─── Typing indicators ──────────────────────
+    socket.on('typing-team', (isTyping) => {
+      socket.to('team-chat').emit('typing-team', { userId: socket.userId, isTyping });
+    });
+
+    socket.on('typing-personal', (data) => {
+      const { conversationId, isTyping } = data;
       socket.to(`conversation-${conversationId}`).emit('typing-personal', {
         userId: socket.userId,
         conversationId,
+        isTyping,
       });
     });
 

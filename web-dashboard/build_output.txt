@@ -1,0 +1,36 @@
+﻿
+> web-dashboard@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.2.1 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 8.0s
+  Running TypeScript ...
+npm : Failed to type check.
+At line:1 char:1
++ npm run build 2>&1 | Out-File -FilePath ".\build_output.txt" -Encodin ...
++ ~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to type check.:String) [],  
+   RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./app/rewards/page.tsx:81:13
+Type error: Type '(signal?: AbortSignal) => Promise<void>' is not assignable to 
+type 'MouseEventHandler<HTMLButtonElement>'.
+  Types of parameters 'signal' and 'event' are incompatible.
+    Type 'MouseEvent<HTMLButtonElement, MouseEvent>' is missing the following 
+properties from type 'AbortSignal': aborted, onabort, reason, throwIfAborted, 
+and 3 more.
+
+  [90m79 |[0m           </motion.div>
+  [90m80 |[0m           <button 
+[31m[1m>[0m [90m81 |[0m             onClick={fetchStatus}
+  [90m   |[0m             [31m[1m^[0m
+  [90m82 |[0m             className=[32m"p-3 bg-slate-900 border 
+border-slate-800 rounded-2xl text-slate-400...[0m
+  [90m83 |[0m           >
+  [90m84 |[0m             <[33mRefreshCcw[0m size={[35m20[0m} />
+Next.js build worker exited with code: 1 and signal: null

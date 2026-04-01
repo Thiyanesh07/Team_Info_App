@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+
 const { logSystemActivity } = require('./systemActivity.controller');
 
 /** GET /api/ps-skills */
@@ -99,3 +99,4 @@ const deletePsSkill = async (req, res) => {
 };
 
 module.exports = { getMyPsSkills, getUserPsSkills, createPsSkill, updatePsSkill, deletePsSkill };
+

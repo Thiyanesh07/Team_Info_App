@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+
 
 /** GET /api/activities - Get activities (own for member, any for leader, all for admin) */
 const getMyActivities = async (req, res) => {
@@ -138,3 +138,4 @@ const deleteActivity = async (req, res) => {
 };
 
 module.exports = { getMyActivities, getUserActivities, getAllActivities, createActivity, updateActivity, deleteActivity };
+

@@ -12,6 +12,7 @@ import 'package:team_info_app/screens/projects/project_detail_screen.dart';
 import 'package:team_info_app/core/enums/user_role.dart';
 import 'package:team_info_app/core/services/excel_export_service.dart';
 import 'package:team_info_app/core/widgets/export_selection_dialog.dart';
+import 'package:team_info_app/widgets/empty_states.dart';
 
 class ProjectsScreen extends ConsumerStatefulWidget {
   const ProjectsScreen({super.key});
@@ -117,7 +118,7 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
       return const Center(child: CircularProgressIndicator());
     }
     if (_personalProjects.isEmpty) {
-      return _emptyState('No personal projects yet', 'Add your first project!');
+      return EmptyProjects(onAction: () => _showAddPersonalProjectDialog(context));
     }
 
     return RefreshIndicator(
@@ -214,43 +215,12 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
     );
   }
 
+  // _emptyState() replaced by bespoke widgets/empty_states.dart
   Widget _emptyState(String title, String subtitle) {
-    return Center(
-      child:
-          Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.folder_open_rounded,
-                    size: 64,
-                    color: AppColors.textMuted.withAlpha(100),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ],
-              )
-              .animate(onPlay: (controller) => controller.repeat(reverse: true))
-              .moveY(
-                begin: -5,
-                end: 5,
-                duration: 2.seconds,
-                curve: Curves.easeInOut,
-              ),
+    return CustomEmptyState(
+      icon: Icons.folder_open_rounded,
+      title: title.toUpperCase(),
+      description: subtitle,
     );
   }
 

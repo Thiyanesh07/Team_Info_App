@@ -1,5 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+
+const targetService = require('../services/target.service');
 const googleSheetsService = require('../services/googleSheets.service');
 
 /** GET /api/analytics/weekly?userId=x&startDate=x&endDate=x */
@@ -187,14 +188,8 @@ const getRewardStatus = async (req, res) => {
   try {
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
     
-    // 1. Fetch yearly averages from Google Sheets with fallbacks
-    let averages = {
-      'I': 100, 
-      'II': 300, 
-      'III': 500, 
-      'IV': 800, 
-      'OVERALL': 400
-    };
+    // 1. Fetch yearly averages from Database (maintained by background scheduler)
+    let averages = await targetService.getTargets();
 
     try {
       if (spreadsheetId) {
@@ -224,9 +219,24 @@ const getRewardStatus = async (req, res) => {
 
     // 3. Process each user's status
     const teamStatus = users.map(user => {
-      const yearKey = user.year || 'OVERALL';
+      let yearKey = (user.year || 'OVERALL').toString().trim().toUpperCase();
+      
+      // Step 3.1: Normalize Numeric years to Roman (or vice versa) to match sheet labels
+      const normalizationMap = {
+        '1': 'I', 'I': 'I',
+        '2': 'II', 'II': 'II',
+        '3': 'III', 'III': 'III',
+        '4': 'IV', 'IV': 'IV'
+      };
+
+      const normalizedYear = normalizationMap[yearKey] || yearKey;
+      
       // Fallback to overall average if year-specific average is missing
-      const target = averages[yearKey] !== undefined ? averages[yearKey] : (averages['OVERALL'] || 0);
+      // Try normalized first, then original key, then OVERALL
+      const target = averages[normalizedYear] !== undefined 
+        ? averages[normalizedYear] 
+        : (averages[yearKey] !== undefined ? averages[yearKey] : (averages['OVERALL'] || 0));
+      
       const diff = user.rewardPoints - target;
       
       return {
@@ -267,3 +277,4 @@ const getRewardStatus = async (req, res) => {
 };
 
 module.exports = { getWeeklyAnalytics, getLeaderboard, getTeamWorkload, getRewardStatus };
+

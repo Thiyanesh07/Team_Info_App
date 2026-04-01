@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const http = require('http');
 const { Server } = require('socket.io');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('./lib/prisma');
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
@@ -29,6 +29,7 @@ const systemActivityRoutes = require('./routes/systemActivity.routes');
 const milestoneRoutes = require('./routes/milestone.routes');
 const exportRoutes = require('./routes/export.routes');
 const reportRoutes = require('./routes/report.routes');
+const schedulerService = require('./services/scheduler.service');
 
 // Import socket handler
 const { setupSocketHandlers } = require('./socket/chatSocket');
@@ -36,7 +37,6 @@ const { setupSocketHandlers } = require('./socket/chatSocket');
 const app = express();
 app.set('trust proxy', 1); // Required for Render load balancer to pass real client IP
 const server = http.createServer(app);
-const prisma = new PrismaClient();
 
 // Socket.io setup
 const io = new Server(server, {
@@ -191,6 +191,9 @@ server.listen(PORT, '0.0.0.0', async () => {
   try {
     await prisma.$connect();
     console.log('📦 Database connection via Prisma established');
+    
+    // Start background services after DB is ready
+    await schedulerService.init();
   } catch (err) {
     console.error('❌ Database connection via Prisma FAILED:');
     console.error(err.message);
@@ -200,10 +203,12 @@ server.listen(PORT, '0.0.0.0', async () => {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   await prisma.$disconnect();
+  schedulerService.stopAll();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   await prisma.$disconnect();
+  schedulerService.stopAll();
   process.exit(0);
 });

@@ -11,6 +11,7 @@ const navItems = [
   { name: 'Hackathons', icon: Trophy, href: '/hackathons' },
   { name: 'Tasks', icon: CheckSquare, href: '/tasks' },
   { name: 'Rewards', icon: Trophy, href: '/rewards' },
+  { name: 'Admin Support', icon: ShieldCheck, href: '/chat' },
   { name: 'Inspection', icon: UserSearch, href: '/inspection' },
   { name: 'Security Audit', icon: ShieldCheck, href: '/audit' },
 ];

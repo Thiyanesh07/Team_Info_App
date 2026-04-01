@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+
 
 /** GET /api/hackathons */
 const getMyHackathons = async (req, res) => {
@@ -107,3 +107,4 @@ const deleteHackathon = async (req, res) => {
 };
 
 module.exports = { getMyHackathons, getUserHackathons, createHackathon, updateHackathon, deleteHackathon };
+

@@ -11,6 +11,7 @@ class CertificationModel {
   final String? description;
   final String? issuedDate;
   final String? createdAt;
+  final String? proofUrl;
 
   CertificationModel({
     required this.id,
@@ -20,6 +21,7 @@ class CertificationModel {
     this.description,
     this.issuedDate,
     this.createdAt,
+    this.proofUrl,
   });
 
   factory CertificationModel.fromJson(Map<String, dynamic> json) => 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:team_info_app/models/certification_model.dart';
 import 'package:team_info_app/models/user_model.dart';
 import 'package:team_info_app/services/api_service.dart';
@@ -12,6 +13,8 @@ import 'package:team_info_app/core/services/excel_export_service.dart';
 import 'package:team_info_app/core/widgets/export_selection_dialog.dart';
 import 'package:team_info_app/providers/auth_provider.dart';
 import 'package:team_info_app/core/enums/user_role.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:team_info_app/widgets/empty_states.dart';
 
 class CertificationsScreen extends ConsumerStatefulWidget {
   final UserModel? targetUser; // If null, means current user's certs
@@ -58,6 +61,9 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
     final providerC = TextEditingController();
     final descC = TextEditingController();
     DateTime selectedDate = DateTime.now();
+    String? proofUrl;
+    bool isUploading = false;
+    String? fileName;
 
     showModalBottomSheet(
       context: context,
@@ -128,6 +134,91 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
                 ),
               ),
 
+              const SizedBox(height: 16),
+              
+              // PROOF UPLOADER
+              InkWell(
+                onTap: isUploading ? null : () async {
+                  FilePickerResult? result = await FilePicker.platform.pickFiles(
+                    type: FileType.custom,
+                    allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+                  );
+
+                  if (result != null) {
+                    setModalState(() {
+                      isUploading = true;
+                      fileName = result.files.single.name;
+                    });
+
+                    try {
+                      final api = ref.read(apiServiceProvider);
+                      final uploadRes = await api.uploadFile(
+                        '/upload/image', 
+                        result.files.single.path!,
+                        fieldName: 'image',
+                      );
+
+                      if (uploadRes.success) {
+                        setModalState(() {
+                          proofUrl = uploadRes.data['url'];
+                          isUploading = false;
+                        });
+                      } else {
+                        setModalState(() {
+                          isUploading = false;
+                          fileName = null;
+                        });
+                        if (mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             SnackBar(content: Text('Upload failed: ${uploadRes.message}'), backgroundColor: AppColors.error),
+                           );
+                        }
+                      }
+                    } catch (e) {
+                      setModalState(() {
+                        isUploading = false;
+                        fileName = null;
+                      });
+                    }
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withAlpha(isUploading ? 10 : 20),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.primary.withAlpha(30), width: 2),
+                  ),
+                  child: Row(
+                    children: [
+                      if (isUploading)
+                        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                      else
+                        const Icon(Icons.upload_file_rounded, color: AppColors.primary),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isUploading ? 'Uploading Evidence...' : (fileName ?? 'Upload Proof (PDF/Image)'),
+                              style: GoogleFonts.inter(
+                                color: proofUrl != null ? AppColors.primary : Colors.white, 
+                                fontWeight: FontWeight.bold, 
+                                fontSize: 13
+                              ),
+                            ),
+                            if (proofUrl != null)
+                               Text('Click to change file', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 10)),
+                          ],
+                        ),
+                      ),
+                      if (proofUrl != null) const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -141,6 +232,7 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
                       'provider': providerC.text.trim(),
                       'description': descC.text.trim(),
                       'issuedDate': selectedDate.toIso8601String(),
+                      'proofUrl': proofUrl,
                     });
                     if (!modalContext.mounted) return;
                     if (res.success) {
@@ -163,6 +255,9 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
     final providerC = TextEditingController(text: cert.provider);
     final descC = TextEditingController(text: cert.description);
     DateTime selectedDate = cert.issuedDate != null ? DateTime.parse(cert.issuedDate!) : DateTime.now();
+    String? proofUrl = cert.proofUrl;
+    bool isUploading = false;
+    String? fileName = cert.proofUrl != null ? 'Current Proof' : null;
 
     showModalBottomSheet(
       context: context,
@@ -233,6 +328,89 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
                 ),
               ),
 
+              const SizedBox(height: 16),
+
+              // PROOF UPLOADER (EDIT MODE)
+              InkWell(
+                onTap: isUploading ? null : () async {
+                  FilePickerResult? result = await FilePicker.platform.pickFiles(
+                    type: FileType.custom,
+                    allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+                  );
+
+                  if (result != null) {
+                    setModalState(() {
+                      isUploading = true;
+                      fileName = result.files.single.name;
+                    });
+
+                    try {
+                      final api = ref.read(apiServiceProvider);
+                      final uploadRes = await api.uploadFile(
+                        '/upload/image', 
+                        result.files.single.path!,
+                        fieldName: 'image',
+                      );
+
+                      if (uploadRes.success) {
+                        setModalState(() {
+                          proofUrl = uploadRes.data['url'];
+                          isUploading = false;
+                        });
+                      } else {
+                        setModalState(() {
+                          isUploading = false;
+                        });
+                        if (mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             SnackBar(content: Text('Upload failed: ${uploadRes.message}'), backgroundColor: AppColors.error),
+                           );
+                        }
+                      }
+                    } catch (e) {
+                      setModalState(() {
+                        isUploading = false;
+                      });
+                    }
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withAlpha(isUploading ? 10 : 20),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.primary.withAlpha(30), width: 2),
+                  ),
+                  child: Row(
+                    children: [
+                      if (isUploading)
+                        const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                      else
+                        const Icon(Icons.upload_file_rounded, color: AppColors.primary),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isUploading ? 'Uploading Evidence...' : (fileName ?? 'Upload Proof (PDF/Image)'),
+                              style: GoogleFonts.inter(
+                                color: proofUrl != null ? AppColors.primary : Colors.white, 
+                                fontWeight: FontWeight.bold, 
+                                fontSize: 13
+                              ),
+                            ),
+                            if (proofUrl != null)
+                               Text('Click to change evidence', style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 10)),
+                          ],
+                        ),
+                      ),
+                      if (proofUrl != null) const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -246,6 +424,7 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
                       'provider': providerC.text.trim(),
                       'description': descC.text.trim(),
                       'issuedDate': selectedDate.toIso8601String(),
+                      'proofUrl': proofUrl,
                     });
                     if (!modalContext.mounted) return;
                     if (res.success) {
@@ -324,7 +503,7 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
       body: _loading 
         ? const Center(child: CircularProgressIndicator())
         : _certs.isEmpty 
-          ? _buildEmptyState()
+          ? EmptyCertifications(onAction: _showAddCertDialog)
           : ListView.builder(
               padding: const EdgeInsets.all(20),
               itemCount: _certs.length,
@@ -378,21 +557,7 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
     }
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.workspace_premium_outlined, size: 64, color: AppColors.textMuted.withAlpha(50)),
-          const SizedBox(height: 16),
-          Text(
-            'No certifications found.',
-            style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 16),
-          ),
-        ],
-      ),
-    ).animate().fade();
-  }
+  // _buildEmptyState() replaced by bespoke widgets/empty_states.dart
 
   Widget _buildCertCard(CertificationModel cert) {
     return Container(
@@ -452,6 +617,17 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
               ],
             ),
           ),
+          if (cert.proofUrl != null && cert.proofUrl!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: IconButton(
+                icon: const Icon(Icons.remove_red_eye_outlined, color: AppColors.primary, size: 20),
+                onPressed: () {
+                   launchUrl(Uri.parse(cert.proofUrl!), mode: LaunchMode.externalApplication);
+                },
+                tooltip: 'View Proof',
+              ),
+            ),
           if (widget.targetUser == null)
             PopupMenuButton(
               icon: const Icon(Icons.more_vert, color: AppColors.textMuted, size: 20),

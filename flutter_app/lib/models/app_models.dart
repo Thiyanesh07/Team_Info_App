@@ -286,7 +286,14 @@ class TeamMessage {
   final String id;
   final String? message;
   final String? imageUrl;
+  final String? fileUrl;
+  final String? fileName;
+  final String? fileType;
+  final String? replyToId;
+  final Map<String, dynamic>? reactions;
   final bool isPinned;
+  final bool isRead;
+  final bool isDelivered;
   final String timestamp;
   final Map<String, dynamic>? sender;
 
@@ -294,7 +301,14 @@ class TeamMessage {
     required this.id,
     this.message,
     this.imageUrl,
+    this.fileUrl,
+    this.fileName,
+    this.fileType,
+    this.replyToId,
+    this.reactions,
     this.isPinned = false,
+    this.isRead = false,
+    this.isDelivered = false,
     required this.timestamp,
     this.sender,
   });
@@ -331,7 +345,14 @@ class ChatMessage {
   final String conversationId;
   final String? message;
   final String? imageUrl;
+  final String? fileUrl;
+  final String? fileName;
+  final String? fileType;
+  final String? replyToId;
+  final Map<String, dynamic>? reactions;
   final bool isPinned;
+  final bool isRead;
+  final bool isDelivered;
   final String timestamp;
   final Map<String, dynamic>? sender;
 
@@ -340,7 +361,14 @@ class ChatMessage {
     required this.conversationId,
     this.message,
     this.imageUrl,
+    this.fileUrl,
+    this.fileName,
+    this.fileType,
+    this.replyToId,
+    this.reactions,
     this.isPinned = false,
+    this.isRead = false,
+    this.isDelivered = false,
     required this.timestamp,
     this.sender,
   });
@@ -349,6 +377,14 @@ class ChatMessage {
       _$ChatMessageFromJson(json);
 
   Map<String, dynamic> toJson() => _$ChatMessageToJson(this);
+
+  // Aliases for mission-critical synchronization
+  factory ChatMessage.fromMap(Map<String, dynamic> map) =>
+      ChatMessage.fromJson(map);
+  Map<String, dynamic> toMap() => toJson();
+
+  // Tactical ID getter
+  String get senderId => sender?['id'] ?? '';
 }
 
 @JsonSerializable()
