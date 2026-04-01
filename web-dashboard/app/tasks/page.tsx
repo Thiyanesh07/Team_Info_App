@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import api from '@/lib/api';
-import { CheckSquare, Clock, User, AlertCircle, ExternalLink, Filter, Search, ChevronRight, Plus, X, Trash2, Edit3 } from 'lucide-react';
+import api, { downloadExcel } from '@/lib/api';
+import { CheckSquare, Clock, User, AlertCircle, ExternalLink, Filter, Search, ChevronRight, Plus, X, Trash2, Edit3, FileSpreadsheet } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -48,6 +49,16 @@ export default function TasksPage() {
       console.error('Fetch tasks error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportTasks = async () => {
+    try {
+      toast.info('Generating Activity Report...');
+      await downloadExcel('/export/activities', `Team_Activities_${new Date().getTime()}.xlsx`, { scope: 'TEAM' });
+      toast.success('Activity Report Downloaded');
+    } catch (err: any) {
+      toast.error('Export Failed');
     }
   };
 
@@ -111,6 +122,13 @@ export default function TasksPage() {
             <p className="text-slate-400 mt-1 font-medium italic">Global tracking and regulation of active assignments.</p>
           </div>
           <div className="flex items-center gap-4">
+            <button 
+              onClick={handleExportTasks}
+              className="px-6 py-3 bg-slate-900 border border-slate-700 hover:border-emerald-500/50 hover:bg-emerald-500/5 text-slate-300 hover:text-emerald-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 group flex items-center gap-2"
+            >
+              <FileSpreadsheet size={16} className="group-hover:animate-pulse" />
+              Export Log
+            </button>
             <button 
               onClick={() => {
                 setFormData({ title: '', description: '', status: 'PENDING', priority: 'MEDIUM', deadline: '', assigneeId: '' });

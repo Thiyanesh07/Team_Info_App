@@ -8,6 +8,10 @@ import 'package:team_info_app/services/api_service.dart';
 import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'package:team_info_app/core/services/excel_export_service.dart';
+import 'package:team_info_app/core/widgets/export_selection_dialog.dart';
+import 'package:team_info_app/providers/auth_provider.dart';
+import 'package:team_info_app/core/enums/user_role.dart';
 
 class CertificationsScreen extends ConsumerStatefulWidget {
   final UserModel? targetUser; // If null, means current user's certs
@@ -18,6 +22,7 @@ class CertificationsScreen extends ConsumerStatefulWidget {
 }
 
 class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
+  final _excelService = ExcelExportService();
   List<CertificationModel> _certs = [];
   bool _loading = true;
 
@@ -30,8 +35,12 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
   Future<void> _loadCerts() async {
     setState(() => _loading = true);
     final api = ref.read(apiServiceProvider);
-    final userId = widget.targetUser?.id ?? 'me';
-    final res = await api.get('${ApiConstants.certifications}/user/$userId');
+    
+    final endpoint = widget.targetUser == null 
+        ? ApiConstants.certifications 
+        : '${ApiConstants.certifications}/user/${widget.targetUser!.id}';
+        
+    final res = await api.get(endpoint);
     
     if (mounted && res.success) {
       final List data = res.data;
@@ -57,9 +66,9 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      builder: (modalContext) => StatefulBuilder(
+        builder: (modalContext, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(modalContext).viewInsets.bottom + 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,8 +142,9 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
                       'description': descC.text.trim(),
                       'issuedDate': selectedDate.toIso8601String(),
                     });
-                    if (mounted && res.success) {
-                      Navigator.pop(context);
+                    if (!modalContext.mounted) return;
+                    if (res.success) {
+                      Navigator.pop(modalContext);
                       _loadCerts();
                     }
                   },
@@ -161,9 +171,9 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      builder: (modalContext) => StatefulBuilder(
+        builder: (modalContext, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(modalContext).viewInsets.bottom + 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,8 +247,9 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
                       'description': descC.text.trim(),
                       'issuedDate': selectedDate.toIso8601String(),
                     });
-                    if (mounted && res.success) {
-                      Navigator.pop(context);
+                    if (!modalContext.mounted) return;
+                    if (res.success) {
+                      Navigator.pop(modalContext);
                       _loadCerts();
                     }
                   },
@@ -296,6 +307,14 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
         title: Text(isMe ? 'My Certifications' : '${widget.targetUser!.name}\'s Certs'),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            onPressed: () => _handleExport(),
+            tooltip: 'Export Excel',
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       floatingActionButton: isMe ? FloatingActionButton(
         onPressed: _showAddCertDialog,
@@ -312,6 +331,51 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
               itemBuilder: (context, index) => _buildCertCard(_certs[index]),
             ),
     );
+  }
+
+  void _handleExport() {
+    final user = ref.read(authProvider).user;
+    if (user == null) return;
+
+    final isLeader = [UserRole.admin, UserRole.captain, UserRole.viceCaptain, UserRole.strategist, UserRole.manager]
+        .contains(user.role);
+
+    if (isLeader) {
+      showDialog(
+        context: context,
+        builder: (_) => ExportSelectionDialog(
+          title: 'Export Certifications',
+          onExport: (scope, selectedUserId) async {
+            await _runExport(scope: scope, userId: selectedUserId);
+          },
+        ),
+      );
+    } else {
+      _runExport(scope: 'SELF');
+    }
+  }
+
+  Future<void> _runExport({required String scope, String? userId}) async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preparing Excel report...')),
+      );
+
+      await _excelService.downloadAndOpenReport(
+        endpoint: ApiConstants.exportCertifications,
+        filename: 'Certifications_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+        queryParams: {
+          'scope': scope,
+          if (userId != null) 'userId': userId,
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   Widget _buildEmptyState() {

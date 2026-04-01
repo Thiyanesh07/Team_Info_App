@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 import CommandPalette from "@/components/CommandPalette";
+import { Toaster } from 'sonner';
 
 export default function RootLayout({
   children,
@@ -29,6 +30,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-slate-950 text-white">
         <GoogleOAuthProvider clientId={clientId}>
+          <Toaster richColors position="top-right" theme="dark" />
           <CommandPalette />
           {children}
         </GoogleOAuthProvider>

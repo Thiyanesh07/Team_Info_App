@@ -92,4 +92,53 @@ class AppDataRepository extends BaseRepository {
     null,
     ActivityItem.fromJson,
   );
+
+  // ─── Reports ───────────────────────────────
+
+  Future<List<ReportRequest>> getMyPendingReports() async {
+    final response = await api.get(ApiConstants.myPendingReports, useCache: true);
+    return listFromResponse(response, ReportRequest.fromJson);
+  }
+
+  Future<List<ReportRequest>> getManageableRequests() async {
+    final response = await api.get(ApiConstants.manageableReports, useCache: true);
+    return listFromResponse(response, ReportRequest.fromJson);
+  }
+
+  Future<ApiResponse> createReportRequest(Map<String, dynamic> data) async {
+    return await api.post(ApiConstants.reportRequest, body: data);
+  }
+
+  Future<ApiResponse> submitReport(String requestId, String fileUrl, String notes) async {
+    return await api.post(
+      '${ApiConstants.submitReport}/$requestId',
+      body: {
+        'fileUrl': fileUrl,
+        'notes': notes,
+      },
+    );
+  }
+
+  Future<List<ReportSubmission>> getSubmissionsForRequest(String requestId) async {
+    final response = await api.get('${ApiConstants.reportSubmissions}/$requestId');
+    return listFromResponse(response, ReportSubmission.fromJson);
+  }
+
+  Future<ApiResponse> reviewSubmission(String submissionId, String status, String notes) async {
+    return await api.patch(
+      '${ApiConstants.reportReview}/$submissionId',
+      body: {
+        'status': status,
+        'reviewerNotes': notes,
+      },
+    );
+  }
+
+  Future<ApiResponse> deleteReportRequest(String requestId) async {
+    return await api.delete('${ApiConstants.reportRequest}/$requestId');
+  }
+
+  Future<ApiResponse> deleteReportSubmission(String submissionId) async {
+    return await api.delete('/reports/submission/$submissionId');
+  }
 }

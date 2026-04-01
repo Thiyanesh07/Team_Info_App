@@ -27,6 +27,8 @@ const uploadRoutes = require('./routes/upload.routes');
 const taskRoutes = require('./routes/task.routes');
 const systemActivityRoutes = require('./routes/systemActivity.routes');
 const milestoneRoutes = require('./routes/milestone.routes');
+const exportRoutes = require('./routes/export.routes');
+const reportRoutes = require('./routes/report.routes');
 
 // Import socket handler
 const { setupSocketHandlers } = require('./socket/chatSocket');
@@ -39,8 +41,13 @@ const prisma = new PrismaClient();
 // Socket.io setup
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: [
+      'https://team-info-app.vercel.app', 
+      'http://localhost:3000', 
+      'http://localhost:5173'
+    ],
     methods: ['GET', 'POST'],
+    credentials: true
   },
 });
 
@@ -67,7 +74,16 @@ const apiLimiter = rateLimit({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://team-info-app.vercel.app', 
+    'http://localhost:3000', 
+    'http://localhost:5173'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
+  credentials: true
+}));
 app.use(express.json({ limit: '10mb' })); // limits payload to 10mb
 app.use(express.urlencoded({ extended: true }));
 
@@ -119,16 +135,27 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/system-activities', systemActivityRoutes); // Remapped to /api/system-activities to resolve clash
 app.use('/api/milestones', milestoneRoutes);
+app.use('/api/export', exportRoutes);
+app.use('/api/reports', reportRoutes);
 
 // ──────────────────────────────────────
 // ERROR HANDLING
 // ──────────────────────────────────────
 
 app.use((err, req, res, next) => {
-  console.error('[GLOBAL ERROR HANDLER]:', err);
-  
-  // Distinguish between handled app errors and severe crashes
   const statusCode = err.statusCode || 500;
+  
+  // High-fidelity production logging
+  console.error(`[SYSTEM ERROR] ${req.method} ${req.path} - Status: ${statusCode}`);
+  console.error(`Message: ${err.message}`);
+  if (process.env.NODE_ENV === 'production') {
+    // In production, we log more but hide internals from the client
+    if (statusCode === 500) {
+      console.error('Stack Trace:', err.stack);
+    }
+  } else {
+    console.error('Stack:', err.stack);
+  }
   
   res.status(statusCode).json({
     success: false,

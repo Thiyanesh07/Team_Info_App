@@ -420,15 +420,17 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           TextButton(
             onPressed: () async {
               final res = await _api.delete('${ApiConstants.users}/${user.id}');
-              if (!dialogContext.mounted) return;
               if (res.success) {
-                Navigator.pop(dialogContext);
+                if (!mounted) return;
+                Navigator.pop(context);
                 _loadUsers();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Member deleted successfully')),
                 );
               } else {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(res.message ?? 'Failed to delete member'),
                     backgroundColor: AppColors.error,

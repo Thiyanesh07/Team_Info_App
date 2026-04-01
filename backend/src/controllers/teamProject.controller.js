@@ -112,6 +112,14 @@ const createTeamProject = async (req, res) => {
 /** PUT /api/team-projects/:id */
 const updateTeamProject = async (req, res) => {
   try {
+    const existing = await prisma.teamProject.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ success: false, message: 'Project not found' });
+    
+    const leaderRoles = ['ADMIN', 'CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'];
+    if (existing.assignedCaptainId !== req.user.id && !leaderRoles.includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Only Team Leaders or the Project Captain can update this project' });
+    }
+
     const { projectName, assignedCaptainId, domain, subDomain, problemStatement, solution, startDate, status } = req.body;
 
     const project = await prisma.teamProject.update({
@@ -174,6 +182,14 @@ const updateTeamProject = async (req, res) => {
 /** POST /api/team-projects/:id/members - Assign members (Captain/Admin) */
 const assignMembers = async (req, res) => {
   try {
+    const existing = await prisma.teamProject.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ success: false, message: 'Project not found' });
+    
+    const leaderRoles = ['ADMIN', 'CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'];
+    if (existing.assignedCaptainId !== req.user.id && !leaderRoles.includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Only Team Leaders or the Project Captain can manage members' });
+    }
+
     const { memberIds } = req.body;
     if (!memberIds || !Array.isArray(memberIds)) {
       return res.status(400).json({ success: false, message: 'memberIds array is required' });

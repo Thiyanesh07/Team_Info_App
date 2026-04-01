@@ -8,8 +8,8 @@ router.use(authenticate);
 router.get('/', getTeamProjects);
 router.get('/:id', getTeamProjectById);
 router.post('/', isLeader, createTeamProject);
-router.put('/:id', isLeader, updateTeamProject);
-router.post('/:id/members', isLeader, assignMembers);
+router.put('/:id', updateTeamProject);
+router.post('/:id/members', assignMembers);
 router.delete('/:id', isLeader, deleteTeamProject);
 router.post('/:id/progress', addProgressUpdate);
 

@@ -1,0 +1,7 @@
+﻿Analyzing flutter_app...                                        
+
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\screens\home\home_screen.dart:688:9 - use_null_aware_elements
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\projects\project_detail_screen.dart:235:19 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\projects\project_detail_screen.dart:244:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\projects\projects_screen.dart:373:56 - use_build_context_synchronously
+

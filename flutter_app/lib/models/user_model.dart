@@ -15,6 +15,8 @@ class UserModel {
   final double? cgpa;
   final int rewardPoints;
   final int activityPoints;
+  final int? groupPoints;
+  final double? contributionPercent;
   final String? profileImageUrl;
   final UserRole role;
   final List<String> primarySkills;
@@ -39,6 +41,8 @@ class UserModel {
     this.cgpa,
     this.rewardPoints = 0,
     this.activityPoints = 0,
+    this.groupPoints,
+    this.contributionPercent,
     this.profileImageUrl,
     this.role = UserRole.member,
     this.primarySkills = const [],
@@ -57,37 +61,23 @@ class UserModel {
 
   Map<String, dynamic> toJson() => _$UserModelToJson(this);
 
-  String get rankName {
-    if (rewardPoints >= 5000) return 'Diamond Strategist';
-    if (rewardPoints >= 2500) return 'Platinum Architect';
-    if (rewardPoints >= 1000) return 'Gold Captain';
-    if (rewardPoints >= 500) return 'Silver Manager';
-    if (rewardPoints >= 100) return 'Bronze Member';
-    return 'Rookie';
-  }
-
-  double get rankProgress {
-    if (rewardPoints >= 5000) return 1.0;
-    if (rewardPoints >= 2500) return (rewardPoints - 2500) / 2500;
-    if (rewardPoints >= 1000) return (rewardPoints - 1000) / 1500;
-    if (rewardPoints >= 500) return (rewardPoints - 500) / 500;
-    if (rewardPoints >= 100) return (rewardPoints - 100) / 400;
-    return rewardPoints / 100;
-  }
-
   UserModel copyWith({
     String? name, String? regNo, String? department, String? year,
     String? mobile, double? cgpa, String? profileImageUrl, UserRole? role,
     List<String>? primarySkills, List<String>? secondarySkills,
     List<String>? specialSkills, List<String>? programmingLangs,
     String? linkedinUrl, String? githubUrl, String? leetcodeUrl, String? twitterUrl,
+    int? rewardPoints, int? activityPoints, int? groupPoints, double? contributionPercent,
   }) {
     return UserModel(
       id: id, email: email,
       name: name ?? this.name, regNo: regNo ?? this.regNo,
       department: department ?? this.department, year: year ?? this.year,
       mobile: mobile ?? this.mobile, cgpa: cgpa ?? this.cgpa,
-      rewardPoints: rewardPoints, activityPoints: activityPoints,
+      rewardPoints: rewardPoints ?? this.rewardPoints, 
+      activityPoints: activityPoints ?? this.activityPoints,
+      groupPoints: groupPoints ?? this.groupPoints,
+      contributionPercent: contributionPercent ?? this.contributionPercent,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       role: role ?? this.role,
       primarySkills: primarySkills ?? this.primarySkills,

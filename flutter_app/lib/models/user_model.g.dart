@@ -17,6 +17,8 @@ UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
       cgpa: (json['cgpa'] as num?)?.toDouble(),
       rewardPoints: (json['rewardPoints'] as num?)?.toInt() ?? 0,
       activityPoints: (json['activityPoints'] as num?)?.toInt() ?? 0,
+      groupPoints: (json['groupPoints'] as num?)?.toInt(),
+      contributionPercent: (json['contributionPercent'] as num?)?.toDouble(),
       profileImageUrl: json['profileImageUrl'] as String?,
       role: $enumDecodeNullable(_$UserRoleEnumMap, json['role']) ??
           UserRole.member,
@@ -55,6 +57,8 @@ Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
       'cgpa': instance.cgpa,
       'rewardPoints': instance.rewardPoints,
       'activityPoints': instance.activityPoints,
+      'groupPoints': instance.groupPoints,
+      'contributionPercent': instance.contributionPercent,
       'profileImageUrl': instance.profileImageUrl,
       'role': _$UserRoleEnumMap[instance.role]!,
       'primarySkills': instance.primarySkills,

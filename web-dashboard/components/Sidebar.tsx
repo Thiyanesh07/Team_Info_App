@@ -1,14 +1,16 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, UserSearch, LogOut, ShieldCheck, Rocket, CheckSquare } from 'lucide-react';
+import { LayoutDashboard, Users, UserSearch, LogOut, ShieldCheck, Rocket, CheckSquare, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { name: 'Dashboard', icon: LayoutDashboard, href: '/' },
   { name: 'Members', icon: Users, href: '/members' },
   { name: 'Projects', icon: Rocket, href: '/projects' },
+  { name: 'Hackathons', icon: Trophy, href: '/hackathons' },
   { name: 'Tasks', icon: CheckSquare, href: '/tasks' },
+  { name: 'Rewards', icon: Trophy, href: '/rewards' },
   { name: 'Inspection', icon: UserSearch, href: '/inspection' },
   { name: 'Security Audit', icon: ShieldCheck, href: '/audit' },
 ];
@@ -17,9 +19,11 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_user');
-    window.location.href = '/login';
+    if (window.confirm('Are you sure you want to terminate your administrative session?')) {
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_user');
+      window.location.href = '/login';
+    }
   };
 
   return (

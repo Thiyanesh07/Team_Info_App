@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import api from '@/lib/api';
-import { Users, MoreVertical, Shield, Mail, Building, Plus, Trash2, Edit3, X, Check, Search, Star, Flame, LayoutList, GraduationCap, BookOpen, Trash, Hexagon } from 'lucide-react';
+import api, { downloadExcel } from '@/lib/api';
+import { Users, MoreVertical, Shield, Mail, Building, Plus, Trash2, Edit3, X, Check, Search, Star, Flame, LayoutList, GraduationCap, BookOpen, Trash, Hexagon, FileSpreadsheet } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -39,6 +40,36 @@ export default function MembersPage() {
       console.error('Fetch users error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportPortfolio = async (type: 'skills' | 'learning' | 'certifications') => {
+    if (!selectedUser) return;
+    try {
+      const label = type === 'skills' ? 'Skills' : type === 'learning' ? 'Learning' : 'Certifications';
+      toast.info(`Generating ${label} Report...`);
+      const endpoint = `/export/${type}`;
+      await downloadExcel(endpoint, `${selectedUser.name}_${label}_${new Date().getTime()}.xlsx`, { 
+        scope: 'USER',
+        userId: selectedUser.id 
+      });
+      toast.success(`${label} Report Downloaded`);
+    } catch (err: any) {
+      toast.error('Export Failed');
+    }
+  };
+
+  const handleExportUsers = async () => {
+    try {
+      toast.info('Generating Team Roster...');
+      // Note: We don't have a dedicated /export/users but since users are essentially the base, 
+      // we can reuse another export that includes user data if applicable, or just daily logs if requested.
+      // The user requested: daily log, projects, hackathons, skills, learning, certs.
+      // I will assume they might want a general skills/learning matrix for all.
+      await downloadExcel('/export/activities', `Team_Roster_Activities_${new Date().getTime()}.xlsx`, { scope: 'TEAM' });
+      toast.success('Roster Data Downloaded');
+    } catch (err: any) {
+      toast.error('Export Failed');
     }
   };
 
@@ -181,13 +212,22 @@ export default function MembersPage() {
             <h2 className="text-3xl font-bold tracking-tight uppercase">Team Members</h2>
             <p className="text-slate-400 mt-1 font-medium italic">Manage accounts, roles and tactical performance metrics.</p>
           </div>
-          <button 
-            onClick={openCreateModal}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-2xl font-bold transition-all shadow-lg shadow-blue-600/20 active:scale-95"
-          >
-            <Plus size={20} />
-            Onboard Member
-          </button>
+          <div className="flex gap-4">
+            <button 
+              onClick={handleExportUsers}
+              className="flex items-center gap-2.5 px-6 py-3 bg-slate-900 border border-slate-700 hover:border-emerald-500/50 hover:bg-emerald-500/5 text-slate-300 hover:text-emerald-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 group"
+            >
+              <FileSpreadsheet size={16} className="group-hover:animate-pulse" />
+              Export Roster
+            </button>
+            <button 
+              onClick={openCreateModal}
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-2xl font-bold transition-all shadow-lg shadow-blue-600/20 active:scale-95"
+            >
+              <Plus size={20} />
+              Onboard Member
+            </button>
+          </div>
         </header>
 
         <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl">
@@ -515,6 +555,33 @@ export default function MembersPage() {
                     {t.label}
                   </button>
                 ))}
+                {portfolioTab === 'skills' && (
+                  <button 
+                    onClick={() => handleExportPortfolio('skills')}
+                    className="flex items-center gap-2.5 px-5 py-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all active:scale-95 ml-auto"
+                  >
+                    <FileSpreadsheet size={14} />
+                    Export Skills
+                  </button>
+                )}
+                {portfolioTab === 'learning' && (
+                  <button 
+                    onClick={() => handleExportPortfolio('learning')}
+                    className="flex items-center gap-2.5 px-5 py-3 bg-blue-500/10 border border-blue-500/30 text-blue-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500/20 transition-all active:scale-95 ml-auto"
+                  >
+                    <FileSpreadsheet size={14} />
+                    Export Learning
+                  </button>
+                )}
+                {portfolioTab === 'certs' && (
+                  <button 
+                    onClick={() => handleExportPortfolio('certifications')}
+                    className="flex items-center gap-2.5 px-5 py-3 bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500/20 transition-all active:scale-95 ml-auto"
+                  >
+                    <FileSpreadsheet size={14} />
+                    Export Certs
+                  </button>
+                )}
               </div>
 
               <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">

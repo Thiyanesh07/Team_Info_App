@@ -5,6 +5,7 @@ import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/models/app_models.dart';
 import 'package:team_info_app/models/user_model.dart';
 import 'package:team_info_app/screens/analytics/leaderboard_screen.dart';
+import 'package:team_info_app/screens/analytics/reward_status_screen.dart';
 import 'package:team_info_app/screens/analytics/widgets/resource_heatmap.dart';
 import 'package:team_info_app/screens/analytics/widgets/velocity_chart.dart';
 import 'package:team_info_app/screens/analytics/widgets/skill_growth_radar.dart';
@@ -87,6 +88,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                       color: Colors.white,
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  
+                  // New Reward Eligibility Card
+                  _buildRewardEligibilityCard(),
                   const SizedBox(height: 16),
 
                   // Hours breakdown chart
@@ -397,6 +402,68 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildRewardEligibilityCard() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary.withAlpha(40), AppColors.surfaceLight.withAlpha(20)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withAlpha(60)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const RewardStatusScreen()),
+          ),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withAlpha(40),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.verified_rounded, color: AppColors.primary, size: 28),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Internal Marks Eligibility',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Track your Reward Points status relative to your year\'s average.',
+                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0);
   }
 }
 

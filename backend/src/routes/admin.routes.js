@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAdminOverview, getAdminUserDetail, updateUser, updateProject, deleteProject } = require('../controllers/admin.controller');
+const { getAdminOverview, getAdminUserDetail, updateUser, updateProject, deleteProject, syncRewardsFromSheets } = require('../controllers/admin.controller');
 const { authenticate, isAdmin } = require('../middleware/auth.middleware');
 
 // Protect all admin routes
@@ -31,9 +31,11 @@ router.put('/manage/users/:id', updateUser);
 router.put('/manage/projects/:id', updateProject);
 
 /**
- * @route DELETE /api/admin/manage/projects/:id
- * @desc Delete a team project from the database
+ * @route POST /api/admin/sync/rewards-sheets
+ * @desc Sync reward points for all users from Google Sheets
  */
+router.post('/sync/rewards-sheets', syncRewardsFromSheets);
+
 router.delete('/manage/projects/:id', deleteProject);
 
 module.exports = router;

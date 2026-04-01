@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const googleSheetsService = require('../services/googleSheets.service');
 
 /** GET /api/analytics/weekly?userId=x&startDate=x&endDate=x */
 const getWeeklyAnalytics = async (req, res) => {
@@ -179,4 +180,70 @@ const getTeamWorkload = async (req, res) => {
   }
 };
 
-module.exports = { getWeeklyAnalytics, getLeaderboard, getTeamWorkload };
+/** GET /api/analytics/reward-status */
+const getRewardStatus = async (req, res) => {
+  try {
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+    
+    // 1. Fetch yearly averages from Google Sheets
+    const averages = await googleSheetsService.getYearlyAverages(spreadsheetId);
+    
+    // 2. Fetch all users with their current reward points
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        regNo: true,
+        year: true,
+        rewardPoints: true,
+        profileImageUrl: true,
+        role: true
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    // 3. Process each user's status
+    const teamStatus = users.map(user => {
+      const yearKey = user.year || 'OVERALL';
+      // Fallback to overall average if year-specific average is missing
+      const target = averages[yearKey] !== undefined ? averages[yearKey] : (averages['OVERALL'] || 0);
+      const diff = user.rewardPoints - target;
+      
+      return {
+        id: user.id,
+        name: user.name,
+        regNo: user.regNo,
+        year: user.year,
+        rewardPoints: user.rewardPoints,
+        profileImageUrl: user.profileImageUrl,
+        role: user.role,
+        target,
+        isEligible: diff >= 0,
+        pointsNeeded: diff < 0 ? Math.abs(Math.round(diff * 100) / 100) : 0
+      };
+    });
+
+    const belowAverage = teamStatus.filter(s => !s.isEligible);
+    const eligibleCount = teamStatus.length - belowAverage.length;
+
+    res.json({
+      success: true,
+      data: {
+        yearlyTargets: averages,
+        teamStatus,
+        summary: {
+          totalUsers: teamStatus.length,
+          eligibleCount,
+          belowAverageCount: belowAverage.length,
+          overallAverage: averages['OVERALL'] || 0
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('GetRewardStatus error:', error);
+    res.status(500).json({ success: false, message: 'Failed to compute reward status' });
+  }
+};
+
+module.exports = { getWeeklyAnalytics, getLeaderboard, getTeamWorkload, getRewardStatus };

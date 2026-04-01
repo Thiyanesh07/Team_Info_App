@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 const userSelect = {
   id: true, email: true, name: true, regNo: true, department: true,
   year: true, mobile: true, cgpa: true, rewardPoints: true, activityPoints: true,
+  psToken: true, groupPoints: true, contributionPercent: true,
   profileImageUrl: true, role: true, primarySkills: true, secondarySkills: true,
   specialSkills: true, programmingLangs: true, linkedinUrl: true, githubUrl: true,
   leetcodeUrl: true, twitterUrl: true, createdAt: true, updatedAt: true,
@@ -50,22 +51,7 @@ const updateProfile = async (req, res) => {
   try {
     const { name, regNo, department, year, mobile, cgpa, profileImageUrl,
       primarySkills, secondarySkills, specialSkills, programmingLangs,
-      linkedinUrl, githubUrl, leetcodeUrl, twitterUrl,
-      rewardPoints, activityPoints } = req.body;
-
-    if (rewardPoints !== undefined) {
-      const reward = Number(rewardPoints);
-      if (!Number.isFinite(reward) || reward <= 0) {
-        return res.status(400).json({ success: false, message: 'Reward points must be a positive number' });
-      }
-    }
-
-    if (activityPoints !== undefined) {
-      const activity = Number(activityPoints);
-      if (!Number.isFinite(activity) || activity <= 0) {
-        return res.status(400).json({ success: false, message: 'Activity points must be a positive number' });
-      }
-    }
+      linkedinUrl, githubUrl, leetcodeUrl, twitterUrl } = req.body;
 
     const user = await prisma.user.update({
       where: { id: req.user.id },
@@ -81,12 +67,6 @@ const updateProfile = async (req, res) => {
         ...(secondarySkills && { secondarySkills }),
         ...(specialSkills && { specialSkills }),
         ...(programmingLangs && { programmingLangs }),
-        ...(rewardPoints !== undefined && {
-          rewardPoints: Number(rewardPoints),
-        }),
-        ...(activityPoints !== undefined && {
-          activityPoints: Number(activityPoints),
-        }),
         ...(linkedinUrl !== undefined && { linkedinUrl }),
         ...(githubUrl !== undefined && { githubUrl }),
         ...(leetcodeUrl !== undefined && { leetcodeUrl }),
@@ -246,4 +226,63 @@ const adminUpdateUser = async (req, res) => {
   }
 };
 
-module.exports = { getAllUsers, getUserById, updateProfile, assignRole, createUser, deleteUser, adminUpdateUser };
+/** PUT /api/users/ps-sync - Sync Activity Points via token */
+const syncPsPoints = async (req, res) => {
+  try {
+    const { psToken } = req.body;
+    if (!psToken) {
+      return res.status(400).json({ success: false, message: 'PS token is required' });
+    }
+
+    // Call the external API
+    const response = await fetch('https://ps.bitsathy.ac.in/api/ps_v2/dashboard/user-points?filter=overall', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json, text/plain, */*',
+        'Cookie': `PS=${psToken}`,
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Mobile Safari/537.36'
+      }
+    });
+
+    if (!response.ok) {
+        return res.status(response.status).json({ success: false, message: 'Failed to authenticate with PS portal' });
+    }
+
+    const dataObj = await response.json();
+    if (!dataObj.success || !dataObj.data) {
+        return res.status(400).json({ success: false, message: 'Invalid response from PS portal' });
+    }
+    
+    let activityPoints = 0;
+    let groupPoints = 0;
+    let contributionPercent = 0.0;
+
+    if (dataObj.data.points && dataObj.data.points.length > 0) {
+        activityPoints = dataObj.data.points[0].total_points || 0;
+    }
+    
+    if (dataObj.data.group_points && dataObj.data.group_points.length > 0) {
+        groupPoints = dataObj.data.group_points[0].total_group_points || 0;
+        contributionPercent = dataObj.data.group_points[0].contribution_percent || 0;
+    }
+
+    // Update the user
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        psToken,
+        activityPoints,
+        groupPoints,
+        contributionPercent
+      },
+      select: userSelect,
+    });
+
+    res.json({ success: true, message: 'Points synced successfully', data: user });
+  } catch (error) {
+    console.error('SyncPsPoints error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error while syncing points' });
+  }
+};
+
+module.exports = { getAllUsers, getUserById, updateProfile, assignRole, createUser, deleteUser, adminUpdateUser, syncPsPoints };

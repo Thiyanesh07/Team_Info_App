@@ -6,6 +6,11 @@ import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:team_info_app/services/api_service.dart';
 import 'package:team_info_app/models/app_models.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:team_info_app/screens/learning/learning_detail_screen.dart';
+import 'package:team_info_app/core/services/excel_export_service.dart';
+import 'package:team_info_app/core/widgets/export_selection_dialog.dart';
+import 'package:team_info_app/providers/auth_provider.dart';
+import 'package:team_info_app/core/enums/user_role.dart';
 
 class LearningScreen extends ConsumerStatefulWidget {
   const LearningScreen({super.key});
@@ -15,6 +20,7 @@ class LearningScreen extends ConsumerStatefulWidget {
 
 class _LearningScreenState extends ConsumerState<LearningScreen> {
   final _api = ApiService();
+  final _excelService = ExcelExportService();
   List<Learning> _learnings = [];
   bool _loading = true;
 
@@ -48,6 +54,14 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
           style: GoogleFonts.inter(fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            onPressed: () => _handleExport(),
+            tooltip: 'Export Learning Logs',
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddLearningDialog(context),
@@ -77,6 +91,51 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
               ),
             ),
     );
+  }
+
+  void _handleExport() {
+    final user = ref.read(authProvider).user;
+    if (user == null) return;
+
+    final isLeader = [UserRole.admin, UserRole.captain, UserRole.viceCaptain, UserRole.strategist, UserRole.manager]
+        .contains(user.role);
+
+    if (isLeader) {
+      showDialog(
+        context: context,
+        builder: (_) => ExportSelectionDialog(
+          title: 'Export Learning Logs',
+          onExport: (scope, selectedUserId) async {
+            await _runExport(scope: scope, userId: selectedUserId);
+          },
+        ),
+      );
+    } else {
+      _runExport(scope: 'SELF');
+    }
+  }
+
+  Future<void> _runExport({required String scope, String? userId}) async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preparing Excel report...')),
+      );
+
+      await _excelService.downloadAndOpenReport(
+        endpoint: ApiConstants.exportLearning,
+        filename: 'LearningLogs_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+        queryParams: {
+          'scope': scope,
+          if (userId != null) 'userId': userId,
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   Widget _emptyState() {
@@ -388,126 +447,117 @@ class _LearningCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.divider),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(50),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LearningDetailScreen(learning: learning),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.warning.withAlpha(30),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.school_rounded,
-                  color: AppColors.warning,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      learning.skillName,
-                      style: GoogleFonts.inter(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      learning.level,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: AppColors.warning,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuButton(
-                icon: const Icon(Icons.more_vert, color: AppColors.textMuted, size: 20),
-                color: AppColors.surface,
-                itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'edit', child: Text('Edit', style: TextStyle(color: AppColors.primary))),
-                  const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
-                ],
-                onSelected: (v) {
-                  if (v == 'edit') onEdit();
-                  if (v == 'delete') onDelete();
-                },
-              ),
-            ],
-          ),
-          if (learning.topics.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: learning.topics
-                  .map(
-                    (t) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceLight,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        t,
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
+        ).then((_) => onRefresh());
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.cardDark,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.divider),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(50),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _statusBadge(String status) {
-    final color = status == 'COMPLETED' ? AppColors.success : AppColors.primary;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withAlpha(25),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withAlpha(50)),
-      ),
-      child: Text(
-        status,
-        style: GoogleFonts.inter(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: color,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withAlpha(30),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.school_rounded,
+                    color: AppColors.warning,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        learning.skillName,
+                        style: GoogleFonts.inter(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        learning.level,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuButton(
+                  icon: const Icon(Icons.more_vert, color: AppColors.textMuted, size: 20),
+                  color: AppColors.surface,
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(value: 'edit', child: Text('Edit', style: TextStyle(color: AppColors.primary))),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+                  ],
+                  onSelected: (v) {
+                    if (v == 'edit') onEdit();
+                    if (v == 'delete') onDelete();
+                  },
+                ),
+              ],
+            ),
+            if (learning.topics.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: learning.topics
+                    .map(
+                      (t) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceLight,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          t,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
 }
+

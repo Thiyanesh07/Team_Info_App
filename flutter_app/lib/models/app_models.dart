@@ -93,6 +93,7 @@ class ProjectUpdate {
   final String userId;
   final String title;
   final String? description;
+  final String? date;
   final Map<String, dynamic>? user;
   final String? createdAt;
   final String? updatedAt;
@@ -103,6 +104,7 @@ class ProjectUpdate {
     required this.userId,
     required this.title,
     this.description,
+    this.date,
     this.user,
     this.createdAt,
     this.updatedAt,
@@ -502,4 +504,77 @@ class ProjectMilestone {
   factory ProjectMilestone.fromJson(Map<String, dynamic> json) =>
       _$ProjectMilestoneFromJson(json);
   Map<String, dynamic> toJson() => _$ProjectMilestoneToJson(this);
+}
+
+// ─── General Report Submission ─────────────────
+
+enum ReportAudience { INDIVIDUAL, ROLE, TEAM }
+enum ReportSubmissionStatus { PENDING, COMPLETED, REDO }
+
+@JsonSerializable()
+class ReportRequest {
+  final String id;
+  final String title;
+  final String? description;
+  final String? deadline;
+  final String assignedById;
+  final ReportAudience targetAudience;
+  final List<String> targetRoles;
+  final List<String> targetUserIds;
+  final List<String> allowedFormats;
+  final String? createdAt;
+  final Map<String, dynamic>? assignedBy;
+  final List<ReportSubmission> submissions;
+
+  ReportRequest({
+    required this.id,
+    required this.title,
+    this.description,
+    this.deadline,
+    required this.assignedById,
+    this.targetAudience = ReportAudience.TEAM,
+    this.targetRoles = const [],
+    this.targetUserIds = const [],
+    this.allowedFormats = const [".pdf", ".docx", ".xlsx", ".pptx"],
+    this.createdAt,
+    this.assignedBy,
+    this.submissions = const [],
+  });
+
+  factory ReportRequest.fromJson(Map<String, dynamic> json) =>
+      _$ReportRequestFromJson(json);
+  Map<String, dynamic> toJson() => _$ReportRequestToJson(this);
+}
+
+@JsonSerializable()
+class ReportSubmission {
+  final String id;
+  final String reportRequestId;
+  final String userId;
+  final String fileUrl;
+  final String? notes;
+  final ReportSubmissionStatus status;
+  final String? reviewerNotes;
+  final String? createdAt;
+  final String? updatedAt;
+  final Map<String, dynamic>? user;
+  final ReportRequest? reportRequest;
+
+  ReportSubmission({
+    required this.id,
+    required this.reportRequestId,
+    required this.userId,
+    required this.fileUrl,
+    this.notes,
+    this.status = ReportSubmissionStatus.PENDING,
+    this.reviewerNotes,
+    this.createdAt,
+    this.updatedAt,
+    this.user,
+    this.reportRequest,
+  });
+
+  factory ReportSubmission.fromJson(Map<String, dynamic> json) =>
+      _$ReportSubmissionFromJson(json);
+  Map<String, dynamic> toJson() => _$ReportSubmissionToJson(this);
 }

@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const googleSheetsService = require('../services/googleSheets.service');
 
 /**
  * Get high-level team overview for Admin Dashboard
@@ -225,10 +226,77 @@ const deleteProject = async (req, res) => {
   }
 };
 
+/**
+ * Administrative: Sync Reward Points from Google Sheets
+ */
+const syncRewardsFromSheets = async (req, res) => {
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+  const tabs = (process.env.GOOGLE_SHEET_DEPARTMENTS || 'IT,ISE,FD,FT,EIE,ECE,EEE,CT,CSE,CSD,CSBS,CIVIL,BT,BIOMEDICAL,AIML').split(',');
+
+  try {
+    const pointsMap = await googleSheetsService.fetchAllDepartments(spreadsheetId, tabs);
+    const users = await prisma.user.findMany({
+        where: { regNo: { not: null } }
+    });
+
+    let updatedCount = 0;
+    let notFoundCount = 0;
+    const errors = [];
+
+    // 4. Batch update users concurrently
+    await Promise.all(users.map(async (user) => {
+      if (pointsMap.has(user.regNo)) {
+        const newPoints = pointsMap.get(user.regNo);
+        // Only update if points have changed to save DB write operations
+        if (user.rewardPoints !== newPoints) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { rewardPoints: newPoints }
+          });
+          updatedCount++;
+        }
+      } else {
+        notFoundCount++;
+      }
+    }));
+
+    // Create a system activity record
+    await prisma.systemActivity.create({
+      data: {
+        userId: req.user.id,
+        title: 'Points Synchronized',
+        content: `Reward points synced from Google Sheets. ${updatedCount} users updated, ${notFoundCount} not matched.`,
+        type: 'SYNC',
+        metadata: {
+            updatedCount,
+            notFoundCount,
+            source: 'GOOGLE_SHEETS'
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Points synced successfully',
+      summary: {
+        updated: updatedCount,
+        notFound: notFoundCount,
+        totalInDatabase: users.length,
+        totalInSheet: pointsMap.size
+      }
+    });
+
+  } catch (error) {
+    console.error('syncRewardsFromSheets error:', error);
+    res.status(500).json({ success: false, message: 'Google Sheets sync failed: ' + error.message });
+  }
+};
+
 module.exports = {
   getAdminOverview,
   getAdminUserDetail,
   updateUser,
   updateProject,
-  deleteProject
+  deleteProject,
+  syncRewardsFromSheets
 };

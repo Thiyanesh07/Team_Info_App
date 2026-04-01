@@ -14,6 +14,7 @@ class ApiConstants {
   static const String users = '/users';
   static const String updateProfile = '/users/profile';
   static const String createUser = '/users/create';
+  static const String psSync = '/users/ps-sync';
 
   // Projects
   static const String personalProjects = '/personal-projects';
@@ -38,9 +39,11 @@ class ApiConstants {
   static const String weeklyAnalytics = '/analytics/weekly';
   static const String leaderboard = '/analytics/leaderboard';
   static const String teamWorkload = '/analytics/team-workload';
+  static const String rewardStatus = '/analytics/reward-status';
 
   // Upload
   static const String uploadImage = '/upload/image';
+  static const String uploadFile = '/upload/image'; // Backend now supports auto
 
   // Tasks
   static const String myTasks = '/tasks/my';
@@ -48,7 +51,24 @@ class ApiConstants {
   static const String allTasks = '/tasks/all';
   static const String tasks = '/tasks';
 
+  // Reports
+  static const String myPendingReports = '/reports/my-pending';
+  static const String reportRequest = '/reports/request';
+  static const String reportSubmissions = '/reports/submissions';
+  static const String reportReview = '/reports/review';
+  static const String manageableReports = '/reports/manageable';
+  static const String submitReport = '/reports/submit';
+
   // Admin
   static const String adminOverview = '/admin/overview';
-  static const String adminUserDetail = '/admin/users'; // followed by /:id/detail
+  static const String adminUserDetail = '/admin/users';
+  static const String syncRewardsSheets = '/admin/sync/rewards-sheets';
+
+  // Export
+  static const String exportActivities = '/export/activities';
+  static const String exportProjects = '/export/projects';
+  static const String exportHackathons = '/export/hackathons';
+  static const String exportSkills = '/export/skills';
+  static const String exportLearning = '/export/learning';
+  static const String exportCertifications = '/export/certifications';
 }

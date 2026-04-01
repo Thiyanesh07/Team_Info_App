@@ -10,8 +10,9 @@ import 'package:team_info_app/services/api_service.dart';
 import 'package:team_info_app/screens/profile/edit_profile_screen.dart';
 import 'package:team_info_app/screens/skills/skills_screen.dart';
 import 'package:team_info_app/screens/profile/certifications_screen.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+
 import 'package:team_info_app/core/enums/user_role.dart';
+import 'package:team_info_app/screens/profile/college_sync_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -135,7 +136,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.logout, color: AppColors.error),
-            onPressed: () => ref.read(authProvider.notifier).logout(),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  backgroundColor: AppColors.surface,
+                  title: Text('Logout', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                  content: Text('Are you sure you want to exit the Command Center?', style: GoogleFonts.inter(color: Colors.white70)),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: Text('Cancel', style: GoogleFonts.inter(color: AppColors.textMuted)),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: Text('Logout', style: GoogleFonts.inter(color: AppColors.error, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                ref.read(authProvider.notifier).logout();
+              }
+            },
           ),
         ],
       ),
@@ -196,12 +219,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Rank Progress Card (Hide for Admin)
-            if (user.role != UserRole.admin) ...[
-              _buildRankCard(user),
-              const SizedBox(height: 24),
-            ],
-
             // Info Cards (Hide for Admin as they aren't students)
             if (user.role != UserRole.admin) ...[
               _InfoSection(
@@ -224,22 +241,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 children: [
                   Expanded(
                     child: _StatChip(
-                      'Reward Pts',
-                      user.rewardPoints.toString(),
-                      AppColors.primary,
-                      onTap: () => _editPoints(
-                        fieldKey: 'rewardPoints',
-                        label: 'Reward Points',
-                        currentValue: user.rewardPoints,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _StatChip(
                       'Activity Pts',
                       user.activityPoints.toString(),
-                      AppColors.secondary,
+                      AppColors.primary,
                       onTap: () => _editPoints(
                         fieldKey: 'activityPoints',
                         label: 'Activity Points',
@@ -247,9 +251,54 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _StatChip(
+                      'Reward Pts',
+                      user.rewardPoints.toString(),
+                      AppColors.secondary,
+                      onTap: () => _editPoints(
+                        fieldKey: 'rewardPoints',
+                        label: 'Reward Points',
+                        currentValue: user.rewardPoints,
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
+            ],
+
+            // Bitsathy API Connection
+            if (user.role != UserRole.admin) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final synced = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CollegeSyncScreen(),
+                      ),
+                    );
+                    if (synced == true) {
+                      await ref.read(authProvider.notifier).refreshUser();
+                    }
+                  },
+                  icon: const Icon(Icons.sync),
+                  label: const Text('Sync College Portal'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.cardDark,
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: AppColors.primary.withAlpha(50)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
             ],
 
             // Skills Portfolio
@@ -316,84 +365,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       user.leetcodeUrl != null ||
       user.twitterUrl != null;
 
-  Widget _buildRankCard(UserModel user) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.primary.withAlpha(50)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withAlpha(20),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Your Rank',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              Text(
-                user.rankName,
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: user.rankProgress,
-              minHeight: 12,
-              backgroundColor: AppColors.surfaceLight,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.primary,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${user.rewardPoints} points',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                'Next Rank: 85%', // Mock percentage for next rank logic
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ).animate().scale(
-      delay: 200.ms,
-      duration: 600.ms,
-      curve: Curves.easeOutBack,
-    );
-  }
+
 
   Widget _buildSkillsPreview(BuildContext context, UserModel user) {
     return Column(

@@ -27,4 +27,39 @@ api.interceptors.response.use(
   }
 );
 
+export const downloadExcel = async (endpoint: string, filename: string, params: any = {}) => {
+  try {
+    const response = await api.get(endpoint, {
+      params,
+      responseType: 'blob',
+      headers: {
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    return true;
+  } catch (error) {
+    console.error('Download error:', error);
+    throw error;
+  }
+};
+
+export const checkHealth = async () => {
+  try {
+    const res = await api.get('/health/db');
+    return res.data;
+  } catch (error) {
+    console.error('Health check failed:', error);
+    return { status: 'error', database: 'disconnected' };
+  }
+};
+
 export default api;

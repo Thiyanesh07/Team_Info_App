@@ -16,12 +16,21 @@ cloudinary.config({
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB as requested
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    const allowedMimeTypes = [
+      'image/',
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/msword', // .doc
+    ];
+
+    if (allowedMimeTypes.some(mime => file.mimetype.startsWith(mime) || file.mimetype === mime)) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'), false);
+      cb(new Error('File format not supported. Only images and documents (.pdf, .docx, .pptx, .xlsx) are allowed.'), false);
     }
   },
 });
@@ -36,7 +45,7 @@ router.post('/image', authenticate, upload.single('image'), async (req, res) => 
     // Upload to Cloudinary
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: 'team-info-app', resource_type: 'image' },
+        { folder: 'team-info-app', resource_type: 'auto' },
         (error, result) => {
           if (error) reject(error);
           else resolve(result);

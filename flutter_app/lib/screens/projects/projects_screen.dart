@@ -10,6 +10,8 @@ import 'package:team_info_app/repositories/app_data_repository.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:team_info_app/screens/projects/project_detail_screen.dart';
 import 'package:team_info_app/core/enums/user_role.dart';
+import 'package:team_info_app/core/services/excel_export_service.dart';
+import 'package:team_info_app/core/widgets/export_selection_dialog.dart';
 
 class ProjectsScreen extends ConsumerStatefulWidget {
   const ProjectsScreen({super.key});
@@ -20,6 +22,7 @@ class ProjectsScreen extends ConsumerStatefulWidget {
 class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
     with SingleTickerProviderStateMixin {
   final _api = ApiService();
+  final _excelService = ExcelExportService();
   late TabController _tabController;
   List<PersonalProject> _personalProjects = [];
   List<TeamProject> _teamProjects = [];
@@ -78,6 +81,14 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
           'Projects',
           style: GoogleFonts.inter(fontWeight: FontWeight.w700),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            onPressed: () => _handleExport(),
+            tooltip: 'Export Team Projects',
+          ),
+          const SizedBox(width: 8),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.primary,
@@ -125,6 +136,51 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
                 .slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
       ),
     );
+  }
+
+  void _handleExport() {
+    final user = ref.read(authProvider).user;
+    if (user == null) return;
+
+    final isLeader = [UserRole.admin, UserRole.captain, UserRole.viceCaptain, UserRole.strategist, UserRole.manager]
+        .contains(user.role);
+
+    if (isLeader) {
+      showDialog(
+        context: context,
+        builder: (_) => ExportSelectionDialog(
+          title: 'Export Team Projects',
+          onExport: (scope, selectedUserId) async {
+            await _runExport(scope: scope, userId: selectedUserId);
+          },
+        ),
+      );
+    } else {
+      _runExport(scope: 'SELF');
+    }
+  }
+
+  Future<void> _runExport({required String scope, String? userId}) async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preparing Excel report...')),
+      );
+
+      await _excelService.downloadAndOpenReport(
+        endpoint: ApiConstants.exportProjects,
+        filename: 'TeamProjects_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+        queryParams: {
+          'scope': scope,
+          if (userId != null) 'userId': userId,
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   Widget _buildTeamTab() {
@@ -368,8 +424,8 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
                     'liveLink': liveC.text,
                   };
                   final res = await _api.put('${ApiConstants.personalProjects}/${project.id}', body: body);
-                  if (!context.mounted) return;
-                  if (res.success) {
+                  if (!mounted) return;
+                  if (res.success && context.mounted) {
                     Navigator.pop(context);
                     if (mounted) _loadPersonalProjects();
                   }

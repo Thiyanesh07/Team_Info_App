@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
-import api from '@/lib/api';
-import { Rocket, Target, Users, Calendar, MoreVertical, ExternalLink, Shield, X, Clock, Activity, Hexagon, Edit3, Trash2 } from 'lucide-react';
+import api, { downloadExcel } from '@/lib/api';
+import { Rocket, Target, Users, Calendar, MoreVertical, ExternalLink, Shield, X, Clock, Activity, Hexagon, Edit3, Trash2, FileSpreadsheet } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -49,6 +50,16 @@ export default function ProjectsPage() {
       console.error('Fetch projects error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportProjects = async () => {
+    try {
+      toast.info('Generating Project Report...');
+      await downloadExcel('/export/projects', `Team_Projects_${new Date().getTime()}.xlsx`, { scope: 'TEAM' });
+      toast.success('Project Report Downloaded');
+    } catch (err: any) {
+      toast.error('Export Failed', { description: 'Failed to generate projects report.' });
     }
   };
 
@@ -191,6 +202,13 @@ export default function ProjectsPage() {
             <p className="text-slate-400 mt-1 font-medium italic">Global monitoring and regulation of team-led initiatives.</p>
           </motion.div>
           <div className="flex gap-4 items-center">
+            <button 
+              onClick={handleExportProjects}
+              className="px-6 py-3 bg-slate-900 border border-slate-700 hover:border-emerald-500/50 hover:bg-emerald-500/5 text-slate-300 hover:text-emerald-400 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 group flex items-center gap-2"
+            >
+              <FileSpreadsheet size={16} className="group-hover:animate-pulse" />
+              Export Projects
+            </button>
             <button 
               onClick={() => {
                 setFormData({ 

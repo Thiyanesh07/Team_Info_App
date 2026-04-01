@@ -56,4 +56,32 @@ const deleteProjectUpdate = async (req, res) => {
   }
 };
 
-module.exports = { getProjectUpdates, createProjectUpdate, deleteProjectUpdate };
+/** PUT /api/project-updates/:id */
+const updateProjectUpdate = async (req, res) => {
+  try {
+    const { title, description, date } = req.body;
+    const update = await prisma.projectUpdate.findUnique({ where: { id: req.params.id } });
+    
+    if (!update) return res.status(404).json({ success: false, message: 'Update not found' });
+    if (update.userId !== req.user.id && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    const updated = await prisma.projectUpdate.update({
+      where: { id: req.params.id },
+      data: {
+        title: title || update.title,
+        description: description !== undefined ? description : update.description,
+        date: date ? new Date(date) : update.date,
+      },
+      include: { user: { select: { id: true, name: true, profileImageUrl: true } } },
+    });
+
+    res.json({ success: true, message: 'Update updated', data: updated });
+  } catch (error) {
+    console.error('UpdateProjectUpdate error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update' });
+  }
+};
+
+module.exports = { getProjectUpdates, createProjectUpdate, updateProjectUpdate, deleteProjectUpdate };

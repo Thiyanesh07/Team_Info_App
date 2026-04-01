@@ -7,6 +7,10 @@ import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:team_info_app/services/api_service.dart';
 import 'package:team_info_app/models/app_models.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:team_info_app/core/services/excel_export_service.dart';
+import 'package:team_info_app/core/widgets/export_selection_dialog.dart';
+import 'package:team_info_app/providers/auth_provider.dart';
+import 'package:team_info_app/core/enums/user_role.dart';
 
 class ActivityScreen extends ConsumerStatefulWidget {
   const ActivityScreen({super.key});
@@ -16,6 +20,7 @@ class ActivityScreen extends ConsumerStatefulWidget {
 
 class _ActivityScreenState extends ConsumerState<ActivityScreen> {
   final _api = ApiService();
+  final _excelService = ExcelExportService();
   List<DailyActivity> _activities = [];
   bool _loading = true;
 
@@ -71,6 +76,14 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
           style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            onPressed: _handleExport,
+            tooltip: 'Export Excel',
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddActivityDialog(context),
@@ -104,6 +117,51 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
               ),
             ),
     );
+  }
+
+  void _handleExport() {
+    final user = ref.read(authProvider).user;
+    if (user == null) return;
+
+    final isLeader = [UserRole.admin, UserRole.captain, UserRole.viceCaptain, UserRole.strategist, UserRole.manager]
+        .contains(user.role);
+
+    if (isLeader) {
+      showDialog(
+        context: context,
+        builder: (_) => ExportSelectionDialog(
+          title: 'Export Activities',
+          onExport: (scope, selectedUserId) async {
+            await _runExport(scope: scope, userId: selectedUserId);
+          },
+        ),
+      );
+    } else {
+      _runExport(scope: 'SELF');
+    }
+  }
+
+  Future<void> _runExport({required String scope, String? userId}) async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preparing Excel report...')),
+      );
+      
+      await _excelService.downloadAndOpenReport(
+        endpoint: ApiConstants.exportActivities,
+        filename: 'DailyActivities_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+        queryParams: {
+          'scope': scope,
+          if (userId != null) 'userId': userId,
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   Widget _emptyState() {

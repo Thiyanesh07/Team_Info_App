@@ -1,7 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
-import api from '@/lib/api';
+import api, { downloadExcel, checkHealth } from '@/lib/api';
+import { toast } from 'sonner';
 import { 
   Users, 
   Rocket, 
@@ -13,7 +15,8 @@ import {
   Zap,
   Target,
   Trophy,
-  History
+  History,
+  FileSpreadsheet
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -37,11 +40,24 @@ const COLORS = ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#8b5cf6'];
 export default function Dashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [health, setHealth] = useState<any>({ status: 'ok', database: 'connected' });
 
   useEffect(() => {
     setIsMounted(true);
     fetchOverview();
+    
+    // Initial health check
+    const runHealthCheck = async () => {
+      const h = await checkHealth();
+      setHealth(h);
+    };
+    runHealthCheck();
+
+    // Periodic health check every 2 minutes
+    const interval = setInterval(runHealthCheck, 120000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchOverview = async () => {
@@ -54,6 +70,37 @@ export default function Dashboard() {
       console.error('Fetch overview error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncRewards = async () => {
+    try {
+      setSyncing(true);
+      const res = await api.post('/admin/sync/rewards-sheets');
+      if (res.data.success) {
+        toast.success('Synchronization Complete', {
+          description: `Updated: ${res.data.data.summary.updated} users. Not matched: ${res.data.data.summary.notFound}.`,
+          duration: 5000,
+        });
+        fetchOverview();
+      }
+    } catch (err: any) {
+      console.error('Sync error:', err);
+      toast.error('Synchronization Failed', {
+        description: err.response?.data?.message || 'Check backend logs for details.',
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleExportActivities = async () => {
+    try {
+      toast.info('Generating Activity Report...');
+      await downloadExcel('/export/activities', `Team_Activities_${new Date().getTime()}.xlsx`, { scope: 'TEAM' });
+      toast.success('Activity Report Downloaded');
+    } catch (err: any) {
+      toast.error('Export Failed', { description: 'Failed to generate activities report.' });
     }
   };
 
@@ -101,9 +148,44 @@ export default function Dashboard() {
             <p className="text-slate-400 mt-2 font-medium italic">High-fidelity administrative oversight and tactical system health.</p>
           </motion.div>
           <div className="flex gap-3">
-             <div className="px-4 py-2 bg-slate-900 border border-slate-800 rounded-2xl flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">System Operational</span>
+             <button 
+                onClick={handleExportActivities}
+                className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-2 hover:bg-emerald-600/20 transition-all active:scale-95 group"
+             >
+                <FileSpreadsheet size={14} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">
+                  Export Activities
+                </span>
+             </button>
+             <button 
+                onClick={handleSyncRewards}
+                disabled={syncing}
+                className={cn(
+                  "px-4 py-2 bg-blue-600/10 border border-blue-500/20 rounded-2xl flex items-center gap-2 hover:bg-blue-600/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
+                  syncing && "animate-pulse"
+                )}
+             >
+                <Activity size={14} className={cn("text-blue-500", syncing && "animate-spin")} />
+                <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">
+                  {syncing ? 'Syncing...' : 'Sync Rewards'}
+                </span>
+             </button>
+             <div className={cn(
+                "px-4 py-2 border rounded-2xl flex items-center gap-2 transition-colors",
+                health.database === 'connected' 
+                  ? "bg-emerald-500/10 border-emerald-500/20" 
+                  : "bg-rose-500/10 border-rose-500/20"
+              )}>
+                <div className={cn(
+                  "h-2 w-2 rounded-full animate-pulse",
+                  health.database === 'connected' ? "bg-emerald-500" : "bg-rose-500"
+                )} />
+                <span className={cn(
+                  "text-xs font-bold uppercase tracking-widest",
+                  health.database === 'connected' ? "text-emerald-500" : "text-rose-500"
+                )}>
+                  {health.database === 'connected' ? 'Pulse Online' : 'Core Disconnect'}
+                </span>
              </div>
           </div>
         </header>
@@ -222,7 +304,7 @@ export default function Dashboard() {
                        </div>
                     </div>
                     <div className="text-right">
-                       <p className="text-sm font-black text-emerald-500">{performer.rewardPoints || 0} RPT</p>
+                       <p className="text-sm font-black text-orange-500">{performer.activityPoints || 0} APT</p>
                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">Verified Achievement</p>
                     </div>
                  </div>
@@ -241,10 +323,19 @@ export default function Dashboard() {
             <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                <Activity size={120} className="text-blue-500" />
             </div>
-            <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2">
-               <History size={20} className="text-blue-500" />
-               Pulse Activity Stream
-            </h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-black text-white flex items-center gap-2">
+                 <History size={20} className="text-blue-500" />
+                 Pulse Activity Stream
+              </h3>
+              <Link 
+                href="/audit"
+                className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-blue-400 transition-colors flex items-center gap-1 group/link"
+              >
+                View Full Audit Trail
+                <Rocket size={10} className="group-hover/link:translate-x-1 transition-transform" />
+              </Link>
+            </div>
             <div className="space-y-6 relative z-10">
                {data.recentActivities?.length > 0 ? data.recentActivities.map((activity: any) => (
                  <div key={activity.id} className="flex gap-4 group">

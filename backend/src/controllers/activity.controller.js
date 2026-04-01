@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 /** GET /api/activities - Get activities (own for member, any for leader, all for admin) */
 const getMyActivities = async (req, res) => {
   try {
-    const { userId, startDate, endDate } = req.query;
+    const { userId, startDate, endDate, type, customType } = req.query;
     const where = {};
 
     // Determine whose activities to fetch
@@ -16,6 +16,9 @@ const getMyActivities = async (req, res) => {
     } else {
       where.userId = req.user.id;
     }
+
+    if (type) where.type = type;
+    if (customType) where.customType = customType;
 
     if (startDate && endDate) {
       where.date = { gte: new Date(startDate), lte: new Date(endDate) };

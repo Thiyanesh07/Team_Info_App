@@ -1,22 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:team_info_app/core/theme/app_theme.dart';
-import 'package:team_info_app/core/constants/api_constants.dart';
-import 'package:team_info_app/services/api_service.dart';
-import 'package:team_info_app/models/app_models.dart';
 import 'package:team_info_app/models/user_model.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:team_info_app/core/services/excel_export_service.dart';
+import 'package:team_info_app/core/widgets/export_selection_dialog.dart';
+import 'package:team_info_app/providers/auth_provider.dart';
+import 'package:team_info_app/core/enums/user_role.dart';
+import 'package:team_info_app/services/api_service.dart';
+import 'package:team_info_app/core/constants/api_constants.dart';
+import 'package:team_info_app/models/app_models.dart'; 
+import 'package:team_info_app/core/theme/app_theme.dart';
 
-class SkillsScreen extends StatefulWidget {
+class SkillsScreen extends ConsumerStatefulWidget {
   final UserModel? targetUser; // If null, manage own skills
   const SkillsScreen({super.key, this.targetUser});
 
   @override
-  State<SkillsScreen> createState() => _SkillsScreenState();
+  ConsumerState<SkillsScreen> createState() => _SkillsScreenState();
 }
 
-class _SkillsScreenState extends State<SkillsScreen> {
-  final _api = ApiService();
+class _SkillsScreenState extends ConsumerState<SkillsScreen> {
+  final _excelService = ExcelExportService();
   List<PsSkill> _skills = [];
   bool _loading = true;
 
@@ -31,7 +36,7 @@ class _SkillsScreenState extends State<SkillsScreen> {
         ? '${ApiConstants.psSkills}/user/${widget.targetUser!.id}'
         : ApiConstants.psSkills;
 
-    final res = await _api.get(url);
+    final res = await ref.read(apiServiceProvider).get(url);
     if (res.success && mounted) {
       setState(() {
         _skills = (res.data as List).map((e) => PsSkill.fromJson(e)).toList();
@@ -57,6 +62,14 @@ class _SkillsScreenState extends State<SkillsScreen> {
           style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            onPressed: () => _handleExport(),
+            tooltip: 'Export Skills',
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       floatingActionButton:
           FloatingActionButton.extended(
@@ -90,7 +103,7 @@ class _SkillsScreenState extends State<SkillsScreen> {
                           onDelete: () => _deleteSkill(_skills[i].id),
                           onEdit: () => _showEditSkillDialog(_skills[i]),
                           onTap: () async {
-                            final res = await _api.put(
+                            final res = await ref.read(apiServiceProvider).put(
                               '${ApiConstants.psSkills}/${_skills[i].id}',
                               body: {'completed': !_skills[i].completed},
                             );
@@ -103,6 +116,51 @@ class _SkillsScreenState extends State<SkillsScreen> {
               ),
             ),
     );
+  }
+
+  void _handleExport() {
+    final user = ref.read(authProvider).user;
+    if (user == null) return;
+
+    final isLeader = [UserRole.admin, UserRole.captain, UserRole.viceCaptain, UserRole.strategist, UserRole.manager]
+        .contains(user.role);
+
+    if (isLeader) {
+      showDialog(
+        context: context,
+        builder: (_) => ExportSelectionDialog(
+          title: 'Export Skills',
+          onExport: (scope, selectedUserId) async {
+            await _runExport(scope: scope, userId: selectedUserId);
+          },
+        ),
+      );
+    } else {
+      _runExport(scope: 'SELF');
+    }
+  }
+
+  Future<void> _runExport({required String scope, String? userId}) async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preparing Excel report...')),
+      );
+
+      await _excelService.downloadAndOpenReport(
+        endpoint: ApiConstants.exportSkills,
+        filename: 'SkillsPortfolio_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+        queryParams: {
+          'scope': scope,
+          if (userId != null) 'userId': userId as String,
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   Widget _emptyState() {
@@ -209,7 +267,7 @@ class _SkillsScreenState extends State<SkillsScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (nameC.text.isEmpty) return;
-                    final res = await _api.post(
+                    final res = await ref.read(apiServiceProvider).post(
                       ApiConstants.psSkills,
                       body: {
                         'skillName': nameC.text,
@@ -305,7 +363,7 @@ class _SkillsScreenState extends State<SkillsScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (nameC.text.isEmpty) return;
-                    final res = await _api.put(
+                    final res = await ref.read(apiServiceProvider).put(
                       '${ApiConstants.psSkills}/${skill.id}',
                       body: {
                         'skillName': nameC.text,
@@ -329,7 +387,7 @@ class _SkillsScreenState extends State<SkillsScreen> {
   }
 
   Future<void> _deleteSkill(String id) async {
-    final res = await _api.delete('${ApiConstants.psSkills}/$id');
+    final res = await ref.read(apiServiceProvider).delete('${ApiConstants.psSkills}/$id');
     if (res.success) _loadSkills();
   }
 }

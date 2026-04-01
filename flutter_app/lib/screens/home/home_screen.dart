@@ -19,10 +19,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:team_info_app/screens/home/activity_logs_screen.dart';
 import 'package:team_info_app/screens/home/widgets/global_activity_feed.dart';
-import 'package:team_info_app/screens/profile/profile_screen.dart';
 import 'package:team_info_app/screens/tasks/tasks_screen.dart';
-import 'package:team_info_app/screens/admin/audit_log_screen.dart';
-import 'package:team_info_app/services/api_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:team_info_app/screens/profile/certifications_screen.dart';
 
@@ -41,6 +38,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   List<TaskAssignment> _pendingMyTasks = [];
   List<TaskAssignment> _pendingAssignedTasks = [];
+  List<ReportRequest> _redoReports = [];
   List<ActivityItem> _activities = [];
 
   @override
@@ -109,6 +107,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           .toList();
     }
 
+    // Load Redo Reports
+    final reports = await repo.getMyPendingReports();
+    _redoReports = reports.where((r) => 
+      r.submissions.isNotEmpty && 
+      r.submissions.any((s) => s.status == ReportSubmissionStatus.REDO)
+    ).toList();
+
     if (mounted) {
       setState(() {});
       _checkPendingTasksAlerts();
@@ -116,7 +121,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _checkPendingTasksAlerts() async {
-    if (_pendingMyTasks.isEmpty && _pendingAssignedTasks.isEmpty) return;
+    if (_pendingMyTasks.isEmpty && _pendingAssignedTasks.isEmpty && _redoReports.isEmpty) return;
 
     final prefs = await SharedPreferences.getInstance();
     final lastAlertDate = prefs.getString('last_task_alert_date');
@@ -163,6 +168,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ..._pendingMyTasks.map((t) => _buildAlertItem(t, false)),
                 const SizedBox(height: 16),
               ],
+              if (_redoReports.isNotEmpty) ...[
+                Text(
+                  '🔄 Revision Required (REDO):',
+                  style: GoogleFonts.inter(
+                    color: AppColors.error,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ..._redoReports.map((r) => _buildReportAlertItem(r)),
+                const SizedBox(height: 16),
+              ],
               if (_pendingAssignedTasks.isNotEmpty) ...[
                 Text(
                   '👀 Pending from Team:',
@@ -192,14 +210,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           TextButton(
             onPressed: () {
               prefs.setString('last_task_alert_date', today);
-              Navigator.pop(context);
+              if (_redoReports.isNotEmpty && _pendingMyTasks.isEmpty) {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ReportHubScreen()),
+                );
+              } else {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TasksScreen()),
+                );
+              }
             },
-            child: const Text(
-              'Go to Tasks',
-              style: TextStyle(color: AppColors.primary),
+            child: Text(
+              _redoReports.isNotEmpty && _pendingMyTasks.isEmpty ? 'Go to Reports' : 'Go to Tasks',
+              style: const TextStyle(color: AppColors.primary),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildReportAlertItem(ReportRequest r) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.error.withAlpha(20),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.error.withAlpha(50)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              r.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Status: REDO - Check Leader Feedback',
+              style: TextStyle(
+                color: AppColors.error,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -354,7 +419,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                     // Pending Tasks Banner
                     if (_pendingMyTasks.isNotEmpty ||
-                        _pendingAssignedTasks.isNotEmpty) ...[
+                        _pendingAssignedTasks.isNotEmpty ||
+                        _redoReports.isNotEmpty) ...[
                       _safeSection('pending tasks', _buildPendingTasksBanner),
                       const SizedBox(height: 28),
                     ],
@@ -431,6 +497,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       'quick actions',
                       () => _buildQuickActions(context),
                     ),
+                    const SizedBox(height: 28),
+
+                    // Add Report Hub to Home Screen flow
+                    _safeSection(
+                      'reports hub link',
+                      () => ListTile(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ReportHubScreen()),
+                        ),
+                        tileColor: AppColors.cardDark,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        leading: const Icon(Icons.assignment_outlined, color: AppColors.primary),
+                        title: const Text('Report Hub', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        subtitle: const Text('Submit work and view team reports', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                        trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                      ),
+                    ),
+
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -647,15 +732,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               style: GoogleFonts.inter(color: Colors.white70, fontSize: 13),
             ),
           ],
+          if (_redoReports.isNotEmpty) ...[
+             const SizedBox(height: 4),
+             Text(
+              'You have ${_redoReports.length} reports marked as REDO.',
+              style: GoogleFonts.inter(color: AppColors.error, fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+          ],
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const TasksScreen()),
-                );
+                if (_redoReports.isNotEmpty && _pendingMyTasks.isEmpty) {
+                   Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ReportHubScreen()),
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const TasksScreen()),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error.withAlpha(50),
@@ -665,9 +764,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                'View Pending Tasks',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              child: Text(
+                _redoReports.isNotEmpty && _pendingMyTasks.isEmpty ? 'View Redo Reports' : 'View Pending Tasks',
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -688,7 +787,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             color: Colors.white,
           ),
         ),
-        if (trailing != null) trailing,
+        trailing ?? const SizedBox.shrink(),
       ],
     );
   }
@@ -836,7 +935,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      '${user.rewardPoints} pts',
+                      '${user.activityPoints} APT',
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         color: AppColors.textMuted,

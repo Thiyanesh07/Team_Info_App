@@ -113,6 +113,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             const SizedBox(height: 16),
             _buildStatGrid(stats),
             const SizedBox(height: 24),
+            
+            // New Sync Section
+            _buildSyncSection(),
+            const SizedBox(height: 24),
+
             Text(
               'Recent Activities',
               style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
@@ -170,6 +175,148 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0);
   }
+
+  Widget _buildSyncSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary.withAlpha(50), AppColors.surfaceLight.withAlpha(30)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.primary.withAlpha(80)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.sync_rounded, color: AppColors.primary),
+              const SizedBox(width: 12),
+              Text(
+                'Data Synchronization',
+                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Keep student reward points up-to-date by syncing across all department sheets.',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _showSyncConfirmation,
+              icon: const Icon(Icons.cloud_download_outlined, size: 18),
+              label: const Text('Sync Rewards from Google Sheets'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(delay: 200.ms).scale(begin: const Offset(0.95, 0.95));
+  }
+
+  void _showSyncConfirmation() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        title: Text('Trigger Global Sync?', style: GoogleFonts.outfit(color: Colors.white)),
+        content: const Text(
+          'This will fetch Reward Points from all department Google Sheets and update all matching Register Numbers in the database. This action cannot be undone.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _syncRewardPoints();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Start Sync'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _syncRewardPoints() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final res = await _api.post(ApiConstants.syncRewardsSheets);
+    
+    if (!mounted) return;
+    Navigator.pop(context); // Close loading
+
+    if (res.success) {
+      final summary = res.data['summary'];
+      _showSyncSummary(summary);
+      _loadOverview();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res.message ?? 'Sync failed'), backgroundColor: AppColors.error),
+      );
+    }
+  }
+
+  void _showSyncSummary(Map<String, dynamic> summary) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.green),
+            const SizedBox(width: 12),
+            Text('Sync Successful', style: GoogleFonts.outfit(color: Colors.white)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _summaryItem('Users Updated', summary['updated'].toString(), Colors.green),
+            _summaryItem('Not Matched', summary['notFound'].toString(), Colors.orange),
+            _summaryItem('Database Total', summary['totalInDatabase'].toString(), Colors.blue),
+            const Divider(color: AppColors.divider, height: 24),
+            _summaryItem('Sheet Records', summary['totalInSheet'].toString(), Colors.white),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryItem(String label, String value, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: AppColors.textMuted)),
+          Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16)),
+        ],
+      ),
+    );
+  }
+
 
   Widget _buildRecentActivityList(List activities) {
     if (activities.isEmpty) return const Text('No recent activities');

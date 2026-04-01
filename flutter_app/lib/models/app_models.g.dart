@@ -91,6 +91,7 @@ ProjectUpdate _$ProjectUpdateFromJson(Map<String, dynamic> json) =>
       userId: json['userId'] as String,
       title: json['title'] as String,
       description: json['description'] as String?,
+      date: json['date'] as String?,
       user: json['user'] as Map<String, dynamic>?,
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
@@ -103,6 +104,7 @@ Map<String, dynamic> _$ProjectUpdateToJson(ProjectUpdate instance) =>
       'userId': instance.userId,
       'title': instance.title,
       'description': instance.description,
+      'date': instance.date,
       'user': instance.user,
       'createdAt': instance.createdAt,
       'updatedAt': instance.updatedAt,
@@ -458,4 +460,97 @@ const _$MilestoneStatusEnumMap = {
   MilestoneStatus.PENDING: 'PENDING',
   MilestoneStatus.IN_PROGRESS: 'IN_PROGRESS',
   MilestoneStatus.COMPLETED: 'COMPLETED',
+};
+
+ReportRequest _$ReportRequestFromJson(Map<String, dynamic> json) =>
+    ReportRequest(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String?,
+      deadline: json['deadline'] as String?,
+      assignedById: json['assignedById'] as String,
+      targetAudience: $enumDecodeNullable(
+              _$ReportAudienceEnumMap, json['targetAudience']) ??
+          ReportAudience.TEAM,
+      targetRoles: (json['targetRoles'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      targetUserIds: (json['targetUserIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      allowedFormats: (json['allowedFormats'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [".pdf", ".docx", ".xlsx", ".pptx"],
+      createdAt: json['createdAt'] as String?,
+      assignedBy: json['assignedBy'] as Map<String, dynamic>?,
+      submissions: (json['submissions'] as List<dynamic>?)
+              ?.map((e) => ReportSubmission.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+    );
+
+Map<String, dynamic> _$ReportRequestToJson(ReportRequest instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'title': instance.title,
+      'description': instance.description,
+      'deadline': instance.deadline,
+      'assignedById': instance.assignedById,
+      'targetAudience': _$ReportAudienceEnumMap[instance.targetAudience]!,
+      'targetRoles': instance.targetRoles,
+      'targetUserIds': instance.targetUserIds,
+      'allowedFormats': instance.allowedFormats,
+      'createdAt': instance.createdAt,
+      'assignedBy': instance.assignedBy,
+      'submissions': instance.submissions,
+    };
+
+const _$ReportAudienceEnumMap = {
+  ReportAudience.INDIVIDUAL: 'INDIVIDUAL',
+  ReportAudience.ROLE: 'ROLE',
+  ReportAudience.TEAM: 'TEAM',
+};
+
+ReportSubmission _$ReportSubmissionFromJson(Map<String, dynamic> json) =>
+    ReportSubmission(
+      id: json['id'] as String,
+      reportRequestId: json['reportRequestId'] as String,
+      userId: json['userId'] as String,
+      fileUrl: json['fileUrl'] as String,
+      notes: json['notes'] as String?,
+      status: $enumDecodeNullable(
+              _$ReportSubmissionStatusEnumMap, json['status']) ??
+          ReportSubmissionStatus.PENDING,
+      reviewerNotes: json['reviewerNotes'] as String?,
+      createdAt: json['createdAt'] as String?,
+      updatedAt: json['updatedAt'] as String?,
+      user: json['user'] as Map<String, dynamic>?,
+      reportRequest: json['reportRequest'] == null
+          ? null
+          : ReportRequest.fromJson(
+              json['reportRequest'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$ReportSubmissionToJson(ReportSubmission instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'reportRequestId': instance.reportRequestId,
+      'userId': instance.userId,
+      'fileUrl': instance.fileUrl,
+      'notes': instance.notes,
+      'status': _$ReportSubmissionStatusEnumMap[instance.status]!,
+      'reviewerNotes': instance.reviewerNotes,
+      'createdAt': instance.createdAt,
+      'updatedAt': instance.updatedAt,
+      'user': instance.user,
+      'reportRequest': instance.reportRequest,
+    };
+
+const _$ReportSubmissionStatusEnumMap = {
+  ReportSubmissionStatus.PENDING: 'PENDING',
+  ReportSubmissionStatus.COMPLETED: 'COMPLETED',
+  ReportSubmissionStatus.REDO: 'REDO',
 };
