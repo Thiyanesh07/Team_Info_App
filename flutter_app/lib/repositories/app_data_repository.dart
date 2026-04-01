@@ -3,6 +3,7 @@ import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:team_info_app/models/app_models.dart';
 import 'package:team_info_app/models/user_model.dart';
 import 'package:team_info_app/repositories/base_repository.dart';
+import 'package:team_info_app/services/api_service.dart';
 
 final appDataRepositoryProvider = Provider<AppDataRepository>(
   (ref) => AppDataRepository(),

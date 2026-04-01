@@ -143,7 +143,7 @@ class _ExportSelectionDialogState extends State<ExportSelectionDialog> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.white.withOpacity(0.05),
+          color: isSelected ? AppColors.primary.withAlpha(25) : Colors.white.withAlpha(13),
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.white10,
           ),

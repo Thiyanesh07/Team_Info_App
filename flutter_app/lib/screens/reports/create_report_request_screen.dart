@@ -213,8 +213,8 @@ class _CreateReportRequestScreenState extends ConsumerState<CreateReportRequestS
             prefixIcon: Icon(icon, color: AppColors.primary.withAlpha(200), size: 20),
             filled: true,
             fillColor: AppColors.cardDark,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.all(color: AppColors.divider)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.all(color: AppColors.divider)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
           ),
         ),
       ],
@@ -263,8 +263,11 @@ class _CreateReportRequestScreenState extends ConsumerState<CreateReportRequestS
           selected: isSelected,
           onSelected: (v) {
             setState(() {
-              if (v) _selectedRoles.add(role);
-              else _selectedRoles.remove(role);
+              if (v) {
+                _selectedRoles.add(role);
+              } else {
+                _selectedRoles.remove(role);
+              }
             });
           },
           backgroundColor: AppColors.cardDark,
@@ -301,8 +304,11 @@ class _CreateReportRequestScreenState extends ConsumerState<CreateReportRequestS
             checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
             onChanged: (v) {
               setState(() {
-                if (v == true) _selectedUserIds.add(m.id);
-                else _selectedUserIds.remove(m.id);
+                if (v == true) {
+                  _selectedUserIds.add(m.id);
+                } else {
+                  _selectedUserIds.remove(m.id);
+                }
               });
             },
           );
@@ -322,8 +328,11 @@ class _CreateReportRequestScreenState extends ConsumerState<CreateReportRequestS
           selected: isSelected,
           onSelected: (v) {
             setState(() {
-              if (v) _selectedFormats.add(f);
-              else _selectedFormats.remove(f);
+              if (v) {
+                _selectedFormats.add(f);
+              } else {
+                _selectedFormats.remove(f);
+              }
             });
           },
           backgroundColor: AppColors.cardDark,
