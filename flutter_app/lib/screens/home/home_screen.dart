@@ -20,6 +20,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:team_info_app/screens/home/activity_logs_screen.dart';
 import 'package:team_info_app/screens/home/widgets/global_activity_feed.dart';
 import 'package:team_info_app/screens/tasks/tasks_screen.dart';
+import 'package:team_info_app/screens/reports/report_hub_screen.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:team_info_app/screens/profile/certifications_screen.dart';
 
