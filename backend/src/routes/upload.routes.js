@@ -16,24 +16,34 @@ cloudinary.config({
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB as requested
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req, file, cb) => {
     const allowedMimeTypes = [
-      'image/',
+      'image/',                  // All image/* types
       'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-      'application/msword', // .doc
+      'application/msword',      // .doc
+      'application/octet-stream', // Generic binary (Flutter file_picker sends this)
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  // .docx
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',// .pptx
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',        // .xlsx
+      'text/',                   // Plain text files
+      'video/',                  // Video files for chat
+      'audio/',                  // Audio files for chat
     ];
 
-    if (allowedMimeTypes.some(mime => file.mimetype.startsWith(mime) || file.mimetype === mime)) {
+    const isAllowed = allowedMimeTypes.some(mime =>
+      file.mimetype.startsWith(mime) || file.mimetype === mime
+    );
+
+    if (isAllowed) {
       cb(null, true);
     } else {
-      cb(new Error('File format not supported. Only images and documents (.pdf, .docx, .pptx, .xlsx) are allowed.'), false);
+      console.warn(`⚠️ Rejected MIME type: ${file.mimetype} for file: ${file.originalname}`);
+      cb(new Error(`File type '${file.mimetype}' not supported.`), false);
     }
   },
 });
+
 
 /** POST /api/upload/image (Now supports any file under 'file' name) */
 router.post('/image', authenticate, upload.single('file'), async (req, res) => {

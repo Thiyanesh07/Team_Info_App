@@ -25,7 +25,7 @@ class ApiConstants {
   static const String hackathons = '/hackathons';
   static const String learning = '/learning';
   static const String activities = '/activities';
-  static const String unifiedActivities = '/activities/unified';
+  static const String unifiedActivities = '/system-activities/unified';
   static const String milestones = '/milestones';
   static const String certifications = '/certifications';
   static const String psSkills = '/ps-skills';
