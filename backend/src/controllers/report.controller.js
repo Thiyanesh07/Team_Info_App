@@ -87,6 +87,10 @@ exports.submitReport = async (req, res) => {
   const userId = req.user.id;
 
   try {
+    if (!fileUrl) {
+      return res.status(400).json({ success: false, message: 'File URL is required. Please upload a file first.' });
+    }
+
     const submission = await prisma.reportSubmission.upsert({
       where: {
         reportRequestId_userId: {

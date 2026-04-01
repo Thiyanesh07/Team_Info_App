@@ -433,7 +433,7 @@ model ReportSubmission {
   id              String                 @id @default(uuid())
   reportRequestId String
   userId          String
-  fileUrl         String
+  fileUrl         String?
   notes           String?
   status          ReportSubmissionStatus @default(PENDING)
   reviewerNotes   String?
