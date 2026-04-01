@@ -39,20 +39,29 @@ const upload = multer({
 router.post('/image', authenticate, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file provided' });
+      return res.status(400).json({ success: false, message: 'No file provided. Make sure field name is "file".' });
     }
+
+    console.log(`📤 Upload attempt: ${req.file.originalname} | type: ${req.file.mimetype} | size: ${req.file.size} bytes`);
+    console.log(`☁️ Cloudinary config: cloud=${process.env.CLOUDINARY_CLOUD_NAME} | key=${process.env.CLOUDINARY_API_KEY ? 'SET' : 'MISSING'} | secret=${process.env.CLOUDINARY_API_SECRET ? 'SET' : 'MISSING'}`);
 
     // Upload to Cloudinary
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         { folder: 'team_info_app', resource_type: 'auto' },
         (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
+          if (error) {
+            console.error('❌ Cloudinary error:', JSON.stringify(error));
+            reject(error);
+          } else {
+            resolve(result);
+          }
         }
       );
       uploadStream.end(req.file.buffer);
     });
+
+    console.log(`✅ Upload success: ${result.secure_url}`);
 
     res.json({
       success: true,
@@ -63,7 +72,11 @@ router.post('/image', authenticate, upload.single('file'), async (req, res) => {
     });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ success: false, message: 'Failed to upload image' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to upload file', 
+      detail: error.message || error.http_code || 'Unknown error'
+    });
   }
 });
 
