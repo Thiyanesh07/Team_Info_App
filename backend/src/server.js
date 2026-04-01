@@ -94,6 +94,10 @@ app.use('/api', apiLimiter);
 // ROUTES
 // ──────────────────────────────────────
 
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', name: 'team-info-backend', timestamp: new Date().toISOString() });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
