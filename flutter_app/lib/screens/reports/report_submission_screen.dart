@@ -235,7 +235,13 @@ class _ReportSubmissionScreenState extends ConsumerState<ReportSubmissionScreen>
             style: const TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.5),
           ),
           const Divider(height: 32, color: AppColors.divider),
-          _buildDetailRow(Icons.person_outline, 'Assigned By', widget.request.assignedBy?['name'] ?? 'Team Leader'),
+          _buildDetailRow(
+            Icons.person_outline, 
+            'Assigned By', 
+            widget.request.assignedBy?['role'] == 'ADMIN' 
+              ? 'Admin' 
+              : (widget.request.assignedBy?['name'] ?? 'Team Leader')
+          ),
           const SizedBox(height: 12),
           _buildDetailRow(Icons.calendar_month_outlined, 'Deadline', widget.request.deadline != null ? DateFormat('MMM dd, yyyy').format(DateTime.parse(widget.request.deadline!)) : 'Open'),
           const SizedBox(height: 12),

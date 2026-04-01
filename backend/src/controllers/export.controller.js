@@ -151,40 +151,35 @@ const exportMethods = {
   async exportSkills(req, res) {
     try {
       const userIds = await getTargetUserIds(req);
-      const [psSkills, users] = await Promise.all([
-        prisma.psSkill.findMany({
-          where: { userId: { in: userIds } },
-          include: { user: { select: { name: true, regNo: true } } }
-        }),
-        prisma.user.findMany({
-          where: { id: { in: userIds } },
-          select: { name: true, regNo: true, primarySkills: true, secondarySkills: true, specialSkills: true, programmingLangs: true }
-        })
-      ]);
+      const psSkills = await prisma.psSkill.findMany({
+        where: { userId: { in: userIds } },
+        include: { user: { select: { name: true, regNo: true } } }
+      });
 
-      const workbook = require('exceljs').Workbook();
-      const psSheet = workbook.addWorksheet('Technical Lab Skills');
-      const coreSheet = workbook.addWorksheet('Core Skill Sets');
-
-      // (Implementation note: generateSimpleExcel was for 1 sheet, let's just use exceljs directly here for 2 sheets)
-      // I'll stick to 1 sheet for simplicity in this version but with better formatting.
-      const buffer = await excelService.generateSimpleExcel('Skills', [
-        { header: 'User', key: 'name', width: 20 },
-        { header: 'Skill Name', key: 'skill', width: 25 },
+      const columns = [
+        { header: 'User', key: 'name', width: 25 },
+        { header: 'Reg No', key: 'regNo', width: 20 },
+        { header: 'Skill Name', key: 'skill', width: 30 },
         { header: 'Type', key: 'type', width: 15 },
         { header: 'Completed', key: 'status', width: 15 }
-      ], psSkills.map(s => ({
+      ];
+
+      const formattedData = psSkills.map(s => ({
         name: s.user.name,
+        regNo: s.user.regNo,
         skill: s.skillName,
         type: s.type,
-        status: s.completed ? 'Yes' : 'No'
-      })));
+        status: s.completed ? 'YES' : 'NO'
+      }));
 
-      res.setHeader('Content-Disposition', 'attachment; filename=SkillsReport.xlsx');
+      const buffer = await excelService.generateSimpleExcel('Skills Portfolio', columns, formattedData);
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=SkillsPortfolio.xlsx');
       res.send(buffer);
     } catch (error) {
        console.error('ExportSkills error:', error);
-       res.status(500).json({ success: false, message: 'Failed to export skills' });
+       res.status(500).json({ success: false, message: 'Failed to export skills portfolio: ' + error.message });
     }
   },
 

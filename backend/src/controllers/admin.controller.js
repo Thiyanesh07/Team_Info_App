@@ -55,6 +55,7 @@ const getAdminOverview = async (req, res) => {
       
       // Top 5 Performers
       prisma.user.findMany({
+        where: { role: { not: 'ADMIN' } },
         take: 5,
         orderBy: { rewardPoints: 'desc' },
         select: {

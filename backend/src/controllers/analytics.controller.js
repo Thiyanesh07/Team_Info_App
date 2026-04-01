@@ -88,6 +88,7 @@ const getLeaderboard = async (req, res) => {
     const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
 
     const users = await prisma.user.findMany({
+      where: { role: { not: 'ADMIN' } },
       select: { id: true, name: true, profileImageUrl: true },
     });
 
@@ -137,6 +138,7 @@ const getTeamWorkload = async (req, res) => {
     startDate.setHours(0, 0, 0, 0);
 
     const users = await prisma.user.findMany({
+      where: { role: { not: 'ADMIN' } },
       select: { id: true, name: true, profileImageUrl: true },
     });
 
@@ -185,11 +187,29 @@ const getRewardStatus = async (req, res) => {
   try {
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
     
-    // 1. Fetch yearly averages from Google Sheets
-    const averages = await googleSheetsService.getYearlyAverages(spreadsheetId);
+    // 1. Fetch yearly averages from Google Sheets with fallbacks
+    let averages = {
+      'I': 100, 
+      'II': 300, 
+      'III': 500, 
+      'IV': 800, 
+      'OVERALL': 400
+    };
+
+    try {
+      if (spreadsheetId) {
+        const sheetAverages = await googleSheetsService.getYearlyAverages(spreadsheetId);
+        if (sheetAverages && Object.keys(sheetAverages).length > 0) {
+          averages = { ...averages, ...sheetAverages };
+        }
+      }
+    } catch (sheetError) {
+      console.warn('Fallback to default targets: Google Sheets fetch failed.', sheetError.message);
+    }
     
-    // 2. Fetch all users with their current reward points
+    // 2. Fetch all student users (Exclude ADMINs)
     const users = await prisma.user.findMany({
+      where: { role: { not: 'ADMIN' } },
       select: {
         id: true,
         name: true,

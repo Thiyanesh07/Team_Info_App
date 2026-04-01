@@ -62,7 +62,7 @@ exports.getMyReports = async (req, res) => {
       },
       include: {
         assignedBy: {
-          select: { name: true, profileImageUrl: true }
+          select: { name: true, profileImageUrl: true, role: true }
         },
         submissions: {
           where: { userId }
@@ -97,7 +97,7 @@ exports.submitReport = async (req, res) => {
       update: {
         fileUrl,
         notes,
-        status: 'PENDING', // Reset status to pending on update
+        status: 'PENDING',
         updatedAt: new Date()
       },
       create: {
@@ -111,8 +111,19 @@ exports.submitReport = async (req, res) => {
 
     res.json({ success: true, data: submission, message: 'Report submitted successfully' });
   } catch (error) {
-    console.error('submitReport error:', error);
-    res.status(500).json({ success: false, message: 'Failed to submit report' });
+    console.error('submitReport detailed error:', {
+      message: error.message,
+      stack: error.stack,
+      requestId,
+      userId
+    });
+    
+    // Check for specific Prisma errors
+    if (error.code === 'P2003') {
+        return res.status(400).json({ success: false, message: 'Invalid Report Request ID. The request may have been deleted.' });
+    }
+
+    res.status(500).json({ success: false, message: 'Internal Server Error: ' + error.message });
   }
 };
 
