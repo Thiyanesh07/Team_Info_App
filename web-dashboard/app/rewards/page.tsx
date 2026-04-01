@@ -78,7 +78,7 @@ export default function RewardsStatus() {
             <p className="text-slate-400 mt-2 font-medium italic">Tactical mapping of points vs. internal marks thresholds.</p>
           </motion.div>
           <button 
-            onClick={fetchStatus}
+            onClick={() => fetchStatus()}
             className="p-3 bg-slate-900 border border-slate-800 rounded-2xl text-slate-400 hover:text-white hover:border-slate-700 transition-all active:scale-95"
           >
             <RefreshCcw size={20} />
