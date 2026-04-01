@@ -8,9 +8,10 @@ const fs = require('fs');
  */
 class PuppetScraperService {
   constructor() {
-    // Path to your actual Chrome User Data on Windows
-    this.chromeUserData = path.join(process.env.LOCALAPPDATA, 'Google/Chrome/User Data');
-    this.chromeExecutable = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+    // Path to your actual Chrome User Data (with Linux/Render fallback)
+    const baseAppData = process.env.LOCALAPPDATA || process.env.HOME || '/tmp';
+    this.chromeUserData = path.join(baseAppData, 'Google/Chrome/User Data');
+    this.chromeExecutable = process.env.CHROME_BIN || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
   }
 
   /**

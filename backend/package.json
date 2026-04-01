@@ -2,6 +2,7 @@
   "name": "team-info-backend",
   "version": "1.0.0",
   "description": "Team Management & Productivity Backend API",
+  "license": "UNLICENSED",
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
