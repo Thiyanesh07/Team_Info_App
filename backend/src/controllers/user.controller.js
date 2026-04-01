@@ -51,7 +51,8 @@ const updateProfile = async (req, res) => {
   try {
     const { name, regNo, department, year, mobile, cgpa, profileImageUrl,
       primarySkills, secondarySkills, specialSkills, programmingLangs,
-      linkedinUrl, githubUrl, leetcodeUrl, twitterUrl } = req.body;
+      linkedinUrl, githubUrl, leetcodeUrl, twitterUrl,
+      rewardPoints, activityPoints } = req.body;
 
     const user = await prisma.user.update({
       where: { id: req.user.id },
@@ -71,6 +72,8 @@ const updateProfile = async (req, res) => {
         ...(githubUrl !== undefined && { githubUrl }),
         ...(leetcodeUrl !== undefined && { leetcodeUrl }),
         ...(twitterUrl !== undefined && { twitterUrl }),
+        ...(rewardPoints !== undefined && { rewardPoints: parseInt(rewardPoints) }),
+        ...(activityPoints !== undefined && { activityPoints: parseInt(activityPoints) }),
       },
       select: userSelect,
     });
