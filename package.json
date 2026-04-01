@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Root package manager to forward Railway deployments to the backend directory",
   "scripts": {
-    "postinstall": "npm install --prefix backend",
+    "postinstall": "npm install --prefix backend && cd backend && npx puppeteer browsers install chrome",
     "build": "npm run build --prefix backend",
     "start": "npm start --prefix backend"
   },
