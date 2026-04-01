@@ -8,7 +8,6 @@ import 'package:team_info_app/providers/auth_provider.dart';
 import 'package:team_info_app/repositories/app_data_repository.dart';
 import 'package:team_info_app/screens/reports/create_report_request_screen.dart';
 import 'package:team_info_app/screens/reports/report_submission_screen.dart';
-import 'package:team_info_app/screens/reports/report_review_hub.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class ReportHubScreen extends ConsumerStatefulWidget {
@@ -46,9 +45,9 @@ class _ReportHubScreenState extends ConsumerState<ReportHubScreen> with SingleTi
 
       if (mounted) {
         setState(() {
-          _myPendingReports = results[0] as List<ReportRequest>;
+          _myPendingReports = results[0];
           if (results.length > 1) {
-            _manageableRequests = results[1] as List<ReportRequest>;
+            _manageableRequests = results[1];
           }
           _loading = false;
         });

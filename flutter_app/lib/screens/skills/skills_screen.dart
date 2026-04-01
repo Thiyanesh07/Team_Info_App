@@ -151,7 +151,7 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
         filename: 'SkillsPortfolio_${DateTime.now().millisecondsSinceEpoch}.xlsx',
         queryParams: {
           'scope': scope,
-          if (userId != null) 'userId': userId as String,
+          if (userId != null) 'userId': userId,
         },
       );
     } catch (e) {
