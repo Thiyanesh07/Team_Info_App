@@ -9,9 +9,10 @@ const fs = require('fs');
 class PuppetScraperService {
   constructor() {
     // Path to your actual Chrome User Data (with Linux/Render fallback)
+    const isWindows = process.platform === 'win32';
     const baseAppData = process.env.LOCALAPPDATA || process.env.HOME || '/tmp';
     this.chromeUserData = path.join(baseAppData, 'Google/Chrome/User Data');
-    this.chromeExecutable = process.env.CHROME_BIN || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+    this.chromeExecutable = process.env.CHROME_BIN || (isWindows ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' : undefined);
   }
 
   /**
@@ -26,8 +27,7 @@ class PuppetScraperService {
      * IMPORTANT: Puppeteer cannot use a profile that is currently open in Chrome.
      * We use a temporary clone or ask you to close Chrome.
      */
-    const browser = await puppeteer.launch({
-      executablePath: this.chromeExecutable,
+    const launchOptions = {
       headless: "new",
       userDataDir: this.chromeUserData, // PIGGYBACK on your real session
       args: [
@@ -36,7 +36,13 @@ class PuppetScraperService {
         '--disable-extensions',
         '--remote-debugging-port=9222',
       ]
-    });
+    };
+    
+    if (this.chromeExecutable) {
+      launchOptions.executablePath = this.chromeExecutable;
+    }
+
+    const browser = await puppeteer.launch(launchOptions);
 
     const page = await browser.newPage();
     await page.setViewport({ width: 1920, height: 1080 });
