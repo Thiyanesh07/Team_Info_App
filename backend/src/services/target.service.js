@@ -4,12 +4,26 @@ const prisma = require('../lib/prisma');
  * Service to manage academic reward targets (benchmarks)
  */
 class TargetService {
+  async ensureYearlyTargetsTable() {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "yearly_targets" (
+        "id" TEXT PRIMARY KEY DEFAULT md5(random()::text || clock_timestamp()::text),
+        "year" TEXT NOT NULL UNIQUE,
+        "target" DOUBLE PRECISION NOT NULL,
+        "lastSyncStatus" TEXT DEFAULT 'SUCCESS',
+        "lastSyncError" TEXT,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+  }
+
   /**
    * Syncs targets from the source (PLACEHOLDER for Hugging Face)
    */
   async syncTargets() {
     try {
       console.log('🔄 Syncing reward benchmarks (Hugging Face integration pending)...');
+      await this.ensureYearlyTargetsTable();
       
       // Fallback: Ensure defaults are seeded if DB is empty
       await this.seedDefaults();
@@ -17,6 +31,18 @@ class TargetService {
       console.log('✅ Target synchronization logic updated (Google decommissioned).');
     } catch (error) {
       console.error('⚠️ Benchmark Sync FAILED:', error.message);
+
+      // If migration hasn't created the table yet, try once to self-heal.
+      if (error.code === 'P2021' || String(error.message).includes('yearly_targets')) {
+        try {
+          await this.ensureYearlyTargetsTable();
+          await this.seedDefaults();
+          console.log('✅ Self-healed missing yearly_targets table.');
+          return;
+        } catch (healErr) {
+          console.error('❌ Self-heal for yearly_targets failed:', healErr.message);
+        }
+      }
       
       // Update DB with the failure status
       try {
@@ -36,6 +62,7 @@ class TargetService {
    * Seeds the database with the latest benchmarks extracted from the college chart
    */
   async seedDefaults() {
+    await this.ensureYearlyTargetsTable();
     const count = await prisma.yearlyTarget.count();
     if (count > 0) return; // Only seed if empty
 
@@ -61,7 +88,13 @@ class TargetService {
    * Returns a map of year labels to targets
    */
   async getTargets() {
-    const targets = await prisma.yearlyTarget.findMany();
+    let targets = [];
+    try {
+      await this.ensureYearlyTargetsTable();
+      targets = await prisma.yearlyTarget.findMany();
+    } catch (_error) {
+      targets = [];
+    }
     const map = {};
     targets.forEach(t => {
       map[t.year] = t.target;
