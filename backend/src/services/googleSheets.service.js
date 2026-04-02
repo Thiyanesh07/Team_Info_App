@@ -44,6 +44,7 @@ class GoogleSheetsService {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId,
         range,
+        auth: this.auth, // Explicitly pass auth to ensure identity
       });
       return response.data.values || [];
     } catch (error) {

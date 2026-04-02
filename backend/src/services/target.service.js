@@ -1,19 +1,43 @@
+const googleSheetsService = require('./googleSheets.service');
+const chartScraperService = require('./chartScraper.service');
 const prisma = require('../lib/prisma');
-
-const puppetScraperService = require('./puppetScraper.service');
 
 /**
  * Service to manage academic reward targets (benchmarks)
  */
 class TargetService {
   /**
-   * Syncs targets from the published Google Chart (Robot Browser Scraper V4)
+   * Syncs targets from the source (API primary, Axios Scraper fallback)
    */
   async syncTargets() {
     try {
-      console.log('🔄 Syncing reward benchmarks via Robot Browser...');
-      const benchmarks = await puppetScraperService.fetchBenchmarks();
+      console.log('🔄 Syncing reward benchmarks...');
+      const spreadsheetId = process.env.GOOGLE_AVERAGES_SHEET_ID || process.env.GOOGLE_SHEET_ID;
       
+      let benchmarks = null;
+
+      // 1. Attempt API Sync (Fastest and Reliable)
+      try {
+        console.log('📡 Attempting API sync from 2points tab...');
+        benchmarks = await googleSheetsService.getYearlyAverages(spreadsheetId);
+        console.log('✅ API sync successful.');
+      } catch (apiErr) {
+        console.warn('⚠️ API sync failed (possibly permissions). Attempting Axios Scraper fallback...', apiErr.message);
+      }
+
+      // 2. Attempt Axios Scraper Fallback (Production Safe)
+      if (!benchmarks) {
+        try {
+          console.log('🌐 Fetching data via Chart Scraper (Axios)...');
+          benchmarks = await chartScraperService.fetchBenchmarks();
+          console.log('✅ Chart Scraper sync successful.');
+        } catch (scraperErr) {
+          console.error('❌ Chart Scraper failed as well.', scraperErr.message);
+          throw new Error('All benchmark sync methods failed.');
+        }
+      }
+
+      // Update Database
       const years = Object.keys(benchmarks);
       for (const year of years) {
         const target = benchmarks[year];
@@ -33,11 +57,11 @@ class TargetService {
           });
         }
       }
-      console.log('✅ Yearly targets successfully synced from published chart.');
+      console.log('✅ Yearly targets successfully synchronized.');
     } catch (error) {
-      console.error('⚠️ Could not sync targets from chart scraper:', error.message);
+      console.error('⚠️ Benchmark Sync FAILED:', error.message);
       
-      // Update DB with the failure status for all targets
+      // Update DB with the failure status
       try {
         await prisma.yearlyTarget.updateMany({
           data: {
@@ -49,7 +73,7 @@ class TargetService {
         console.error('Failed to log sync error to DB:', dbErr.message);
       }
 
-      // Ensure we have at least the latest known benchmarks in the DB
+      // Seeding defaults if DB is empty
       await this.seedDefaults();
     }
   }
