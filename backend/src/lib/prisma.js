@@ -17,6 +17,38 @@ const getNormalizedDatabaseUrl = () => {
   return raw;
 };
 
+const getNormalizedDirectUrl = () => {
+  const raw = process.env.DIRECT_URL;
+  if (!raw) return raw;
+
+  try {
+    const parsed = new URL(raw);
+    if (parsed.hostname.includes('supabase.co') && !parsed.searchParams.get('sslmode')) {
+      parsed.searchParams.set('sslmode', 'require');
+      return parsed.toString();
+    }
+  } catch (_err) {
+    return raw;
+  }
+
+  return raw;
+};
+
+const getRuntimeDatabaseUrl = () => {
+  const normalizedDbUrl = getNormalizedDatabaseUrl();
+  const normalizedDirectUrl = getNormalizedDirectUrl();
+
+  if (process.env.PRISMA_RUNTIME_URL) {
+    return process.env.PRISMA_RUNTIME_URL;
+  }
+
+  if (process.env.NODE_ENV === 'production' && normalizedDirectUrl) {
+    return normalizedDirectUrl;
+  }
+
+  return normalizedDbUrl || normalizedDirectUrl;
+};
+
 /**
  * Prisma Client Singleton
  * Prevents multiple instances and connection exhaustion in serverless/dev environments
@@ -24,7 +56,7 @@ const getNormalizedDatabaseUrl = () => {
 const prisma = global.prisma || new PrismaClient({
   datasources: {
     db: {
-      url: getNormalizedDatabaseUrl(),
+      url: getRuntimeDatabaseUrl(),
     },
   },
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
