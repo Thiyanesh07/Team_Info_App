@@ -28,7 +28,9 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
   Future<void> _loadSubmissions() async {
     setState(() => _loading = true);
     try {
-      final subs = await ref.read(appDataRepositoryProvider).getSubmissionsForRequest(widget.request.id);
+      final subs = await ref
+          .read(appDataRepositoryProvider)
+          .getSubmissionsForRequest(widget.request.id);
       if (mounted) {
         setState(() {
           _submissions = subs;
@@ -36,7 +38,7 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
         });
       }
     } catch (e) {
-       if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -45,17 +47,34 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardDark,
-        title: const Text('Delete Request?', style: TextStyle(color: Colors.white)),
-        content: const Text('Are you sure you want to delete this report request and all associated submissions?', style: TextStyle(color: AppColors.textSecondary)),
+        title: const Text(
+          'Delete Request?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Are you sure you want to delete this report request and all associated submissions?',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete ALL', style: TextStyle(color: AppColors.error))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Delete ALL',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
         ],
       ),
     );
 
     if (ok == true) {
-      final response = await ref.read(appDataRepositoryProvider).deleteReportRequest(widget.request.id);
+      final response = await ref
+          .read(appDataRepositoryProvider)
+          .deleteReportRequest(widget.request.id);
       if (response.success && mounted) {
         Navigator.pop(context, true);
       }
@@ -67,12 +86,18 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Reports Management', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Reports Management',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_sweep_outlined, color: AppColors.error),
+            icon: const Icon(
+              Icons.delete_sweep_outlined,
+              color: AppColors.error,
+            ),
             onPressed: _deleteRequest,
           ),
         ],
@@ -85,13 +110,17 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
             child: Text(
               'Submissions (${_submissions.length})',
-              style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
             ),
           ),
           Expanded(
-            child: _loading 
-              ? const Center(child: CircularProgressIndicator())
-              : _submissions.isEmpty 
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _submissions.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -119,15 +148,40 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.request.title, style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+          Text(
+            widget.request.title,
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text(widget.request.description ?? 'No description', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+          Text(
+            widget.request.description ?? 'No description',
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+            ),
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
-              _buildSmallBadge(Icons.group, 'Audience: ${widget.request.targetAudience.name}', AppColors.primary),
+              _buildSmallBadge(
+                Icons.group,
+                'Audience: ${widget.request.targetAudience.name}',
+                AppColors.primary,
+              ),
               const SizedBox(width: 12),
-              _buildSmallBadge(Icons.calendar_today, widget.request.deadline != null ? widget.request.deadline!.substring(0, 10).replaceAll('-', '/') : 'No Deadline', AppColors.secondary),
+              _buildSmallBadge(
+                Icons.calendar_today,
+                widget.request.deadline != null
+                    ? widget.request.deadline!
+                          .substring(0, 10)
+                          .replaceAll('-', '/')
+                    : 'No Deadline',
+                AppColors.secondary,
+              ),
             ],
           ),
         ],
@@ -148,20 +202,34 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
         children: [
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
-          Text(text, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildEmptyState() {
-     return Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.hourglass_empty, size: 64, color: AppColors.primary.withAlpha(50)),
+          Icon(
+            Icons.hourglass_empty,
+            size: 64,
+            color: AppColors.primary.withAlpha(50),
+          ),
           const SizedBox(height: 16),
-          const Text('No submissions yet.', style: TextStyle(color: AppColors.textSecondary)),
+          const Text(
+            'No submissions yet.',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
         ],
       ),
     );
@@ -172,28 +240,57 @@ class _SubmissionReviewCard extends ConsumerStatefulWidget {
   final ReportSubmission submission;
   final VoidCallback onUpdate;
 
-  const _SubmissionReviewCard({required this.submission, required this.onUpdate});
+  const _SubmissionReviewCard({
+    required this.submission,
+    required this.onUpdate,
+  });
 
   @override
-  ConsumerState<_SubmissionReviewCard> createState() => _SubmissionReviewCardState();
+  ConsumerState<_SubmissionReviewCard> createState() =>
+      _SubmissionReviewCardState();
 }
 
 class _SubmissionReviewCardState extends ConsumerState<_SubmissionReviewCard> {
   bool _processing = false;
 
+  Future<void> _openPreview(String url) async {
+    await launchUrl(Uri.parse(url), mode: LaunchMode.inAppBrowserView);
+  }
+
+  String _toCloudinaryDownloadUrl(String url) {
+    if (!url.contains('/upload/')) return url;
+    if (url.contains('/upload/fl_attachment/')) return url;
+    return url.replaceFirst('/upload/', '/upload/fl_attachment/');
+  }
+
+  Future<void> _downloadOriginal(String url) async {
+    await launchUrl(
+      Uri.parse(_toCloudinaryDownloadUrl(url)),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
   Future<void> _showReviewDialog() async {
-    final notesController = TextEditingController(text: widget.submission.reviewerNotes);
-    
+    final notesController = TextEditingController(
+      text: widget.submission.reviewerNotes,
+    );
+
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardDark,
-        title: const Text('Review Submission', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Review Submission',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Add feedback or instructions for the team member:', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            const Text(
+              'Add feedback or instructions for the team member:',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: notesController,
@@ -201,41 +298,76 @@ class _SubmissionReviewCardState extends ConsumerState<_SubmissionReviewCard> {
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'e.g., Please clarify section 2...',
-                hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                hintStyle: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 13,
+                ),
                 filled: true,
                 fillColor: AppColors.background,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => _updateStatus(ReportSubmissionStatus.REDO, notesController.text, true),
-            child: const Text('Request REDO', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+            onPressed: () => _updateStatus(
+              ReportSubmissionStatus.REDO,
+              notesController.text,
+              true,
+            ),
+            child: const Text(
+              'Request REDO',
+              style: TextStyle(
+                color: AppColors.error,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           TextButton(
-            onPressed: () => _updateStatus(ReportSubmissionStatus.COMPLETED, notesController.text, true),
-            child: const Text('Approve Document', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
+            onPressed: () => _updateStatus(
+              ReportSubmissionStatus.COMPLETED,
+              notesController.text,
+              true,
+            ),
+            child: const Text(
+              'Approve Document',
+              style: TextStyle(
+                color: AppColors.success,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _updateStatus(ReportSubmissionStatus status, String notes, bool popDialog) async {
+  Future<void> _updateStatus(
+    ReportSubmissionStatus status,
+    String notes,
+    bool popDialog,
+  ) async {
     if (popDialog) Navigator.pop(context);
-    
+
     setState(() => _processing = true);
     try {
       final repo = ref.read(appDataRepositoryProvider);
-      final res = await repo.reviewSubmission(widget.submission.id, status.name, notes);
+      final res = await repo.reviewSubmission(
+        widget.submission.id,
+        status.name,
+        notes,
+      );
       if (res.success) {
         widget.onUpdate();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _processing = false);
@@ -246,9 +378,15 @@ class _SubmissionReviewCardState extends ConsumerState<_SubmissionReviewCard> {
   Widget build(BuildContext context) {
     Color statusColor;
     switch (widget.submission.status) {
-      case ReportSubmissionStatus.PENDING: statusColor = AppColors.warning; break;
-      case ReportSubmissionStatus.COMPLETED: statusColor = AppColors.success; break;
-      case ReportSubmissionStatus.REDO: statusColor = AppColors.error; break;
+      case ReportSubmissionStatus.PENDING:
+        statusColor = AppColors.warning;
+        break;
+      case ReportSubmissionStatus.COMPLETED:
+        statusColor = AppColors.success;
+        break;
+      case ReportSubmissionStatus.REDO:
+        statusColor = AppColors.error;
+        break;
     }
 
     return Card(
@@ -266,16 +404,33 @@ class _SubmissionReviewCardState extends ConsumerState<_SubmissionReviewCard> {
               children: [
                 CircleAvatar(
                   backgroundColor: AppColors.cardDark,
-                  backgroundImage: widget.submission.user?['profileImageUrl'] != null ? NetworkImage(widget.submission.user!['profileImageUrl']) : null,
-                  child: widget.submission.user?['profileImageUrl'] == null ? Text(widget.submission.user?['name']?[0] ?? '?') : null,
+                  backgroundImage:
+                      widget.submission.user?['profileImageUrl'] != null
+                      ? NetworkImage(widget.submission.user!['profileImageUrl'])
+                      : null,
+                  child: widget.submission.user?['profileImageUrl'] == null
+                      ? Text(widget.submission.user?['name']?[0] ?? '?')
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(widget.submission.user?['name'] ?? 'Team Member', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      Text(widget.submission.user?['regNo'] ?? 'No ID', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                      Text(
+                        widget.submission.user?['name'] ?? 'Team Member',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        widget.submission.user?['regNo'] ?? 'No ID',
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -283,10 +438,18 @@ class _SubmissionReviewCardState extends ConsumerState<_SubmissionReviewCard> {
               ],
             ),
             const Divider(height: 24, color: AppColors.divider),
-            if (widget.submission.notes != null && widget.submission.notes!.isNotEmpty) ...[
+            if (widget.submission.notes != null &&
+                widget.submission.notes!.isNotEmpty) ...[
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Notes: ${widget.submission.notes}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontStyle: FontStyle.italic)),
+                child: Text(
+                  'Notes: ${widget.submission.notes}',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
             ],
@@ -294,23 +457,45 @@ class _SubmissionReviewCardState extends ConsumerState<_SubmissionReviewCard> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => launchUrl(Uri.parse(widget.submission.fileUrl)),
-                    icon: const Icon(Icons.open_in_new, size: 16),
-                    label: const Text('View File'),
+                    onPressed: () => _openPreview(widget.submission.fileUrl),
+                    icon: const Icon(Icons.preview_outlined, size: 16),
+                    label: const Text('Preview'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primary,
                       side: const BorderSide(color: AppColors.primary),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        _downloadOriginal(widget.submission.fileUrl),
+                    icon: const Icon(Icons.download_outlined, size: 16),
+                    label: const Text('Download'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.secondary,
+                      side: const BorderSide(color: AppColors.secondary),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _processing ? null : _showReviewDialog,
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                    child: _processing 
-                      ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
-                      : const Text('Review'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                    ),
+                    child: _processing
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Review'),
                   ),
                 ),
               ],
@@ -330,7 +515,11 @@ class _SubmissionReviewCardState extends ConsumerState<_SubmissionReviewCard> {
       ),
       child: Text(
         status.name,
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

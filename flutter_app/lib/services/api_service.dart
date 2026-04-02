@@ -125,7 +125,10 @@ class ApiService {
     }
   }
 
-  Future<ApiResponse> patch(String endpoint, {Map<String, dynamic>? body}) async {
+  Future<ApiResponse> patch(
+    String endpoint, {
+    Map<String, dynamic>? body,
+  }) async {
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
       final response = await http.patch(
@@ -150,12 +153,20 @@ class ApiService {
   }
 
   // ─── Multipart Upload ──────────────────────
-  Future<ApiResponse> uploadFile(String endpoint, String filePath, {String fieldName = 'file'}) async {
+  Future<ApiResponse> uploadFile(
+    String endpoint,
+    String filePath, {
+    String fieldName = 'file',
+    String? folder,
+  }) async {
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
       final request = http.MultipartRequest('POST', uri);
       final token = await getToken();
       if (token != null) request.headers['Authorization'] = 'Bearer $token';
+      if (folder != null && folder.isNotEmpty) {
+        request.fields['folder'] = folder;
+      }
       request.files.add(await http.MultipartFile.fromPath(fieldName, filePath));
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
@@ -165,21 +176,13 @@ class ApiService {
     }
   }
 
-  Future<ApiResponse> uploadImage(String filePath) async {
-    try {
-      final uri = Uri.parse(
-        '${ApiConstants.baseUrl}${ApiConstants.uploadImage}',
-      );
-      final request = http.MultipartRequest('POST', uri);
-      final token = await getToken();
-      if (token != null) request.headers['Authorization'] = 'Bearer $token';
-      request.files.add(await http.MultipartFile.fromPath('file', filePath));
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-      return _handleResponse(response);
-    } catch (e) {
-      return ApiResponse(success: false, message: 'Upload error: $e');
-    }
+  Future<ApiResponse> uploadImage(String filePath, {String? folder}) async {
+    return uploadFile(
+      ApiConstants.uploadImage,
+      filePath,
+      fieldName: 'file',
+      folder: folder,
+    );
   }
 
   // ─── Response Handler ──────────────────────

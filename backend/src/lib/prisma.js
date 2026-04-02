@@ -41,11 +41,8 @@ const getRuntimeDatabaseUrl = () => {
   if (process.env.PRISMA_RUNTIME_URL) {
     return process.env.PRISMA_RUNTIME_URL;
   }
-
-  if (process.env.NODE_ENV === 'production' && normalizedDirectUrl) {
-    return normalizedDirectUrl;
-  }
-
+  // Runtime should prefer DATABASE_URL (typically Supabase pooler).
+  // DIRECT_URL is intended for migrations/introspection.
   return normalizedDbUrl || normalizedDirectUrl;
 };
 
