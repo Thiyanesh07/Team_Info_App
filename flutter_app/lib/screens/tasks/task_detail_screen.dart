@@ -22,13 +22,9 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   TaskAssignment? _task;
   List<TaskReport> _reports = [];
   final _reportController = TextEditingController();
-    {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+
   @override
-    {
-      return Scaffold(appBar: AppBar(title: const Text('Task Not Found')));
-    }
+  void initState() {
     super.initState();
     _loadTaskDetails();
   }
