@@ -329,6 +329,9 @@ class _PersonalChatScreenState extends ConsumerState<PersonalChatScreen> {
   }
 
   void _showReactionSheet(ChatMessage msg) {
+    final currentUserId = ref.read(authProvider).user?.id;
+    final isMe = msg.senderId == currentUserId;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -338,21 +341,77 @@ class _PersonalChatScreenState extends ConsumerState<PersonalChatScreen> {
           color: AppColors.cardDark,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: ['👍', '❤️', '😂', '🔥', '😮', '😢']
-              .map(
-                (e) => GestureDetector(
-                  onTap: () {
-                    _socket.addReaction(msg.id, 'personal', e);
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: ['👍', '❤️', '😂', '🔥', '😮', '😢']
+                  .map(
+                    (e) => GestureDetector(
+                      onTap: () {
+                        _socket.addReaction(msg.id, 'personal', e);
+                        Navigator.pop(ctx);
+                      },
+                      child: Text(e, style: const TextStyle(fontSize: 32)),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                TextButton.icon(
+                  onPressed: () {
                     Navigator.pop(ctx);
+                    _setReplyMessage(msg);
                   },
-                  child: Text(e, style: const TextStyle(fontSize: 32)),
+                  icon: const Icon(Icons.reply, size: 18),
+                  label: const Text('Reply'),
                 ),
-              )
-              .toList(),
+                if (isMe)
+                  TextButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      await _deleteMessage(msg);
+                    },
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 18,
+                      color: AppColors.error,
+                    ),
+                    label: const Text(
+                      'Delete',
+                      style: TextStyle(color: AppColors.error),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Future<void> _deleteMessage(ChatMessage msg) async {
+    final res = await _api.delete(
+      '${ApiConstants.conversations}/${widget.conversationId}/messages/${msg.id}',
+    );
+    if (!mounted) return;
+
+    if (res.success) {
+      setState(() {
+        _messages.removeWhere((m) => m.id == msg.id);
+        if (_replyingTo?.id == msg.id) {
+          _replyingTo = null;
+        }
+      });
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(res.message ?? 'Failed to delete message')),
     );
   }
 

@@ -116,6 +116,31 @@ const getPinnedMessages = async (req, res) => {
   }
 };
 
+/** DELETE /api/chat/team/:id - Delete team message (sender or leader) */
+const deleteTeamMessage = async (req, res) => {
+  try {
+    const message = await prisma.teamMessage.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, senderId: true },
+    });
+
+    if (!message) {
+      return res.status(404).json({ success: false, message: 'Message not found' });
+    }
+
+    const leaderRoles = ['ADMIN', 'CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'];
+    const canDelete = message.senderId === req.user.id || leaderRoles.includes(req.user.role);
+    if (!canDelete) {
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this message' });
+    }
+
+    await prisma.teamMessage.delete({ where: { id: req.params.id } });
+    res.json({ success: true, message: 'Message deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to delete message' });
+  }
+};
+
 // ────────────────────────────────────────
 // PERSONAL CHAT (1-to-1)
 // ────────────────────────────────────────
@@ -308,8 +333,43 @@ const toggleConversationPin = async (req, res) => {
   }
 };
 
+/** DELETE /api/chat/conversations/:conversationId/messages/:messageId */
+const deleteConversationMessage = async (req, res) => {
+  try {
+    const { conversationId, messageId } = req.params;
+    const allowed = await isConversationParticipant(conversationId, req.user.id);
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this conversation' });
+    }
+
+    const message = await prisma.chatMessage.findFirst({
+      where: { id: messageId, conversationId },
+      select: { id: true, senderId: true },
+    });
+
+    if (!message) {
+      return res.status(404).json({ success: false, message: 'Message not found' });
+    }
+
+    if (message.senderId !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Only sender can delete this message' });
+    }
+
+    await prisma.chatMessage.delete({ where: { id: messageId } });
+
+    await prisma.chatConversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() },
+    });
+
+    res.json({ success: true, message: 'Message deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to delete message' });
+  }
+};
+
 module.exports = {
   getTeamMessages, sendTeamMessage, togglePinMessage, getPinnedMessages,
   getConversations, createConversation, getConversationMessages, sendConversationMessage,
-  toggleConversationPin,
+  toggleConversationPin, deleteTeamMessage, deleteConversationMessage,
 };

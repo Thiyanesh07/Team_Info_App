@@ -9,6 +9,8 @@ import 'package:team_info_app/services/api_service.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class InAppFileActions {
+  static const Duration _downloadTimeout = Duration(seconds: 45);
+
   static Future<void> preview(
     BuildContext context,
     String fileUrl, {
@@ -17,6 +19,23 @@ class InAppFileActions {
     try {
       final normalizedUrl = _normalizeAndValidateUrl(fileUrl);
       final headers = await _headersForUrl(normalizedUrl);
+
+      // WebView preview for office docs/PDF is unreliable across devices.
+      // For documents, download to local storage and open with installed app.
+      if (_looksLikeDocument(normalizedUrl, fileName)) {
+        final bytes = await _downloadFileBytesInternal(
+          normalizedUrl,
+          headers: headers,
+        );
+        final safeName = _resolveFileName(normalizedUrl, fileName);
+        final downloadDir = await _ensureDownloadsDir();
+        final path = '${downloadDir.path}/$safeName';
+        final file = File(path);
+        await file.writeAsBytes(bytes, flush: true);
+        await OpenFilex.open(path);
+        return;
+      }
+
       if (!context.mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute(
@@ -84,7 +103,7 @@ class InAppFileActions {
     Map<String, String> headers = const {},
   }) async {
     final uri = Uri.parse(fileUrl);
-    final res = await http.get(uri, headers: headers);
+    final res = await http.get(uri, headers: headers).timeout(_downloadTimeout);
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception('HTTP ${res.statusCode}');
     }
@@ -129,13 +148,31 @@ class InAppFileActions {
 
   static String _resolveFileName(String url, String? preferredName) {
     if (preferredName != null && preferredName.trim().isNotEmpty) {
-      return preferredName.trim();
+      return _sanitizeFileName(preferredName.trim());
     }
     final uri = Uri.parse(url);
     final last = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : '';
     final fallback = last.isEmpty ? 'downloaded_file' : last;
-    final clean = fallback.split('?').first;
-    return clean;
+    final clean = Uri.decodeComponent(fallback.split('?').first);
+    return _sanitizeFileName(clean);
+  }
+
+  static bool _looksLikeDocument(String url, String? fileName) {
+    final source = (fileName ?? url).toLowerCase();
+    return source.endsWith('.pdf') ||
+        source.endsWith('.doc') ||
+        source.endsWith('.docx') ||
+        source.endsWith('.ppt') ||
+        source.endsWith('.pptx') ||
+        source.endsWith('.xls') ||
+        source.endsWith('.xlsx');
+  }
+
+  static String _sanitizeFileName(String fileName) {
+    var value = fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    value = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (value.isEmpty) return 'downloaded_file';
+    return value;
   }
 }
 

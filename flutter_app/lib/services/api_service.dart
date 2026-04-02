@@ -15,6 +15,7 @@ class ApiService {
   final _storage = const FlutterSecureStorage();
   static const _tokenKey = 'auth_token';
   String? _inMemoryToken;
+  static const Duration _requestTimeout = Duration(seconds: 30);
 
   // ─── Token Management ──────────────────────
   Future<String?> getToken() async {
@@ -48,6 +49,25 @@ class ApiService {
     return headers;
   }
 
+  Future<http.Response> _requestWithRetry(
+    Future<http.Response> Function(Map<String, String> headers) sender, {
+    bool withAuth = true,
+  }) async {
+    var headers = await _headers(withAuth: withAuth);
+    var response = await sender(headers).timeout(_requestTimeout);
+
+    if (withAuth && response.statusCode == 401) {
+      final fresh = (await _storage.read(key: _tokenKey))?.trim();
+      if (fresh != null && fresh.isNotEmpty && fresh != _inMemoryToken) {
+        _inMemoryToken = fresh;
+        headers = await _headers(withAuth: withAuth);
+        response = await sender(headers).timeout(_requestTimeout);
+      }
+    }
+
+    return response;
+  }
+
   // ─── HTTP Methods ──────────────────────────
   Future<ApiResponse> get(
     String endpoint, {
@@ -62,7 +82,9 @@ class ApiService {
       final uri = Uri.parse(
         '${ApiConstants.baseUrl}$endpoint',
       ).replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: await _headers());
+      final response = await _requestWithRetry(
+        (headers) => http.get(uri, headers: headers),
+      );
       final apiResponse = _handleResponse(response);
 
       if (useCache && apiResponse.success) {
@@ -100,10 +122,13 @@ class ApiService {
   }) async {
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
-      final response = await http.post(
-        uri,
-        headers: await _headers(withAuth: withAuth),
-        body: body != null ? jsonEncode(body) : null,
+      final response = await _requestWithRetry(
+        (headers) => http.post(
+          uri,
+          headers: headers,
+          body: body != null ? jsonEncode(body) : null,
+        ),
+        withAuth: withAuth,
       );
       return _handleResponse(response);
     } catch (e) {
@@ -114,10 +139,12 @@ class ApiService {
   Future<ApiResponse> put(String endpoint, {Map<String, dynamic>? body}) async {
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
-      final response = await http.put(
-        uri,
-        headers: await _headers(),
-        body: body != null ? jsonEncode(body) : null,
+      final response = await _requestWithRetry(
+        (headers) => http.put(
+          uri,
+          headers: headers,
+          body: body != null ? jsonEncode(body) : null,
+        ),
       );
       return _handleResponse(response);
     } catch (e) {
@@ -131,10 +158,12 @@ class ApiService {
   }) async {
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
-      final response = await http.patch(
-        uri,
-        headers: await _headers(),
-        body: body != null ? jsonEncode(body) : null,
+      final response = await _requestWithRetry(
+        (headers) => http.patch(
+          uri,
+          headers: headers,
+          body: body != null ? jsonEncode(body) : null,
+        ),
       );
       return _handleResponse(response);
     } catch (e) {
@@ -145,7 +174,9 @@ class ApiService {
   Future<ApiResponse> delete(String endpoint) async {
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
-      final response = await http.delete(uri, headers: await _headers());
+      final response = await _requestWithRetry(
+        (headers) => http.delete(uri, headers: headers),
+      );
       return _handleResponse(response);
     } catch (e) {
       return ApiResponse(success: false, message: 'Network error: $e');
@@ -188,6 +219,12 @@ class ApiService {
   // ─── Response Handler ──────────────────────
   ApiResponse _handleResponse(http.Response response) {
     try {
+      if (response.body.trim().isEmpty) {
+        return ApiResponse(
+          success: response.statusCode >= 200 && response.statusCode < 300,
+          statusCode: response.statusCode,
+        );
+      }
       final body = jsonDecode(response.body);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return ApiResponse(
