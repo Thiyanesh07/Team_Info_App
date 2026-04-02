@@ -65,7 +65,8 @@ class HuggingFaceService {
       // 1. Update the User's Year if found in the report
       if (yearMatch && yearMatch[1]) {
         const year = yearMatch[1].trim();
-        await prisma.user.update({
+        // regNo is not unique in Prisma schema, so use updateMany safely.
+        await prisma.user.updateMany({
           where: { regNo },
           data: { year }
         });
