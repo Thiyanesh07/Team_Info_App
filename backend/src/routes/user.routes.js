@@ -5,6 +5,7 @@ const { authenticate, isAdmin, isLeader } = require('../middleware/auth.middlewa
 
 router.use(authenticate);
 
+router.put('/ps-sync', syncPsPoints);
 router.get('/', getAllUsers);
 router.get('/:id', getUserById);
 router.put('/profile', updateProfile);
@@ -12,6 +13,4 @@ router.put('/:id', isAdmin, adminUpdateUser);
 router.put('/:id/role', isAdmin, assignRole);
 router.post('/create', isAdmin, createUser);
 router.delete('/:id', isAdmin, deleteUser);
-
-router.put('/ps-sync', syncPsPoints);
 module.exports = router;

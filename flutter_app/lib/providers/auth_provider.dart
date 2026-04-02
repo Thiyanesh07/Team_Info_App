@@ -216,6 +216,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  void patchCurrentUser({
+    int? activityPoints,
+    int? groupPoints,
+    double? contributionPercent,
+  }) {
+    final user = state.user;
+    if (user == null) return;
+
+    state = state.copyWith(
+      user: user.copyWith(
+        activityPoints: activityPoints,
+        groupPoints: groupPoints,
+        contributionPercent: contributionPercent,
+      ),
+    );
+  }
+
   void clearError() {
     state = state.copyWith(
       status: AuthStatus.unauthenticated,

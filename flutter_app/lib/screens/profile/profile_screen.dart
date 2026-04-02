@@ -22,6 +22,8 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _api = ApiService();
+  String? _lastPortalSyncedAt;
+  String? _lastPortalDeltaText;
 
   Future<void> _editPoints({
     required String fieldKey,
@@ -141,16 +143,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 context: context,
                 builder: (ctx) => AlertDialog(
                   backgroundColor: AppColors.surface,
-                  title: Text('Logout', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
-                  content: Text('Are you sure you want to exit the Command Center?', style: GoogleFonts.inter(color: Colors.white70)),
+                  title: Text(
+                    'Logout',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  content: Text(
+                    'Are you sure you want to exit the Command Center?',
+                    style: GoogleFonts.inter(color: Colors.white70),
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: Text('Cancel', style: GoogleFonts.inter(color: AppColors.textMuted)),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.inter(color: AppColors.textMuted),
+                      ),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: Text('Logout', style: GoogleFonts.inter(color: AppColors.error, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        'Logout',
+                        style: GoogleFonts.inter(
+                          color: AppColors.error,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -229,7 +249,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _InfoTile('Department', user.department!),
                   if (user.year != null) _InfoTile('Year', user.year!),
                   if (user.mobile != null) _InfoTile('Mobile', user.mobile!),
-                  if (user.cgpa != null) _InfoTile('CGPA', user.cgpa.toString()),
+                  if (user.cgpa != null)
+                    _InfoTile('CGPA', user.cgpa.toString()),
                 ],
               ),
               const SizedBox(height: 16),
@@ -275,14 +296,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () async {
-                    final synced = await Navigator.push(
+                    final syncResult = await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const CollegeSyncScreen(),
                       ),
                     );
-                    if (synced == true) {
-                      await ref.read(authProvider.notifier).refreshUser();
+                    if (!mounted) return;
+
+                    if (syncResult is Map && syncResult['synced'] == true) {
+                      final oldPoints = (syncResult['oldPoints'] as num?)
+                          ?.toInt();
+                      final newPoints = (syncResult['newPoints'] as num?)
+                          ?.toInt();
+                      final delta = (syncResult['delta'] as num?)?.toInt();
+                      final syncedAt = syncResult['syncedAt']?.toString();
+
+                      setState(() {
+                        _lastPortalSyncedAt = syncedAt;
+                        _lastPortalDeltaText =
+                            '${oldPoints ?? '-'} -> ${newPoints ?? '-'} (${delta != null && delta >= 0 ? '+' : ''}${delta ?? 0})';
+                      });
+
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Activity Points: ${_lastPortalDeltaText ?? 'Synced'}',
+                          ),
+                          backgroundColor: AppColors.primary,
+                        ),
+                      );
                     }
                   },
                   icon: const Icon(Icons.sync),
@@ -298,6 +342,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                 ),
               ),
+              if (_lastPortalDeltaText != null || _lastPortalSyncedAt != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_lastPortalDeltaText != null)
+                        Text(
+                          'Activity Points: $_lastPortalDeltaText',
+                          style: GoogleFonts.inter(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      if (_lastPortalSyncedAt != null)
+                        Text(
+                          'Last Synced: $_lastPortalSyncedAt',
+                          style: GoogleFonts.inter(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 24),
             ],
 
@@ -313,7 +382,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const SkillsScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const SkillsScreen(),
+                          ),
                         ),
                         icon: const Icon(Icons.bolt_rounded, size: 18),
                         label: const Text('Skills'),
@@ -324,9 +395,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const CertificationsScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const CertificationsScreen(),
+                          ),
                         ),
-                        icon: const Icon(Icons.workspace_premium_rounded, size: 18),
+                        icon: const Icon(
+                          Icons.workspace_premium_rounded,
+                          size: 18,
+                        ),
                         label: const Text('Certs'),
                       ),
                     ),
@@ -364,8 +440,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       user.linkedinUrl != null ||
       user.leetcodeUrl != null ||
       user.twitterUrl != null;
-
-
 
   Widget _buildSkillsPreview(BuildContext context, UserModel user) {
     return Column(

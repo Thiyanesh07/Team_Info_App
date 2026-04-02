@@ -1,6 +1,16 @@
 const prisma = require('../lib/prisma');
 
 
+const PS_SYNC_COOLDOWN_MS = Number(process.env.PS_SYNC_COOLDOWN_MS || 45000);
+const psSyncCooldownByUser = new Map();
+
+const getSyncCooldownRemainingMs = (userId) => {
+  const lastSyncMs = psSyncCooldownByUser.get(userId);
+  if (!lastSyncMs) return 0;
+  return Math.max(0, PS_SYNC_COOLDOWN_MS - (Date.now() - lastSyncMs));
+};
+
+
 
 const userSelect = {
   id: true, email: true, name: true, regNo: true, department: true,
@@ -232,9 +242,43 @@ const adminUpdateUser = async (req, res) => {
 /** PUT /api/users/ps-sync - Sync Activity Points via token */
 const syncPsPoints = async (req, res) => {
   try {
-    const { psToken } = req.body;
-    if (!psToken) {
-      return res.status(400).json({ success: false, message: 'PS token is required' });
+    const rawToken = typeof req.body?.psToken === 'string' ? req.body.psToken : '';
+    const psToken = rawToken.trim();
+    const tokenPresent = psToken.length > 0;
+    console.info(
+      `[PS_SYNC] user=${req.user.id} tokenPresent=${tokenPresent} tokenLength=${psToken.length}`
+    );
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        activityPoints: true,
+      },
+    });
+
+    const oldPoints = Number(existingUser?.activityPoints || 0);
+    const cooldownRemainingMs = getSyncCooldownRemainingMs(req.user.id);
+    if (cooldownRemainingMs > 0) {
+      const retryAfterSeconds = Math.ceil(cooldownRemainingMs / 1000);
+      return res.status(429).json({
+        success: false,
+        message: `Sync already ran recently. Please retry in ${retryAfterSeconds}s.`,
+        data: {
+          oldPoints,
+          newPoints: oldPoints,
+          delta: 0,
+          syncedAt: new Date(Date.now() - (PS_SYNC_COOLDOWN_MS - cooldownRemainingMs)).toISOString(),
+          retryAfterSeconds,
+          idempotent: true,
+        },
+      });
+    }
+
+    if (!tokenPresent) {
+      return res.status(400).json({
+        success: false,
+        message: 'PS token is required. Please login in portal and retry sync.',
+      });
     }
 
     // Call the external API
@@ -246,9 +290,13 @@ const syncPsPoints = async (req, res) => {
         'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Mobile Safari/537.36'
       }
     });
+    console.info(`[PS_SYNC] user=${req.user.id} portalStatus=${response.status}`);
 
     if (!response.ok) {
-        return res.status(response.status).json({ success: false, message: 'Failed to authenticate with PS portal' });
+      return res.status(response.status).json({
+        success: false,
+        message: 'Failed to authenticate with PS portal. Please login again and retry.',
+      });
     }
 
     const dataObj = await response.json();
@@ -261,13 +309,16 @@ const syncPsPoints = async (req, res) => {
     let contributionPercent = 0.0;
 
     if (dataObj.data.points && dataObj.data.points.length > 0) {
-        activityPoints = dataObj.data.points[0].total_points || 0;
+        activityPoints = Number(dataObj.data.points[0].total_points || 0);
     }
     
     if (dataObj.data.group_points && dataObj.data.group_points.length > 0) {
-        groupPoints = dataObj.data.group_points[0].total_group_points || 0;
-        contributionPercent = dataObj.data.group_points[0].contribution_percent || 0;
+        groupPoints = Number(dataObj.data.group_points[0].total_group_points || 0);
+        contributionPercent = Number(dataObj.data.group_points[0].contribution_percent || 0);
     }
+
+      const delta = activityPoints - oldPoints;
+      const syncedAt = new Date().toISOString();
 
     // Update the user
     const user = await prisma.user.update({
@@ -280,8 +331,19 @@ const syncPsPoints = async (req, res) => {
       },
       select: userSelect,
     });
+    psSyncCooldownByUser.set(req.user.id, Date.now());
 
-    res.json({ success: true, message: 'Points synced successfully', data: user });
+    res.json({
+      success: true,
+      message: 'Points synced successfully',
+      data: {
+        user,
+        oldPoints,
+        newPoints: activityPoints,
+        delta,
+        syncedAt,
+      },
+    });
   } catch (error) {
     console.error('SyncPsPoints error:', error);
     res.status(500).json({ success: false, message: 'Internal server error while syncing points' });
