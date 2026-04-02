@@ -31,10 +31,10 @@ router.put('/manage/users/:id', updateUser);
 router.put('/manage/projects/:id', updateProject);
 
 /**
- * @route POST /api/admin/sync/rewards-sheets
- * @desc Sync reward points for all users from Google Sheets
+ * @route POST /api/admin/sync/rewards
+ * @desc Sync reward points for all users (New API integration pending)
  */
-router.post('/sync/rewards-sheets', syncRewardsFromSheets);
+router.post('/sync/rewards', syncRewardsFromSheets);
 
 /**
  * @route GET /api/admin/sync-status

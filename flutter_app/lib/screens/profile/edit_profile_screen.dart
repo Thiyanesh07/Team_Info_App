@@ -16,6 +16,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _api = ApiService();
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameC, _regNoC, _deptC, _yearC, _mobileC, _cgpaC;
+  late TextEditingController _rewardPointsC, _activityPointsC;
   late TextEditingController _linkedinC, _githubC, _leetcodeC, _twitterC;
   late TextEditingController _primarySkill1C, _primarySkill2C;
   late TextEditingController _secondarySkill1C, _secondarySkill2C;
@@ -37,6 +38,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _yearC = TextEditingController(text: user.year ?? '');
     _mobileC = TextEditingController(text: user.mobile ?? '');
     _cgpaC = TextEditingController(text: user.cgpa?.toString() ?? '');
+    _rewardPointsC = TextEditingController(text: user.rewardPoints.toString());
+    _activityPointsC = TextEditingController(text: user.activityPoints.toString());
     _linkedinC = TextEditingController(text: user.linkedinUrl ?? '');
     _githubC = TextEditingController(text: user.githubUrl ?? '');
     _leetcodeC = TextEditingController(text: user.leetcodeUrl ?? '');
@@ -120,6 +123,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         'secondarySkills': _secondarySkills,
         'specialSkills': _specialSkills,
         'programmingLangs': _langs,
+        'rewardPoints': int.tryParse(_rewardPointsC.text) ?? 0,
+        'activityPoints': int.tryParse(_activityPointsC.text) ?? 0,
       },
     );
 
@@ -188,6 +193,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               _field(_yearC, 'Year'),
               _field(_mobileC, 'Mobile', keyboardType: TextInputType.phone),
               _field(_cgpaC, 'CGPA', keyboardType: TextInputType.number),
+              _field(_rewardPointsC, 'Reward Points', keyboardType: TextInputType.number),
+              _field(_activityPointsC, 'Activity Points', keyboardType: TextInputType.number),
               const SizedBox(height: 20),
 
               _sectionTitle('Skills'),

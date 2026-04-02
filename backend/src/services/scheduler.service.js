@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const targetService = require('./target.service');
+const huggingFaceService = require('./huggingFace.service');
 const prisma = require('../lib/prisma');
-
 
 /**
  * Background Scheduler for Periodic Syncing
@@ -17,11 +17,10 @@ class SchedulerService {
   async init() {
     console.log('⏳ Initializing background scheduler...');
     
-    // 1. Initial manual sync to ensure data is populated on startup
+    // 1. Initial manual sync to ensure targets are populated on startup
     await targetService.syncTargets();
 
     // 2. Schedule Reward Benchmarks Update (Every 12 hours)
-    // Runs at 00:00 and 12:00
     const benchmarkJob = cron.schedule('0 0,12 * * *', async () => {
       console.log('⏰ Running scheduled reward benchmark update...');
       await targetService.syncTargets();
@@ -29,11 +28,15 @@ class SchedulerService {
 
     this.jobs.push(benchmarkJob);
 
-    // 3. User Activity Cleanup / Auto-sync reward points across users
-    // This could trigger a sync for all users who haven't updated in 24 hours
+    // 3. Daily Reward Points Refresh (Every day at 1 AM IST)
     const rewardRefreshJob = cron.schedule('0 1 * * *', async () => {
-      console.log('⏰ Running daily reward refresh for all users...');
-      // Logic for mass-sync can be added here
+      console.log('⏰ Running daily reward points mass-sync via Hugging Face...');
+      try {
+        await huggingFaceService.syncAllUsers();
+        console.log('✅ Daily mass-sync completed successfully.');
+      } catch (error) {
+        console.error('❌ Daily mass-sync FAILED:', error.message);
+      }
     });
     
     this.jobs.push(rewardRefreshJob);

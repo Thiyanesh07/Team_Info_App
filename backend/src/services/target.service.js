@@ -1,5 +1,3 @@
-const googleSheetsService = require('./googleSheets.service');
-const chartScraperService = require('./chartScraper.service');
 const prisma = require('../lib/prisma');
 
 /**
@@ -7,57 +5,16 @@ const prisma = require('../lib/prisma');
  */
 class TargetService {
   /**
-   * Syncs targets from the source (API primary, Axios Scraper fallback)
+   * Syncs targets from the source (PLACEHOLDER for Hugging Face)
    */
   async syncTargets() {
     try {
-      console.log('🔄 Syncing reward benchmarks...');
-      const spreadsheetId = process.env.GOOGLE_AVERAGES_SHEET_ID || process.env.GOOGLE_SHEET_ID;
+      console.log('🔄 Syncing reward benchmarks (Hugging Face integration pending)...');
       
-      let benchmarks = null;
-
-      // 1. Attempt API Sync (Fastest and Reliable)
-      try {
-        console.log('📡 Attempting API sync from 2points tab...');
-        benchmarks = await googleSheetsService.getYearlyAverages(spreadsheetId);
-        console.log('✅ API sync successful.');
-      } catch (apiErr) {
-        console.warn('⚠️ API sync failed (possibly permissions). Attempting Axios Scraper fallback...', apiErr.message);
-      }
-
-      // 2. Attempt Axios Scraper Fallback (Production Safe)
-      if (!benchmarks) {
-        try {
-          console.log('🌐 Fetching data via Chart Scraper (Axios)...');
-          benchmarks = await chartScraperService.fetchBenchmarks();
-          console.log('✅ Chart Scraper sync successful.');
-        } catch (scraperErr) {
-          console.error('❌ Chart Scraper failed as well.', scraperErr.message);
-          throw new Error('All benchmark sync methods failed.');
-        }
-      }
-
-      // Update Database
-      const years = Object.keys(benchmarks);
-      for (const year of years) {
-        const target = benchmarks[year];
-        if (year && !isNaN(target)) {
-          await prisma.yearlyTarget.upsert({
-            where: { year },
-            update: { 
-              target,
-              lastSyncStatus: 'SUCCESS',
-              lastSyncError: null
-            },
-            create: { 
-              year, 
-              target,
-              lastSyncStatus: 'SUCCESS'
-            }
-          });
-        }
-      }
-      console.log('✅ Yearly targets successfully synchronized.');
+      // Fallback: Ensure defaults are seeded if DB is empty
+      await this.seedDefaults();
+      
+      console.log('✅ Target synchronization logic updated (Google decommissioned).');
     } catch (error) {
       console.error('⚠️ Benchmark Sync FAILED:', error.message);
       
@@ -72,9 +29,6 @@ class TargetService {
       } catch (dbErr) {
         console.error('Failed to log sync error to DB:', dbErr.message);
       }
-
-      // Seeding defaults if DB is empty
-      await this.seedDefaults();
     }
   }
 

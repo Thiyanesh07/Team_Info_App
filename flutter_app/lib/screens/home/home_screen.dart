@@ -7,6 +7,7 @@ import 'package:team_info_app/models/app_models.dart';
 import 'package:team_info_app/models/user_model.dart';
 import 'package:team_info_app/screens/analytics/analytics_screen.dart';
 import 'package:team_info_app/screens/analytics/leaderboard_screen.dart';
+import 'package:team_info_app/screens/analytics/reward_status_screen.dart';
 import 'package:team_info_app/screens/admin/admin_dashboard_screen.dart';
 import 'package:team_info_app/screens/activity/activity_screen.dart';
 import 'package:team_info_app/screens/projects/projects_screen.dart';
@@ -1113,6 +1114,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => CertificationsScreen()),
+          ),
+        ),
+        _QuickAction(
+          icon: Icons.leaderboard_rounded,
+          label: 'Leaderboard',
+          color: AppColors.accent,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+          ),
+        ),
+        _QuickAction(
+          icon: Icons.verified_rounded,
+          label: 'Eligibility',
+          color: AppColors.primary,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const RewardStatusScreen()),
           ),
         ),
       ],

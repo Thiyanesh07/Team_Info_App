@@ -1,7 +1,6 @@
 const prisma = require('../lib/prisma');
 
 const targetService = require('../services/target.service');
-const googleSheetsService = require('../services/googleSheets.service');
 
 /** GET /api/analytics/weekly?userId=x&startDate=x&endDate=x */
 const getWeeklyAnalytics = async (req, res) => {
@@ -191,16 +190,7 @@ const getRewardStatus = async (req, res) => {
     // 1. Fetch yearly averages from Database (maintained by background scheduler)
     let averages = await targetService.getTargets();
 
-    try {
-      if (spreadsheetId) {
-        const sheetAverages = await googleSheetsService.getYearlyAverages(spreadsheetId);
-        if (sheetAverages && Object.keys(sheetAverages).length > 0) {
-          averages = { ...averages, ...sheetAverages };
-        }
-      }
-    } catch (sheetError) {
-      console.warn('Fallback to default targets: Google Sheets fetch failed.', sheetError.message);
-    }
+    // Yearly targets are now managed solely via the database/Admin Dashboard
     
     // 2. Fetch all student users (Exclude ADMINs)
     const users = await prisma.user.findMany({

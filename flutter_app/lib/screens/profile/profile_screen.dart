@@ -72,10 +72,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: ElevatedButton(
                 onPressed: () async {
                   final parsed = int.tryParse(controller.text.trim());
-                  if (parsed == null || parsed <= 0) {
+                  if (parsed == null || parsed < 0) {
                     ScaffoldMessenger.of(sheetContext).showSnackBar(
                       const SnackBar(
-                        content: Text('Enter a valid positive number'),
+                        content: Text('Enter a valid number (0 or greater)'),
                       ),
                     );
                     return;
@@ -235,8 +235,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const SizedBox(height: 16),
             ],
 
-            // Stats (Hide for Admin)
-            if (user.role != UserRole.admin) ...[
+            // Stats
+            ...[
               Row(
                 children: [
                   Expanded(
