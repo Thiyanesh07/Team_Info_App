@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
+import 'package:team_info_app/core/utils/in_app_file_actions.dart';
 import 'package:team_info_app/models/app_models.dart';
 import 'package:team_info_app/repositories/app_data_repository.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class ReportReviewHub extends ConsumerStatefulWidget {
   final ReportRequest request;
@@ -254,7 +254,11 @@ class _SubmissionReviewCardState extends ConsumerState<_SubmissionReviewCard> {
   bool _processing = false;
 
   Future<void> _openPreview(String url) async {
-    await launchUrl(Uri.parse(url), mode: LaunchMode.inAppBrowserView);
+    await InAppFileActions.preview(
+      context,
+      url,
+      // fileName: widget.submission.fileName,
+    );
   }
 
   String _toCloudinaryDownloadUrl(String url) {
@@ -264,9 +268,10 @@ class _SubmissionReviewCardState extends ConsumerState<_SubmissionReviewCard> {
   }
 
   Future<void> _downloadOriginal(String url) async {
-    await launchUrl(
-      Uri.parse(_toCloudinaryDownloadUrl(url)),
-      mode: LaunchMode.externalApplication,
+    await InAppFileActions.downloadAndOpen(
+      context,
+      _toCloudinaryDownloadUrl(url),
+      // fileName: widget.submission.fileName,
     );
   }
 
@@ -453,50 +458,45 @@ class _SubmissionReviewCardState extends ConsumerState<_SubmissionReviewCard> {
               ),
               const SizedBox(height: 16),
             ],
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _openPreview(widget.submission.fileUrl),
-                    icon: const Icon(Icons.preview_outlined, size: 16),
-                    label: const Text('Preview'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                    ),
+                OutlinedButton.icon(
+                  onPressed: () => _openPreview(widget.submission.fileUrl),
+                  icon: const Icon(Icons.preview_outlined, size: 16),
+                  label: const Text('Preview'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    visualDensity: VisualDensity.compact,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () =>
-                        _downloadOriginal(widget.submission.fileUrl),
-                    icon: const Icon(Icons.download_outlined, size: 16),
-                    label: const Text('Download'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.secondary,
-                      side: const BorderSide(color: AppColors.secondary),
-                    ),
+                OutlinedButton.icon(
+                  onPressed: () => _downloadOriginal(widget.submission.fileUrl),
+                  icon: const Icon(Icons.download_outlined, size: 16),
+                  label: const Text('Download'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.secondary,
+                    side: const BorderSide(color: AppColors.secondary),
+                    visualDensity: VisualDensity.compact,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _processing ? null : _showReviewDialog,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                    ),
-                    child: _processing
-                        ? const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Review'),
+                ElevatedButton(
+                  onPressed: _processing ? null : _showReviewDialog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
                   ),
+                  child: _processing
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Review'),
                 ),
               ],
             ),

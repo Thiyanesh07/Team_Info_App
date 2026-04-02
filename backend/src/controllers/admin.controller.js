@@ -234,6 +234,60 @@ const deleteProject = async (req, res) => {
  */
 const syncRewards = async (req, res) => {
   try {
+    const regNo = req.body?.regNo?.toString()?.trim()?.toUpperCase();
+
+    if (regNo) {
+      const user = await prisma.user.findFirst({
+        where: { regNo: { equals: regNo, mode: 'insensitive' } },
+        select: { id: true, regNo: true, rewardPoints: true, name: true }
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: `No member found for roll number ${regNo}`,
+        });
+      }
+
+      const newPoints = await huggingFaceService.syncUserByRollNo(user.regNo);
+      if (newPoints === null) {
+        return res.status(404).json({
+          success: false,
+          message: `No reward data found for ${user.regNo}`,
+        });
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { rewardPoints: newPoints }
+      });
+
+      await prisma.systemActivity.create({
+        data: {
+          userId: req.user.id,
+          title: 'Points Synchronized',
+          content: `Reward points synced for ${user.regNo} (${user.name}).`,
+          type: 'SYNC',
+          metadata: {
+            regNo: user.regNo,
+            source: 'HUGGING_FACE',
+            previous: user.rewardPoints,
+            current: newPoints,
+          }
+        }
+      });
+
+      return res.json({
+        success: true,
+        message: `Points synced successfully for ${user.regNo}`,
+        summary: {
+          regNo: user.regNo,
+          rewardPoints: newPoints,
+          updated: user.rewardPoints !== newPoints,
+        },
+      });
+    }
+
     const result = await huggingFaceService.syncAllUsers();
     
     // Create a system activity record

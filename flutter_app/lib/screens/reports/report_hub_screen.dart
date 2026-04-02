@@ -16,7 +16,8 @@ class ReportHubScreen extends ConsumerStatefulWidget {
   ConsumerState<ReportHubScreen> createState() => _ReportHubScreenState();
 }
 
-class _ReportHubScreenState extends ConsumerState<ReportHubScreen> with SingleTickerProviderStateMixin {
+class _ReportHubScreenState extends ConsumerState<ReportHubScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _loading = true;
   List<ReportRequest> _myPendingReports = [];
@@ -36,7 +37,7 @@ class _ReportHubScreenState extends ConsumerState<ReportHubScreen> with SingleTi
     try {
       final repo = ref.read(appDataRepositoryProvider);
       final user = ref.read(authProvider).user;
-      
+
       final results = await Future.wait([
         repo.getMyPendingReports(),
         if (user?.role.isLeader ?? false) repo.getManageableRequests(),
@@ -54,9 +55,9 @@ class _ReportHubScreenState extends ConsumerState<ReportHubScreen> with SingleTi
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading reports: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading reports: $e')));
       }
     }
   }
@@ -69,40 +70,49 @@ class _ReportHubScreenState extends ConsumerState<ReportHubScreen> with SingleTi
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Report Center', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Report Center',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        bottom: isLeader ? TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.primary,
-          labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold),
-          tabs: const [
-            Tab(text: 'Assigned to Me'),
-            Tab(text: 'Manage Requests'),
-          ],
-        ) : null,
+        bottom: isLeader
+            ? TabBar(
+                controller: _tabController,
+                indicatorColor: AppColors.primary,
+                labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                tabs: const [
+                  Tab(text: 'Assigned to Me'),
+                  Tab(text: 'Manage Requests'),
+                ],
+              )
+            : null,
       ),
-      body: _loading 
-        ? const Center(child: CircularProgressIndicator())
-        : TabBarView(
-            controller: _tabController,
-            children: [
-              _buildAssignedList(),
-              if (isLeader) _buildManageableList(),
-            ],
-          ),
-      floatingActionButton: isLeader ? FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CreateReportRequestScreen()),
-          );
-          if (result == true) _loadData();
-        },
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add),
-        label: const Text('New Request'),
-      ) : null,
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildAssignedList(),
+                if (isLeader) _buildManageableList(),
+              ],
+            ),
+      floatingActionButton: isLeader
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const CreateReportRequestScreen(),
+                  ),
+                );
+                if (result == true) _loadData();
+              },
+              backgroundColor: AppColors.primary,
+              icon: const Icon(Icons.add),
+              label: const Text('New Request'),
+            )
+          : null,
     );
   }
 
@@ -117,8 +127,10 @@ class _ReportHubScreenState extends ConsumerState<ReportHubScreen> with SingleTi
       itemBuilder: (context, index) {
         final request = _myPendingReports[index];
         // User's submission for this request (might be none)
-        final mySubmission = request.submissions.isNotEmpty ? request.submissions.first : null;
-        
+        final mySubmission = request.submissions.isNotEmpty
+            ? request.submissions.first
+            : null;
+
         return _ReportCard(
           request: request,
           submission: mySubmission,
@@ -126,7 +138,14 @@ class _ReportHubScreenState extends ConsumerState<ReportHubScreen> with SingleTi
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => ReportSubmissionScreen(request: request, submission: mySubmission),
+                settings: RouteSettings(
+                  name: 'report_submission',
+                  arguments: {'requestId': request.id},
+                ),
+                builder: (_) => ReportSubmissionScreen(
+                  request: request,
+                  submission: mySubmission,
+                ),
               ),
             );
             if (result == true) _loadData();
@@ -137,7 +156,7 @@ class _ReportHubScreenState extends ConsumerState<ReportHubScreen> with SingleTi
   }
 
   Widget _buildManageableList() {
-     if (_manageableRequests.isEmpty) {
+    if (_manageableRequests.isEmpty) {
       return _buildEmptyState('You haven\'t created any report requests yet.');
     }
 
@@ -148,11 +167,19 @@ class _ReportHubScreenState extends ConsumerState<ReportHubScreen> with SingleTi
         final request = _manageableRequests[index];
         return Card(
           color: AppColors.cardDark,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           margin: const EdgeInsets.only(bottom: 16),
           child: ListTile(
             contentPadding: const EdgeInsets.all(16),
-            title: Text(request.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            title: Text(
+              request.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -161,34 +188,60 @@ class _ReportHubScreenState extends ConsumerState<ReportHubScreen> with SingleTi
                   request.description ?? 'No description',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.people_alt_outlined, size: 14, color: AppColors.primary),
+                    const Icon(
+                      Icons.people_alt_outlined,
+                      size: 14,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Target: ${request.targetAudience.name}',
-                      style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(width: 12),
-                    const Icon(Icons.description_outlined, size: 14, color: AppColors.secondary),
+                    const Icon(
+                      Icons.description_outlined,
+                      size: 14,
+                      color: AppColors.secondary,
+                    ),
                     const SizedBox(width: 4),
                     // Accessing dynamic count from the backend _count property
                     Text(
-                      'Submissions: ${request.submissions.length}',
-                      style: const TextStyle(color: AppColors.secondary, fontSize: 11, fontWeight: FontWeight.bold),
+                      'Submissions: ${request.submissionsCount}',
+                      style: const TextStyle(
+                        color: AppColors.secondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
-            trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
+            trailing: const Icon(
+              Icons.chevron_right,
+              color: AppColors.textMuted,
+            ),
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
+                  settings: RouteSettings(
+                    name: 'report_review',
+                    arguments: {'requestId': request.id},
+                  ),
                   builder: (_) => ReportReviewHub(request: request),
                 ),
               );
@@ -204,7 +257,11 @@ class _ReportHubScreenState extends ConsumerState<ReportHubScreen> with SingleTi
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.assignment_turned_in_outlined, size: 64, color: AppColors.primary.withAlpha(50)),
+          Icon(
+            Icons.assignment_turned_in_outlined,
+            size: 64,
+            color: AppColors.primary.withAlpha(50),
+          ),
           const SizedBox(height: 16),
           Text(message, style: const TextStyle(color: AppColors.textSecondary)),
         ],
@@ -233,7 +290,9 @@ class _ReportCard extends StatelessWidget {
       color: AppColors.cardDark,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: isRedo ? const BorderSide(color: AppColors.error, width: 1.5) : BorderSide.none,
+        side: isRedo
+            ? const BorderSide(color: AppColors.error, width: 1.5)
+            : BorderSide.none,
       ),
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
@@ -250,7 +309,11 @@ class _ReportCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       request.title,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                   _buildStatusBadge(status),
@@ -259,23 +322,41 @@ class _ReportCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Assigned by: ${request.assignedBy?['name'] ?? 'Team Leader'}',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Icon(Icons.calendar_today, size: 14, color: AppColors.textMuted),
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 14,
+                    color: AppColors.textMuted,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     'Deadline: ${request.deadline != null ? request.deadline!.substring(0, 10) : "No Deadline"}',
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                    ),
                   ),
                   const Spacer(),
-                  const Icon(Icons.file_present, size: 14, color: AppColors.primary),
+                  const Icon(
+                    Icons.file_present,
+                    size: 14,
+                    color: AppColors.primary,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     request.allowedFormats.join(', '),
-                    style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -293,13 +374,31 @@ class _ReportCard extends StatelessWidget {
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.refresh_rounded, color: AppColors.error, size: 14),
+                          Icon(
+                            Icons.refresh_rounded,
+                            color: AppColors.error,
+                            size: 14,
+                          ),
                           SizedBox(width: 4),
-                          Text('REDO FEEDBACK', style: TextStyle(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                          Text(
+                            'REDO FEEDBACK',
+                            style: TextStyle(
+                              color: AppColors.error,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(submission!.reviewerNotes!, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                      Text(
+                        submission!.reviewerNotes!,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -338,7 +437,11 @@ class _ReportCard extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

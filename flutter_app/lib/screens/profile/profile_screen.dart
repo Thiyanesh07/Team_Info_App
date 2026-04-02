@@ -83,8 +83,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     return;
                   }
 
-                  final res = await _api.put(
-                    ApiConstants.updateProfile,
+                  final res = await _api.patch(
+                    ApiConstants.updateOwnPoints,
                     body: {fieldKey: parsed},
                   );
 

@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:team_info_app/models/user_model.dart';
 import 'package:team_info_app/repositories/auth_repository.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:team_info_app/services/notification_service.dart';
 
 const String _googleWebClientId = String.fromEnvironment(
   'GOOGLE_WEB_CLIENT_ID',
@@ -99,6 +100,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: user,
         token: token,
       );
+      await NotificationService.syncFcmTokenIfNeeded();
     } else {
       // Avoid deleting a freshly-updated token if a stale startup check finishes late.
       final latestToken = await _repo.getToken();
@@ -179,6 +181,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           user: UserModel.fromJson(response.data['user']),
           token: response.data['token'],
         );
+        await NotificationService.syncFcmTokenIfNeeded();
       } else {
         state = state.copyWith(
           status: AuthStatus.error,

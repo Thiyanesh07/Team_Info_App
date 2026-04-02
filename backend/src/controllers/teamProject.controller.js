@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { sendPushToUsers } = require('../services/pushNotification.service');
 
 const { logSystemActivity } = require('./systemActivity.controller');
 
@@ -103,6 +104,25 @@ const createTeamProject = async (req, res) => {
       'PROJECT_CREATED',
       { projectId: project.id }
     );
+
+    const notificationTargets = new Set();
+    if (Array.isArray(memberIds)) {
+      memberIds.filter(Boolean).forEach((id) => notificationTargets.add(id));
+    }
+    if (assignedCaptainId) {
+      notificationTargets.add(assignedCaptainId);
+    }
+    notificationTargets.delete(req.user.id);
+
+    await sendPushToUsers({
+      userIds: [...notificationTargets],
+      title: 'New Project Created',
+      body: projectName,
+      data: {
+        type: 'PROJECT_CREATED',
+        projectId: project.id,
+      },
+    });
   } catch (error) {
     console.error('CreateTeamProject error:', error);
     res.status(500).json({ success: false, message: 'Failed to create team project' });
@@ -218,6 +238,16 @@ const assignMembers = async (req, res) => {
       'PROJECT_MEMBERS_UPDATED',
       { projectId: project.id, memberCount: memberIds.length }
     );
+
+    await sendPushToUsers({
+      userIds: memberIds.filter((id) => id && id !== req.user.id),
+      title: 'Project Members Updated',
+      body: `You were assigned to ${project.projectName}`,
+      data: {
+        type: 'PROJECT_MEMBERS_ASSIGNED',
+        projectId: project.id,
+      },
+    });
   } catch (error) {
     console.error('AssignMembers error:', error);
     res.status(500).json({ success: false, message: 'Failed to assign members' });

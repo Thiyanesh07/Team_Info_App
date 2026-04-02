@@ -13,7 +13,7 @@ import 'package:team_info_app/core/services/excel_export_service.dart';
 import 'package:team_info_app/core/widgets/export_selection_dialog.dart';
 import 'package:team_info_app/providers/auth_provider.dart';
 import 'package:team_info_app/core/enums/user_role.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:team_info_app/core/utils/in_app_file_actions.dart';
 import 'package:team_info_app/widgets/empty_states.dart';
 
 class CertificationsScreen extends ConsumerStatefulWidget {
@@ -29,6 +29,10 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
   final _excelService = ExcelExportService();
   List<CertificationModel> _certs = [];
   bool _loading = true;
+
+  Future<void> _previewProof(String proofUrl) async {
+    await InAppFileActions.preview(context, proofUrl);
+  }
 
   @override
   void initState() {
@@ -295,6 +299,21 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
                   ),
                 ),
               ),
+
+              if (proofUrl != null) ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => _previewProof(proofUrl!),
+                    icon: const Icon(Icons.preview_outlined, size: 16),
+                    label: const Text('Preview Proof'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 24),
               SizedBox(
@@ -568,6 +587,21 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
                   ),
                 ),
               ),
+
+              if (proofUrl != null) ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => _previewProof(proofUrl!),
+                    icon: const Icon(Icons.preview_outlined, size: 16),
+                    label: const Text('Preview Proof'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 24),
               SizedBox(
@@ -844,10 +878,7 @@ class _CertificationsScreenState extends ConsumerState<CertificationsScreen> {
                   size: 20,
                 ),
                 onPressed: () {
-                  launchUrl(
-                    Uri.parse(cert.proofUrl!),
-                    mode: LaunchMode.externalApplication,
-                  );
+                  _previewProof(cert.proofUrl!);
                 },
                 tooltip: 'View Proof',
               ),

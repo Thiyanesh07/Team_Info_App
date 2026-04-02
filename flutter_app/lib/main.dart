@@ -92,6 +92,14 @@ class TeamInfoApp extends ConsumerWidget {
       title: 'TMA_A74',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
+      navigatorKey: NotificationService.navigatorKey,
+      navigatorObservers: [NotificationService.routeObserver],
+      builder: (context, child) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          NotificationService.flushPendingTapIfAny();
+        });
+        return child ?? const SizedBox.shrink();
+      },
       home: _buildHome(authState),
     );
   }

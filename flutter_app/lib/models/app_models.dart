@@ -284,6 +284,7 @@ class PsSkill {
 @JsonSerializable()
 class TeamMessage {
   final String id;
+  final String? senderIdValue;
   final String? message;
   final String? imageUrl;
   final String? fileUrl;
@@ -299,6 +300,7 @@ class TeamMessage {
 
   TeamMessage({
     required this.id,
+    this.senderIdValue,
     this.message,
     this.imageUrl,
     this.fileUrl,
@@ -319,7 +321,7 @@ class TeamMessage {
   Map<String, dynamic> toJson() => _$TeamMessageToJson(this);
 
   // Tactical ID getter
-  String get senderId => sender?['id'] ?? '';
+  String get senderId => (sender?['id'] ?? senderIdValue ?? '').toString();
 }
 
 @JsonSerializable()
@@ -327,12 +329,14 @@ class ChatConversation {
   final String id;
   final List<Map<String, dynamic>> participants;
   final List<Map<String, dynamic>> messages;
+  final int unreadCount;
   final String? updatedAt;
 
   ChatConversation({
     required this.id,
     this.participants = const [],
     this.messages = const [],
+    this.unreadCount = 0,
     this.updatedAt,
   });
 
@@ -346,6 +350,7 @@ class ChatConversation {
 class ChatMessage {
   final String id;
   final String conversationId;
+  final String? senderIdValue;
   final String? message;
   final String? imageUrl;
   final String? fileUrl;
@@ -362,6 +367,7 @@ class ChatMessage {
   ChatMessage({
     required this.id,
     required this.conversationId,
+    this.senderIdValue,
     this.message,
     this.imageUrl,
     this.fileUrl,
@@ -387,7 +393,7 @@ class ChatMessage {
   Map<String, dynamic> toMap() => toJson();
 
   // Tactical ID getter
-  String get senderId => sender?['id'] ?? '';
+  String get senderId => (sender?['id'] ?? senderIdValue ?? '').toString();
 }
 
 @JsonSerializable()
@@ -548,6 +554,7 @@ class ProjectMilestone {
 // ─── General Report Submission ─────────────────
 
 enum ReportAudience { INDIVIDUAL, ROLE, TEAM }
+
 enum ReportSubmissionStatus { PENDING, COMPLETED, REDO }
 
 @JsonSerializable()
@@ -564,6 +571,7 @@ class ReportRequest {
   final String? createdAt;
   final Map<String, dynamic>? assignedBy;
   final List<ReportSubmission> submissions;
+  final int submissionsCount;
 
   ReportRequest({
     required this.id,
@@ -578,6 +586,7 @@ class ReportRequest {
     this.createdAt,
     this.assignedBy,
     this.submissions = const [],
+    this.submissionsCount = 0,
   });
 
   factory ReportRequest.fromJson(Map<String, dynamic> json) =>

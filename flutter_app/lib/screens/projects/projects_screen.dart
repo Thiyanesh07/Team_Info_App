@@ -118,7 +118,9 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
       return const Center(child: CircularProgressIndicator());
     }
     if (_personalProjects.isEmpty) {
-      return EmptyProjects(onAction: () => _showAddPersonalProjectDialog(context));
+      return EmptyProjects(
+        onAction: () => _showAddPersonalProjectDialog(context),
+      );
     }
 
     return RefreshIndicator(
@@ -129,8 +131,10 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
         itemBuilder: (_, i) =>
             _PersonalProjectCard(
                   project: _personalProjects[i],
-                  onDelete: () => _deletePersonalProject(_personalProjects[i].id),
-                  onEdit: () => _showEditPersonalProjectDialog(_personalProjects[i]),
+                  onDelete: () =>
+                      _deletePersonalProject(_personalProjects[i].id),
+                  onEdit: () =>
+                      _showEditPersonalProjectDialog(_personalProjects[i]),
                 )
                 .animate()
                 .fade(duration: 400.ms, delay: (i * 100).ms)
@@ -143,8 +147,13 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
     final user = ref.read(authProvider).user;
     if (user == null) return;
 
-    final isLeader = [UserRole.admin, UserRole.captain, UserRole.viceCaptain, UserRole.strategist, UserRole.manager]
-        .contains(user.role);
+    final isLeader = [
+      UserRole.admin,
+      UserRole.captain,
+      UserRole.viceCaptain,
+      UserRole.strategist,
+      UserRole.manager,
+    ].contains(user.role);
 
     if (isLeader) {
       showDialog(
@@ -170,15 +179,15 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
       await _excelService.downloadAndOpenReport(
         endpoint: ApiConstants.exportProjects,
         filename: 'TeamProjects_${DateTime.now().millisecondsSinceEpoch}.xlsx',
-        queryParams: {
-          'scope': scope,
-          if (userId != null) 'userId': userId,
-        },
+        queryParams: {'scope': scope, if (userId != null) 'userId': userId},
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -204,8 +213,12 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
           final isAdmin = user?.role == UserRole.admin;
           return _TeamProjectCard(
                 project: _teamProjects[i],
-                onDelete: (isCreator || isAdmin) ? () => _deleteTeamProject(_teamProjects[i].id) : null,
-                onEdit: (isCreator || isAdmin) ? () => _showEditTeamProjectDialog(_teamProjects[i]) : null,
+                onDelete: (isCreator || isAdmin)
+                    ? () => _deleteTeamProject(_teamProjects[i].id)
+                    : null,
+                onEdit: (isCreator || isAdmin)
+                    ? () => _showEditTeamProjectDialog(_teamProjects[i])
+                    : null,
               )
               .animate()
               .fade(duration: 400.ms, delay: (i * 100).ms)
@@ -307,7 +320,10 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
                     'githubLink': githubC.text,
                     'liveLink': liveC.text,
                   };
-                  final res = await _api.post(ApiConstants.personalProjects, body: body);
+                  final res = await _api.post(
+                    ApiConstants.personalProjects,
+                    body: body,
+                  );
                   if (!context.mounted) return;
                   if (res.success) {
                     Navigator.pop(context);
@@ -393,7 +409,10 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
                     'githubLink': githubC.text,
                     'liveLink': liveC.text,
                   };
-                  final res = await _api.put('${ApiConstants.personalProjects}/${project.id}', body: body);
+                  final res = await _api.put(
+                    '${ApiConstants.personalProjects}/${project.id}',
+                    body: body,
+                  );
                   if (!mounted) return;
                   if (res.success && context.mounted) {
                     Navigator.pop(context);
@@ -460,12 +479,21 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
                 const SizedBox(height: 12),
                 TextField(
                   controller: problemC,
-                  decoration: const InputDecoration(hintText: 'Problem Statement'),
+                  decoration: const InputDecoration(
+                    hintText: 'Problem Statement',
+                  ),
                   style: const TextStyle(color: Colors.white),
                   maxLines: 3,
                 ),
                 const SizedBox(height: 20),
-                Text('Assigned Captain', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                Text(
+                  'Assigned Captain',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -479,24 +507,48 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
                       value: selectedCaptainId,
                       isExpanded: true,
                       dropdownColor: AppColors.surface,
-                      hint: const Text('Select captain', style: TextStyle(color: AppColors.textMuted)),
-                      items: _allUsers.map((u) => DropdownMenuItem(
-                        value: u['id'] as String,
-                        child: Text(u['name'], style: const TextStyle(color: Colors.white)),
-                      )).toList(),
-                      onChanged: (val) => setModalState(() => selectedCaptainId = val),
+                      hint: const Text(
+                        'Select captain',
+                        style: TextStyle(color: AppColors.textMuted),
+                      ),
+                      items: _allUsers
+                          .map(
+                            (u) => DropdownMenuItem(
+                              value: u['id'] as String,
+                              child: Text(
+                                u['name'],
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) =>
+                          setModalState(() => selectedCaptainId = val),
                     ),
                   ),
                 ),
                 const SizedBox(height: 20),
-                Text('Team Members', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                Text(
+                  'Team Members',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   children: _allUsers.map((u) {
                     final isSelected = selectedMemberIds.contains(u['id']);
                     return FilterChip(
-                      label: Text(u['name'], style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontSize: 12)),
+                      label: Text(
+                        u['name'],
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
                       selected: isSelected,
                       onSelected: (val) {
                         setModalState(() {
@@ -551,7 +603,9 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
     final domainC = TextEditingController(text: project.domain);
     final problemC = TextEditingController(text: project.problemStatement);
     String? selectedCaptainId = project.assignedCaptain?['id'];
-    List<String> selectedMemberIds = project.members.map((m) => m.userId).toList();
+    List<String> selectedMemberIds = project.members
+        .map((m) => m.userId)
+        .toList();
 
     showModalBottomSheet(
       context: context,
@@ -596,12 +650,21 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
                 const SizedBox(height: 12),
                 TextField(
                   controller: problemC,
-                  decoration: const InputDecoration(hintText: 'Problem Statement'),
+                  decoration: const InputDecoration(
+                    hintText: 'Problem Statement',
+                  ),
                   style: const TextStyle(color: Colors.white),
                   maxLines: 3,
                 ),
                 const SizedBox(height: 20),
-                Text('Assigned Captain', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                Text(
+                  'Assigned Captain',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -615,24 +678,48 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
                       value: selectedCaptainId,
                       isExpanded: true,
                       dropdownColor: AppColors.surface,
-                      hint: const Text('Select captain', style: TextStyle(color: AppColors.textMuted)),
-                      items: _allUsers.map((u) => DropdownMenuItem(
-                        value: u['id'] as String,
-                        child: Text(u['name'], style: const TextStyle(color: Colors.white)),
-                      )).toList(),
-                      onChanged: (val) => setModalState(() => selectedCaptainId = val),
+                      hint: const Text(
+                        'Select captain',
+                        style: TextStyle(color: AppColors.textMuted),
+                      ),
+                      items: _allUsers
+                          .map(
+                            (u) => DropdownMenuItem(
+                              value: u['id'] as String,
+                              child: Text(
+                                u['name'],
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) =>
+                          setModalState(() => selectedCaptainId = val),
                     ),
                   ),
                 ),
                 const SizedBox(height: 20),
-                Text('Team Members', style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                Text(
+                  'Team Members',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   children: _allUsers.map((u) {
                     final isSelected = selectedMemberIds.contains(u['id']);
                     return FilterChip(
-                      label: Text(u['name'], style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontSize: 12)),
+                      label: Text(
+                        u['name'],
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
                       selected: isSelected,
                       onSelected: (val) {
                         setModalState(() {
@@ -687,11 +774,26 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Delete Project', style: TextStyle(color: Colors.white)),
-        content: const Text('Are you sure you want to delete this team project?', style: TextStyle(color: Colors.white70)),
+        title: const Text(
+          'Delete Project',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Are you sure you want to delete this team project?',
+          style: TextStyle(color: Colors.white70),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: AppColors.error))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
         ],
       ),
     );
@@ -863,7 +965,13 @@ class _TeamProjectCard extends StatelessWidget {
     return InkWell(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ProjectDetailScreen(project: project)),
+        MaterialPageRoute(
+          settings: RouteSettings(
+            name: 'project_detail',
+            arguments: {'projectId': project.id},
+          ),
+          builder: (_) => ProjectDetailScreen(project: project),
+        ),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),

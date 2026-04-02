@@ -15,7 +15,8 @@ PersonalProject _$PersonalProjectFromJson(Map<String, dynamic> json) =>
       contribution: json['contribution'] as String?,
       githubLink: json['githubLink'] as String?,
       liveLink: json['liveLink'] as String?,
-      skillsUsed: (json['skillsUsed'] as List<dynamic>?)
+      skillsUsed:
+          (json['skillsUsed'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
@@ -36,23 +37,23 @@ Map<String, dynamic> _$PersonalProjectToJson(PersonalProject instance) =>
     };
 
 TeamProject _$TeamProjectFromJson(Map<String, dynamic> json) => TeamProject(
-      id: json['id'] as String,
-      projectName: json['projectName'] as String,
-      createdBy: json['createdBy'] as Map<String, dynamic>?,
-      assignedCaptain: json['assignedCaptain'] as Map<String, dynamic>?,
-      domain: json['domain'] as String?,
-      subDomain: json['subDomain'] as String?,
-      problemStatement: json['problemStatement'] as String?,
-      solution: json['solution'] as String?,
-      startDate: json['startDate'] as String?,
-      status: json['status'] as String? ?? 'NOT_STARTED',
-      members: (json['members'] as List<dynamic>?)
-              ?.map(
-                  (e) => TeamProjectMember.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          const [],
-      createdAt: json['createdAt'] as String?,
-    );
+  id: json['id'] as String,
+  projectName: json['projectName'] as String,
+  createdBy: json['createdBy'] as Map<String, dynamic>?,
+  assignedCaptain: json['assignedCaptain'] as Map<String, dynamic>?,
+  domain: json['domain'] as String?,
+  subDomain: json['subDomain'] as String?,
+  problemStatement: json['problemStatement'] as String?,
+  solution: json['solution'] as String?,
+  startDate: json['startDate'] as String?,
+  status: json['status'] as String? ?? 'NOT_STARTED',
+  members:
+      (json['members'] as List<dynamic>?)
+          ?.map((e) => TeamProjectMember.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  createdAt: json['createdAt'] as String?,
+);
 
 Map<String, dynamic> _$TeamProjectToJson(TeamProject instance) =>
     <String, dynamic>{
@@ -111,45 +112,48 @@ Map<String, dynamic> _$ProjectUpdateToJson(ProjectUpdate instance) =>
     };
 
 Hackathon _$HackathonFromJson(Map<String, dynamic> json) => Hackathon(
-      id: json['id'] as String,
-      userId: json['userId'] as String,
-      hackName: json['hackName'] as String,
-      projectName: json['projectName'] as String?,
-      description: json['description'] as String?,
-      contribution: json['contribution'] as String?,
-      skillsUsed: (json['skillsUsed'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      date: json['date'] as String?,
-      isTeam: json['isTeam'] as bool? ?? false,
-      teamMembers: (json['teamMembers'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      status: json['status'] as String? ?? 'UPCOMING',
-      rounds: (json['rounds'] as List<dynamic>?)
-              ?.map((e) => HackathonRound.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          const [],
-      createdAt: json['createdAt'] as String?,
-    );
+  id: json['id'] as String,
+  userId: json['userId'] as String,
+  hackName: json['hackName'] as String,
+  projectName: json['projectName'] as String?,
+  description: json['description'] as String?,
+  contribution: json['contribution'] as String?,
+  skillsUsed:
+      (json['skillsUsed'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
+  date: json['date'] as String?,
+  isTeam: json['isTeam'] as bool? ?? false,
+  teamMembers:
+      (json['teamMembers'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
+  status: json['status'] as String? ?? 'UPCOMING',
+  rounds:
+      (json['rounds'] as List<dynamic>?)
+          ?.map((e) => HackathonRound.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  createdAt: json['createdAt'] as String?,
+);
 
 Map<String, dynamic> _$HackathonToJson(Hackathon instance) => <String, dynamic>{
-      'id': instance.id,
-      'userId': instance.userId,
-      'hackName': instance.hackName,
-      'projectName': instance.projectName,
-      'description': instance.description,
-      'contribution': instance.contribution,
-      'skillsUsed': instance.skillsUsed,
-      'date': instance.date,
-      'isTeam': instance.isTeam,
-      'teamMembers': instance.teamMembers,
-      'status': instance.status,
-      'rounds': instance.rounds,
-      'createdAt': instance.createdAt,
-    };
+  'id': instance.id,
+  'userId': instance.userId,
+  'hackName': instance.hackName,
+  'projectName': instance.projectName,
+  'description': instance.description,
+  'contribution': instance.contribution,
+  'skillsUsed': instance.skillsUsed,
+  'date': instance.date,
+  'isTeam': instance.isTeam,
+  'teamMembers': instance.teamMembers,
+  'status': instance.status,
+  'rounds': instance.rounds,
+  'createdAt': instance.createdAt,
+};
 
 HackathonRound _$HackathonRoundFromJson(Map<String, dynamic> json) =>
     HackathonRound(
@@ -166,31 +170,30 @@ Map<String, dynamic> _$HackathonRoundToJson(HackathonRound instance) =>
     };
 
 Learning _$LearningFromJson(Map<String, dynamic> json) => Learning(
-      id: json['id'] as String,
-      userId: json['userId'] as String,
-      skillName: json['skillName'] as String,
-      topics: (json['topics'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      startDate: json['startDate'] as String?,
-      endDate: json['endDate'] as String?,
-      level: json['level'] as String? ?? 'BEGINNER',
-      status: json['status'] as String? ?? 'ONGOING',
-      createdAt: json['createdAt'] as String?,
-    );
+  id: json['id'] as String,
+  userId: json['userId'] as String,
+  skillName: json['skillName'] as String,
+  topics:
+      (json['topics'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const [],
+  startDate: json['startDate'] as String?,
+  endDate: json['endDate'] as String?,
+  level: json['level'] as String? ?? 'BEGINNER',
+  status: json['status'] as String? ?? 'ONGOING',
+  createdAt: json['createdAt'] as String?,
+);
 
 Map<String, dynamic> _$LearningToJson(Learning instance) => <String, dynamic>{
-      'id': instance.id,
-      'userId': instance.userId,
-      'skillName': instance.skillName,
-      'topics': instance.topics,
-      'startDate': instance.startDate,
-      'endDate': instance.endDate,
-      'level': instance.level,
-      'status': instance.status,
-      'createdAt': instance.createdAt,
-    };
+  'id': instance.id,
+  'userId': instance.userId,
+  'skillName': instance.skillName,
+  'topics': instance.topics,
+  'startDate': instance.startDate,
+  'endDate': instance.endDate,
+  'level': instance.level,
+  'status': instance.status,
+  'createdAt': instance.createdAt,
+};
 
 DailyActivity _$DailyActivityFromJson(Map<String, dynamic> json) =>
     DailyActivity(
@@ -243,38 +246,54 @@ Map<String, dynamic> _$CertificationToJson(Certification instance) =>
     };
 
 PsSkill _$PsSkillFromJson(Map<String, dynamic> json) => PsSkill(
-      id: json['id'] as String,
-      userId: json['userId'] as String,
-      type: json['type'] as String,
-      skillName: json['skillName'] as String,
-      completed: json['completed'] as bool? ?? false,
-      createdAt: json['createdAt'] as String?,
-    );
+  id: json['id'] as String,
+  userId: json['userId'] as String,
+  type: json['type'] as String,
+  skillName: json['skillName'] as String,
+  completed: json['completed'] as bool? ?? false,
+  createdAt: json['createdAt'] as String?,
+);
 
 Map<String, dynamic> _$PsSkillToJson(PsSkill instance) => <String, dynamic>{
-      'id': instance.id,
-      'userId': instance.userId,
-      'type': instance.type,
-      'skillName': instance.skillName,
-      'completed': instance.completed,
-      'createdAt': instance.createdAt,
-    };
+  'id': instance.id,
+  'userId': instance.userId,
+  'type': instance.type,
+  'skillName': instance.skillName,
+  'completed': instance.completed,
+  'createdAt': instance.createdAt,
+};
 
 TeamMessage _$TeamMessageFromJson(Map<String, dynamic> json) => TeamMessage(
-      id: json['id'] as String,
-      message: json['message'] as String?,
-      imageUrl: json['imageUrl'] as String?,
-      isPinned: json['isPinned'] as bool? ?? false,
-      timestamp: json['timestamp'] as String,
-      sender: json['sender'] as Map<String, dynamic>?,
-    );
+  id: json['id'] as String,
+  senderIdValue: json['senderId'] as String?,
+  message: json['message'] as String?,
+  imageUrl: json['imageUrl'] as String?,
+  fileUrl: json['fileUrl'] as String?,
+  fileName: json['fileName'] as String?,
+  fileType: json['fileType'] as String?,
+  replyToId: json['replyToId'] as String?,
+  reactions: json['reactions'] as Map<String, dynamic>?,
+  isPinned: json['isPinned'] as bool? ?? false,
+  isRead: json['isRead'] as bool? ?? false,
+  isDelivered: json['isDelivered'] as bool? ?? false,
+  timestamp: json['timestamp'] as String,
+  sender: json['sender'] as Map<String, dynamic>?,
+);
 
 Map<String, dynamic> _$TeamMessageToJson(TeamMessage instance) =>
     <String, dynamic>{
       'id': instance.id,
+      'senderId': instance.senderIdValue,
       'message': instance.message,
       'imageUrl': instance.imageUrl,
+      'fileUrl': instance.fileUrl,
+      'fileName': instance.fileName,
+      'fileType': instance.fileType,
+      'replyToId': instance.replyToId,
+      'reactions': instance.reactions,
       'isPinned': instance.isPinned,
+      'isRead': instance.isRead,
+      'isDelivered': instance.isDelivered,
       'timestamp': instance.timestamp,
       'sender': instance.sender,
     };
@@ -282,14 +301,17 @@ Map<String, dynamic> _$TeamMessageToJson(TeamMessage instance) =>
 ChatConversation _$ChatConversationFromJson(Map<String, dynamic> json) =>
     ChatConversation(
       id: json['id'] as String,
-      participants: (json['participants'] as List<dynamic>?)
+      participants:
+          (json['participants'] as List<dynamic>?)
               ?.map((e) => e as Map<String, dynamic>)
               .toList() ??
           const [],
-      messages: (json['messages'] as List<dynamic>?)
+      messages:
+          (json['messages'] as List<dynamic>?)
               ?.map((e) => e as Map<String, dynamic>)
               .toList() ??
           const [],
+      unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
       updatedAt: json['updatedAt'] as String?,
     );
 
@@ -298,26 +320,43 @@ Map<String, dynamic> _$ChatConversationToJson(ChatConversation instance) =>
       'id': instance.id,
       'participants': instance.participants,
       'messages': instance.messages,
+      'unreadCount': instance.unreadCount,
       'updatedAt': instance.updatedAt,
     };
 
 ChatMessage _$ChatMessageFromJson(Map<String, dynamic> json) => ChatMessage(
-      id: json['id'] as String,
-      conversationId: json['conversationId'] as String,
-      message: json['message'] as String?,
-      imageUrl: json['imageUrl'] as String?,
-      isPinned: json['isPinned'] as bool? ?? false,
-      timestamp: json['timestamp'] as String,
-      sender: json['sender'] as Map<String, dynamic>?,
-    );
+  id: json['id'] as String,
+  conversationId: json['conversationId'] as String,
+  senderIdValue: json['senderId'] as String?,
+  message: json['message'] as String?,
+  imageUrl: json['imageUrl'] as String?,
+  fileUrl: json['fileUrl'] as String?,
+  fileName: json['fileName'] as String?,
+  fileType: json['fileType'] as String?,
+  replyToId: json['replyToId'] as String?,
+  reactions: json['reactions'] as Map<String, dynamic>?,
+  isPinned: json['isPinned'] as bool? ?? false,
+  isRead: json['isRead'] as bool? ?? false,
+  isDelivered: json['isDelivered'] as bool? ?? false,
+  timestamp: json['timestamp'] as String,
+  sender: json['sender'] as Map<String, dynamic>?,
+);
 
 Map<String, dynamic> _$ChatMessageToJson(ChatMessage instance) =>
     <String, dynamic>{
       'id': instance.id,
       'conversationId': instance.conversationId,
+      'senderId': instance.senderIdValue,
       'message': instance.message,
       'imageUrl': instance.imageUrl,
+      'fileUrl': instance.fileUrl,
+      'fileName': instance.fileName,
+      'fileType': instance.fileType,
+      'replyToId': instance.replyToId,
+      'reactions': instance.reactions,
       'isPinned': instance.isPinned,
+      'isRead': instance.isRead,
+      'isDelivered': instance.isDelivered,
       'timestamp': instance.timestamp,
       'sender': instance.sender,
     };
@@ -385,13 +424,13 @@ Map<String, dynamic> _$TaskAssignmentToJson(TaskAssignment instance) =>
     };
 
 TaskReport _$TaskReportFromJson(Map<String, dynamic> json) => TaskReport(
-      id: json['id'] as String,
-      taskId: json['taskId'] as String,
-      userId: json['userId'] as String,
-      reportText: json['reportText'] as String,
-      user: json['user'] as Map<String, dynamic>?,
-      createdAt: json['createdAt'] as String?,
-    );
+  id: json['id'] as String,
+  taskId: json['taskId'] as String,
+  userId: json['userId'] as String,
+  reportText: json['reportText'] as String,
+  user: json['user'] as Map<String, dynamic>?,
+  createdAt: json['createdAt'] as String?,
+);
 
 Map<String, dynamic> _$TaskReportToJson(TaskReport instance) =>
     <String, dynamic>{
@@ -404,15 +443,15 @@ Map<String, dynamic> _$TaskReportToJson(TaskReport instance) =>
     };
 
 ActivityItem _$ActivityItemFromJson(Map<String, dynamic> json) => ActivityItem(
-      id: json['id'] as String,
-      userId: json['userId'] as String,
-      title: json['title'] as String,
-      content: json['content'] as String,
-      timestamp: json['timestamp'] as String,
-      type: $enumDecode(_$ActivityItemTypeEnumMap, json['type']),
-      user: json['user'] as Map<String, dynamic>?,
-      metadata: json['metadata'] as String?,
-    );
+  id: json['id'] as String,
+  userId: json['userId'] as String,
+  title: json['title'] as String,
+  content: json['content'] as String,
+  timestamp: json['timestamp'] as String,
+  type: $enumDecode(_$ActivityItemTypeEnumMap, json['type']),
+  user: json['user'] as Map<String, dynamic>?,
+  metadata: json['metadata'] as String?,
+);
 
 Map<String, dynamic> _$ActivityItemToJson(ActivityItem instance) =>
     <String, dynamic>{
@@ -440,7 +479,8 @@ ProjectMilestone _$ProjectMilestoneFromJson(Map<String, dynamic> json) =>
       title: json['title'] as String,
       description: json['description'] as String?,
       deadline: json['deadline'] as String?,
-      status: $enumDecodeNullable(_$MilestoneStatusEnumMap, json['status']) ??
+      status:
+          $enumDecodeNullable(_$MilestoneStatusEnumMap, json['status']) ??
           MilestoneStatus.PENDING,
       order: (json['order'] as num?)?.toInt() ?? 0,
     );
@@ -469,27 +509,39 @@ ReportRequest _$ReportRequestFromJson(Map<String, dynamic> json) =>
       description: json['description'] as String?,
       deadline: json['deadline'] as String?,
       assignedById: json['assignedById'] as String,
-      targetAudience: $enumDecodeNullable(
-              _$ReportAudienceEnumMap, json['targetAudience']) ??
+      targetAudience:
+          $enumDecodeNullable(
+            _$ReportAudienceEnumMap,
+            json['targetAudience'],
+          ) ??
           ReportAudience.TEAM,
-      targetRoles: (json['targetRoles'] as List<dynamic>?)
+      targetRoles:
+          (json['targetRoles'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      targetUserIds: (json['targetUserIds'] as List<dynamic>?)
+      targetUserIds:
+          (json['targetUserIds'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      allowedFormats: (json['allowedFormats'] as List<dynamic>?)
+      allowedFormats:
+          (json['allowedFormats'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [".pdf", ".docx", ".xlsx", ".pptx"],
       createdAt: json['createdAt'] as String?,
       assignedBy: json['assignedBy'] as Map<String, dynamic>?,
-      submissions: (json['submissions'] as List<dynamic>?)
+      submissions:
+          (json['submissions'] as List<dynamic>?)
               ?.map((e) => ReportSubmission.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      submissionsCount:
+          ((json['_count'] as Map<String, dynamic>?)?['submissions'] as num?)
+              ?.toInt() ??
+          (json['submissions'] as List<dynamic>?)?.length ??
+          0,
     );
 
 Map<String, dynamic> _$ReportRequestToJson(ReportRequest instance) =>
@@ -506,6 +558,7 @@ Map<String, dynamic> _$ReportRequestToJson(ReportRequest instance) =>
       'createdAt': instance.createdAt,
       'assignedBy': instance.assignedBy,
       'submissions': instance.submissions,
+      'submissionsCount': instance.submissionsCount,
     };
 
 const _$ReportAudienceEnumMap = {
@@ -514,25 +567,25 @@ const _$ReportAudienceEnumMap = {
   ReportAudience.TEAM: 'TEAM',
 };
 
-ReportSubmission _$ReportSubmissionFromJson(Map<String, dynamic> json) =>
-    ReportSubmission(
-      id: json['id'] as String,
-      reportRequestId: json['reportRequestId'] as String,
-      userId: json['userId'] as String,
-      fileUrl: json['fileUrl'] as String,
-      notes: json['notes'] as String?,
-      status: $enumDecodeNullable(
-              _$ReportSubmissionStatusEnumMap, json['status']) ??
-          ReportSubmissionStatus.PENDING,
-      reviewerNotes: json['reviewerNotes'] as String?,
-      createdAt: json['createdAt'] as String?,
-      updatedAt: json['updatedAt'] as String?,
-      user: json['user'] as Map<String, dynamic>?,
-      reportRequest: json['reportRequest'] == null
-          ? null
-          : ReportRequest.fromJson(
-              json['reportRequest'] as Map<String, dynamic>),
-    );
+ReportSubmission _$ReportSubmissionFromJson(
+  Map<String, dynamic> json,
+) => ReportSubmission(
+  id: json['id'] as String,
+  reportRequestId: json['reportRequestId'] as String,
+  userId: json['userId'] as String,
+  fileUrl: json['fileUrl'] as String,
+  notes: json['notes'] as String?,
+  status:
+      $enumDecodeNullable(_$ReportSubmissionStatusEnumMap, json['status']) ??
+      ReportSubmissionStatus.PENDING,
+  reviewerNotes: json['reviewerNotes'] as String?,
+  createdAt: json['createdAt'] as String?,
+  updatedAt: json['updatedAt'] as String?,
+  user: json['user'] as Map<String, dynamic>?,
+  reportRequest: json['reportRequest'] == null
+      ? null
+      : ReportRequest.fromJson(json['reportRequest'] as Map<String, dynamic>),
+);
 
 Map<String, dynamic> _$ReportSubmissionToJson(ReportSubmission instance) =>
     <String, dynamic>{

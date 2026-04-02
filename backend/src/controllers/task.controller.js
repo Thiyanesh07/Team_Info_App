@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { sendPushToUsers } = require('../services/pushNotification.service');
 
 const { logSystemActivity } = require('./systemActivity.controller');
 
@@ -97,6 +98,16 @@ const createTask = async (req, res) => {
       'TASK_CREATED',
       { taskId: task.id, assignedToId }
     );
+
+    await sendPushToUsers({
+      userIds: [assignedToId],
+      title: 'New Task Assigned',
+      body: title,
+      data: {
+        type: 'TASK_ASSIGNED',
+        taskId: task.id,
+      },
+    });
   } catch (error) {
     console.error('CreateTask error:', error);
     res.status(500).json({ success: false, message: 'Failed to create task' });

@@ -2,8 +2,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiConstants {
   // Configured via assets/.env
-  static String get baseUrl => dotenv.env['API_BASE_URL'] ?? 'https://team-info-app.onrender.com/api';
-  static String get socketUrl => dotenv.env['SOCKET_URL'] ?? 'https://team-info-app.onrender.com';
+  static String get baseUrl =>
+      dotenv.env['API_BASE_URL'] ?? 'https://team-info-app.onrender.com/api';
+  static String get socketUrl =>
+      dotenv.env['SOCKET_URL'] ?? 'https://team-info-app.onrender.com';
 
   // Auth
   static const String googleLogin = '/auth/google';
@@ -13,6 +15,7 @@ class ApiConstants {
   // Users
   static const String users = '/users';
   static const String updateProfile = '/users/profile';
+  static const String updateOwnPoints = '/users/profile/points';
   static const String createUser = '/users/create';
   static const String psSync = '/users/ps-sync';
 
@@ -62,7 +65,7 @@ class ApiConstants {
   // Admin
   static const String adminOverview = '/admin/overview';
   static const String adminUserDetail = '/admin/users';
-  static const String syncRewardsSheets = '/admin/sync/rewards-sheets';
+  static const String syncRewardsSheets = '/admin/sync/rewards';
 
   // Export
   static const String exportActivities = '/export/activities';

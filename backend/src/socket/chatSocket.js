@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { sendPushToUsers } = require('../services/pushNotification.service');
 
 /**
  * Socket.io handlers for real-time chat
@@ -59,6 +60,7 @@ const setupSocketHandlers = (io, prisma) => {
             fileName: data.fileName,
             fileType: data.fileType,
             replyToId: data.replyToId,
+            isDelivered: true,
           },
           include: {
             sender: { select: { id: true, name: true, profileImageUrl: true } },
@@ -66,6 +68,22 @@ const setupSocketHandlers = (io, prisma) => {
         });
 
         io.to('team-chat').emit('team-message', msg);
+
+        const members = await prisma.user.findMany({
+          where: { id: { not: socket.userId } },
+          select: { id: true },
+        });
+        const bodyPreview =
+          msg.message || (msg.fileType === 'VOICE' ? 'Voice message' : 'New attachment');
+        await sendPushToUsers({
+          userIds: members.map((u) => u.id),
+          title: `${msg.sender?.name || 'Team'} in Team Chat`,
+          body: bodyPreview,
+          data: {
+            type: 'TEAM_CHAT_MESSAGE',
+            messageId: msg.id,
+          },
+        });
       } catch (error) {
         console.error('Socket team-message error:', error);
         socket.emit('error', { message: 'Failed to send message' });
@@ -75,6 +93,22 @@ const setupSocketHandlers = (io, prisma) => {
     // ─── Personal Chat ───────────────────────────
     socket.on('personal-message', async (data) => {
       try {
+        const participant = await prisma.chatParticipant.findUnique({
+          where: {
+            conversationId_userId: {
+              conversationId: data.conversationId,
+              userId: socket.userId,
+            },
+          },
+        });
+
+        if (!participant) {
+          socket.emit('error', {
+            message: 'Not authorized to send in this conversation',
+          });
+          return;
+        }
+
         const msg = await prisma.chatMessage.create({
           data: {
             conversationId: data.conversationId,
@@ -85,6 +119,7 @@ const setupSocketHandlers = (io, prisma) => {
             fileName: data.fileName,
             fileType: data.fileType,
             replyToId: data.replyToId,
+            isDelivered: true,
           },
           include: {
             sender: { select: { id: true, name: true, profileImageUrl: true } },
@@ -98,6 +133,28 @@ const setupSocketHandlers = (io, prisma) => {
         });
 
         io.to(`conversation-${data.conversationId}`).emit('personal-message', msg);
+
+        const otherParticipants = await prisma.chatParticipant.findMany({
+          where: {
+            conversationId: data.conversationId,
+            userId: { not: socket.userId },
+          },
+          select: { userId: true },
+        });
+
+        const bodyPreview =
+          msg.message || (msg.fileType === 'VOICE' ? 'Voice message' : 'New attachment');
+        await sendPushToUsers({
+          userIds: otherParticipants.map((p) => p.userId),
+          title: `${msg.sender?.name || 'New'} sent a message`,
+          body: bodyPreview,
+          data: {
+            type: 'PERSONAL_CHAT_MESSAGE',
+            conversationId: data.conversationId,
+            messageId: msg.id,
+            senderName: msg.sender?.name || '',
+          },
+        });
       } catch (error) {
         console.error('Socket personal-message error:', error);
         socket.emit('error', { message: 'Failed to send message' });

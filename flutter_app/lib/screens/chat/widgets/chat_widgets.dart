@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:team_info_app/core/utils/in_app_file_actions.dart';
 
 import 'package:any_link_preview/any_link_preview.dart';
 
@@ -27,6 +28,22 @@ class PremiumMessageBubble extends StatefulWidget {
 }
 
 class _PremiumMessageBubbleState extends State<PremiumMessageBubble> {
+  Future<void> _openFilePreview() async {
+    await InAppFileActions.preview(
+      context,
+      widget.message.fileUrl!,
+      fileName: widget.message.fileName,
+    );
+  }
+
+  Future<void> _downloadFile() async {
+    await InAppFileActions.downloadAndOpen(
+      context,
+      widget.message.fileUrl!,
+      fileName: widget.message.fileName,
+    );
+  }
+
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isPlaying = false;
   Duration _duration = Duration.zero;
@@ -132,23 +149,64 @@ class _PremiumMessageBubbleState extends State<PremiumMessageBubble> {
                             color: Colors.black.withAlpha(30),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(
-                                Icons.insert_drive_file,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  widget.message.fileName ?? 'File',
-                                  style: const TextStyle(
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.insert_drive_file,
                                     color: Colors.white,
-                                    fontSize: 12,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      widget.message.fileName ?? 'File',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: _openFilePreview,
+                                    icon: const Icon(
+                                      Icons.open_in_new_rounded,
+                                      size: 14,
+                                    ),
+                                    label: const Text('Open'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      side: const BorderSide(
+                                        color: Colors.white30,
+                                      ),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: _downloadFile,
+                                    icon: const Icon(
+                                      Icons.download_outlined,
+                                      size: 14,
+                                    ),
+                                    label: const Text('Download'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      side: const BorderSide(
+                                        color: Colors.white30,
+                                      ),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -320,7 +378,10 @@ class _PremiumMessageBubbleState extends State<PremiumMessageBubble> {
 
   String _formatTime(String ts) {
     try {
-      final dt = DateTime.parse(ts);
+      // Always render in IST for consistent chat timelines across devices.
+      final dt = DateTime.parse(
+        ts,
+      ).toUtc().add(const Duration(hours: 5, minutes: 30));
       return '${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
     } catch (_) {
       return '';

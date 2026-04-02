@@ -95,6 +95,57 @@ const updateProfile = async (req, res) => {
   }
 };
 
+/** PATCH /api/users/profile/points - Update own AP/RP only */
+const updateOwnPoints = async (req, res) => {
+  try {
+    const hasReward = req.body?.rewardPoints !== undefined;
+    const hasActivity = req.body?.activityPoints !== undefined;
+
+    if (!hasReward && !hasActivity) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide rewardPoints or activityPoints',
+      });
+    }
+
+    const rewardPoints = hasReward ? Number(req.body.rewardPoints) : undefined;
+    const activityPoints = hasActivity
+      ? Number(req.body.activityPoints)
+      : undefined;
+
+    if (
+      (hasReward && (!Number.isFinite(rewardPoints) || rewardPoints < 0)) ||
+      (hasActivity && (!Number.isFinite(activityPoints) || activityPoints < 0))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Points must be valid non-negative numbers',
+      });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        ...(hasReward && { rewardPoints: Math.floor(rewardPoints) }),
+        ...(hasActivity && { activityPoints: Math.floor(activityPoints) }),
+      },
+      select: userSelect,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Points updated',
+      data: user,
+    });
+  } catch (error) {
+    console.error('UpdateOwnPoints error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update points',
+    });
+  }
+};
+
 /** PUT /api/users/:id/role - Admin: assign role */
 const assignRole = async (req, res) => {
   try {
@@ -245,8 +296,12 @@ const syncPsPoints = async (req, res) => {
     const rawToken = typeof req.body?.psToken === 'string' ? req.body.psToken : '';
     const psToken = rawToken.trim();
     const tokenPresent = psToken.length > 0;
+    const hasManualPoints = Number.isFinite(Number(req.body?.manualActivityPoints));
+    const manualActivityPoints = hasManualPoints
+      ? Number(req.body.manualActivityPoints)
+      : null;
     console.info(
-      `[PS_SYNC] user=${req.user.id} tokenPresent=${tokenPresent} tokenLength=${psToken.length}`
+      `[PS_SYNC] user=${req.user.id} tokenPresent=${tokenPresent} tokenLength=${psToken.length} manualPoints=${manualActivityPoints ?? 'none'}`
     );
 
     const existingUser = await prisma.user.findUnique({
@@ -274,59 +329,73 @@ const syncPsPoints = async (req, res) => {
       });
     }
 
-    if (!tokenPresent) {
+    if (!tokenPresent && manualActivityPoints === null) {
       return res.status(400).json({
         success: false,
-        message: 'PS token is required. Please login in portal and retry sync.',
+        message: 'Provide PS token or manualActivityPoints to sync.',
       });
     }
 
-    // Call the external API
-    const response = await fetch('https://ps.bitsathy.ac.in/api/ps_v2/dashboard/user-points?filter=overall', {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json, text/plain, */*',
-        'Cookie': `PS=${psToken}`,
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Mobile Safari/537.36'
-      }
-    });
-    console.info(`[PS_SYNC] user=${req.user.id} portalStatus=${response.status}`);
-
-    if (!response.ok) {
-      return res.status(response.status).json({
-        success: false,
-        message: 'Failed to authenticate with PS portal. Please login again and retry.',
-      });
-    }
-
-    const dataObj = await response.json();
-    if (!dataObj.success || !dataObj.data) {
-        return res.status(400).json({ success: false, message: 'Invalid response from PS portal' });
-    }
-    
     let activityPoints = 0;
-    let groupPoints = 0;
-    let contributionPercent = 0.0;
 
-    if (dataObj.data.points && dataObj.data.points.length > 0) {
-        activityPoints = Number(dataObj.data.points[0].total_points || 0);
+    if (manualActivityPoints !== null) {
+      activityPoints = Math.max(0, Math.floor(manualActivityPoints));
+    } else {
+      // Call the external API
+      const response = await fetch('https://ps.bitsathy.ac.in/api/ps_v2/dashboard/user-points?filter=overall', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json, text/plain, */*',
+          'Cookie': `PS=${psToken}`,
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Mobile Safari/537.36'
+        }
+      });
+      console.info(`[PS_SYNC] user=${req.user.id} portalStatus=${response.status}`);
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          success: false,
+          message: 'Failed to authenticate with PS portal. Please login again and retry.',
+        });
+      }
+
+      const dataObj = await response.json();
+      if (!dataObj.success || !dataObj.data) {
+          return res.status(400).json({ success: false, message: 'Invalid response from PS portal' });
+      }
+
+      if (dataObj.data.points && dataObj.data.points.length > 0) {
+          activityPoints = Number(dataObj.data.points[0].total_points || 0);
+      }
     }
-    
-    if (dataObj.data.group_points && dataObj.data.group_points.length > 0) {
-        groupPoints = Number(dataObj.data.group_points[0].total_group_points || 0);
-        contributionPercent = Number(dataObj.data.group_points[0].contribution_percent || 0);
-    }
 
-      const delta = activityPoints - oldPoints;
-      const syncedAt = new Date().toISOString();
+    const delta = activityPoints - oldPoints;
+    const syncedAt = new Date().toISOString();
 
-    // Update the user
+    // Update user points first, then compute total contribution from all members.
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        ...(tokenPresent && { psToken }),
+        activityPoints,
+      },
+      select: userSelect,
+    });
+
+    const totals = await prisma.user.aggregate({
+      where: { role: { not: 'ADMIN' } },
+      _sum: { activityPoints: true },
+    });
+
+    const totalActivityPoints = Number(totals._sum.activityPoints || 0);
+    const contributionPercent = totalActivityPoints > 0
+      ? Number(((activityPoints / totalActivityPoints) * 100).toFixed(2))
+      : 0;
+
     const user = await prisma.user.update({
       where: { id: req.user.id },
       data: {
-        psToken,
-        activityPoints,
-        groupPoints,
+        groupPoints: totalActivityPoints,
         contributionPercent
       },
       select: userSelect,
@@ -350,5 +419,15 @@ const syncPsPoints = async (req, res) => {
   }
 };
 
-module.exports = { getAllUsers, getUserById, updateProfile, assignRole, createUser, deleteUser, adminUpdateUser, syncPsPoints };
+module.exports = {
+  getAllUsers,
+  getUserById,
+  updateProfile,
+  updateOwnPoints,
+  assignRole,
+  createUser,
+  deleteUser,
+  adminUpdateUser,
+  syncPsPoints,
+};
 

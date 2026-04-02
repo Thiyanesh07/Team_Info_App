@@ -6,8 +6,8 @@ import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/models/app_models.dart';
 import 'package:team_info_app/repositories/app_data_repository.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:team_info_app/core/utils/in_app_file_actions.dart';
 import 'package:team_info_app/services/api_service.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class ReportSubmissionScreen extends ConsumerStatefulWidget {
   final ReportRequest request;
@@ -32,8 +32,7 @@ class _ReportSubmissionScreenState
   String? _uploadUrl;
 
   Future<void> _openPreview(String url) async {
-    final uri = Uri.parse(url);
-    await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    await InAppFileActions.preview(context, url, fileName: _selectedFile?.name);
   }
 
   String _toCloudinaryDownloadUrl(String url) {
@@ -43,8 +42,11 @@ class _ReportSubmissionScreenState
   }
 
   Future<void> _downloadOriginal(String url) async {
-    final uri = Uri.parse(_toCloudinaryDownloadUrl(url));
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    await InAppFileActions.downloadAndOpen(
+      context,
+      _toCloudinaryDownloadUrl(url),
+      fileName: _selectedFile?.name,
+    );
   }
 
   @override
@@ -457,23 +459,29 @@ class _ReportSubmissionScreenState
             ],
             if (_uploadUrl != null && _selectedFile == null) ...[
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 10,
+                runSpacing: 8,
                 children: [
-                  TextButton.icon(
+                  OutlinedButton.icon(
                     onPressed: () => _openPreview(_uploadUrl!),
                     icon: const Icon(Icons.preview_outlined, size: 14),
-                    label: const Text(
-                      'Preview',
-                      style: TextStyle(fontSize: 12),
+                    label: const Text('Preview'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary),
+                      visualDensity: VisualDensity.compact,
                     ),
                   ),
-                  TextButton.icon(
+                  OutlinedButton.icon(
                     onPressed: () => _downloadOriginal(_uploadUrl!),
                     icon: const Icon(Icons.download_outlined, size: 14),
-                    label: const Text(
-                      'Download',
-                      style: TextStyle(fontSize: 12),
+                    label: const Text('Download'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.secondary,
+                      side: const BorderSide(color: AppColors.secondary),
+                      visualDensity: VisualDensity.compact,
                     ),
                   ),
                 ],

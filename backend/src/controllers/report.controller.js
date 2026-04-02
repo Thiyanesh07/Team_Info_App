@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { sendPushToUsers } = require('../services/pushNotification.service');
 
 
 /**
@@ -27,6 +28,34 @@ exports.createRequest = async (req, res) => {
       data: reportRequest,
       message: 'Report request created successfully'
     });
+
+    const where = [];
+    if (targetAudience === 'TEAM') {
+      where.push({ id: { not: assignedById } });
+    }
+    if (targetAudience === 'ROLE' && Array.isArray(targetRoles) && targetRoles.length > 0) {
+      where.push({ role: { in: targetRoles }, id: { not: assignedById } });
+    }
+    if (targetAudience === 'INDIVIDUAL' && Array.isArray(targetUserIds) && targetUserIds.length > 0) {
+      where.push({ id: { in: targetUserIds.filter(Boolean), not: assignedById } });
+    }
+
+    if (where.length > 0) {
+      const targets = await prisma.user.findMany({
+        where: { OR: where },
+        select: { id: true },
+      });
+
+      await sendPushToUsers({
+        userIds: targets.map((u) => u.id),
+        title: 'New Submission Task',
+        body: title,
+        data: {
+          type: 'REPORT_REQUEST_CREATED',
+          requestId: reportRequest.id,
+        },
+      });
+    }
   } catch (error) {
     console.error('createRequest error:', error);
     res.status(500).json({ success: false, message: 'Failed to create report request' });

@@ -27,9 +27,11 @@ class CollegeSyncScreen extends ConsumerStatefulWidget {
 
 class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
   late final WebViewController _controller;
+  final TextEditingController _manualPointsController = TextEditingController();
   bool _isLoading = true;
   bool _isSyncing = false;
   bool _hasPortalError = false;
+  bool _portalInitialized = false;
   Timer? _cookieTimer;
   SyncStage _stage = SyncStage.openingPortal;
 
@@ -52,15 +54,18 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
         NavigationDelegate(
           onPageStarted: (String url) {
             setState(() {
-              _isLoading = true;
+              _isLoading = !_portalInitialized;
               _hasPortalError = false;
-              _setStage(SyncStage.openingPortal);
+              if (!_portalInitialized && !_isSyncing) {
+                _setStage(SyncStage.openingPortal);
+              }
             });
           },
           onPageFinished: (String url) async {
             setState(() {
               _isLoading = false;
-              if (!_isSyncing) {
+              _portalInitialized = true;
+              if (!_isSyncing && _stage != SyncStage.synced) {
                 _setStage(SyncStage.waitingForLogin);
               }
             });
@@ -82,8 +87,8 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
       )
       ..loadRequest(Uri.parse('https://ps.bitsathy.ac.in/dashboard'));
 
-    // PROACTIVE SCAN: Check for session cookie every 2 seconds
-    _cookieTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+    // PROACTIVE SCAN: Check for session cookie every 1 second
+    _cookieTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!_isSyncing) {
         _extractCookieAndSync();
       }
@@ -93,6 +98,7 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
   @override
   void dispose() {
     _cookieTimer?.cancel();
+    _manualPointsController.dispose();
     super.dispose();
   }
 
@@ -171,101 +177,7 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
       }
 
       if (psToken != null && psToken.isNotEmpty) {
-        if (!mounted) return;
-        setState(() {
-          _isSyncing = true;
-          _setStage(SyncStage.tokenCaptured);
-          _errorMessage = null;
-        });
-        await Future.delayed(const Duration(milliseconds: 250));
-
-        if (!mounted) return;
-        setState(() => _setStage(SyncStage.syncing));
-
-        // Sync to backend
-        final api = ApiService();
-        final res = await api.put(
-          ApiConstants.psSync,
-          body: {'psToken': psToken},
-        );
-
-        if (!mounted) return;
-
-        if (res.success) {
-          final data = (res.data is Map<String, dynamic>)
-              ? res.data as Map<String, dynamic>
-              : <String, dynamic>{};
-
-          final userJson = (data['user'] is Map<String, dynamic>)
-              ? data['user'] as Map<String, dynamic>
-              : <String, dynamic>{};
-
-          final newPoints = (data['newPoints'] as num?)?.toInt();
-          final oldPoints = (data['oldPoints'] as num?)?.toInt();
-          final delta = (data['delta'] as num?)?.toInt();
-          final syncedAt = data['syncedAt']?.toString();
-          final groupPoints = (userJson['groupPoints'] as num?)?.toInt();
-          final contributionPercent = (userJson['contributionPercent'] as num?)
-              ?.toDouble();
-
-          ref
-              .read(authProvider.notifier)
-              .patchCurrentUser(
-                activityPoints: newPoints,
-                groupPoints: groupPoints,
-                contributionPercent: contributionPercent,
-              );
-
-          setState(() {
-            _oldPoints = oldPoints;
-            _newPoints = newPoints;
-            _delta = delta;
-            _lastSyncedAt = syncedAt;
-            _setStage(SyncStage.synced);
-          });
-
-          _cookieTimer?.cancel();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Activity Points synced: ${oldPoints ?? '-'} -> ${newPoints ?? '-'} (${delta != null && delta >= 0 ? '+' : ''}${delta ?? 0})',
-              ),
-              backgroundColor: AppColors.primary,
-            ),
-          );
-          await Future.delayed(const Duration(milliseconds: 1200));
-          if (mounted) {
-            Navigator.pop(context, {
-              'synced': true,
-              'oldPoints': oldPoints,
-              'newPoints': newPoints,
-              'delta': delta,
-              'syncedAt': syncedAt,
-            });
-          }
-        } else {
-          final retryAfterSeconds =
-              ((res.data is Map<String, dynamic>)
-                      ? (res.data as Map<String, dynamic>)['retryAfterSeconds']
-                      : null)
-                  as num?;
-
-          setState(() {
-            _isSyncing = false;
-            _setStage(SyncStage.failed);
-            _errorMessage = retryAfterSeconds != null
-                ? 'Sync throttled. Retry in ${retryAfterSeconds.toInt()}s.'
-                : (res.message ??
-                      'Sync failed. Retry sync or open external browser.');
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(res.message ?? 'Auth Error'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        await _syncWithToken(psToken);
       } else if (mounted && _stage != SyncStage.waitingForLogin) {
         setState(() => _setStage(SyncStage.waitingForLogin));
       }
@@ -279,6 +191,260 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
             'Could not capture portal session. Retry sync or open in external browser.';
       });
     }
+  }
+
+  Future<void> _syncWithToken(String psToken) async {
+    if (_isSyncing || psToken.trim().isEmpty || !mounted) return;
+
+    setState(() {
+      _isSyncing = true;
+      _setStage(SyncStage.tokenCaptured);
+      _errorMessage = null;
+    });
+    await Future.delayed(const Duration(milliseconds: 250));
+
+    if (!mounted) return;
+    setState(() => _setStage(SyncStage.syncing));
+
+    final api = ApiService();
+    final res = await api.put(ApiConstants.psSync, body: {'psToken': psToken});
+
+    if (!mounted) return;
+
+    if (res.success) {
+      final data = (res.data is Map<String, dynamic>)
+          ? res.data as Map<String, dynamic>
+          : <String, dynamic>{};
+
+      final userJson = (data['user'] is Map<String, dynamic>)
+          ? data['user'] as Map<String, dynamic>
+          : <String, dynamic>{};
+
+      final newPoints = (data['newPoints'] as num?)?.toInt();
+      final oldPoints = (data['oldPoints'] as num?)?.toInt();
+      final delta = (data['delta'] as num?)?.toInt();
+      final syncedAt = data['syncedAt']?.toString();
+      final groupPoints = (userJson['groupPoints'] as num?)?.toInt();
+      final contributionPercent = (userJson['contributionPercent'] as num?)
+          ?.toDouble();
+
+      ref
+          .read(authProvider.notifier)
+          .patchCurrentUser(
+            activityPoints: newPoints,
+            groupPoints: groupPoints,
+            contributionPercent: contributionPercent,
+          );
+
+      setState(() {
+        _isSyncing = false;
+        _oldPoints = oldPoints;
+        _newPoints = newPoints;
+        _delta = delta;
+        _lastSyncedAt = syncedAt;
+        _setStage(SyncStage.synced);
+      });
+
+      _cookieTimer?.cancel();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Activity Points synced: ${oldPoints ?? '-'} -> ${newPoints ?? '-'} (${delta != null && delta >= 0 ? '+' : ''}${delta ?? 0})',
+          ),
+          backgroundColor: AppColors.primary,
+        ),
+      );
+      await Future.delayed(const Duration(milliseconds: 1200));
+      if (mounted) {
+        Navigator.pop(context, {
+          'synced': true,
+          'oldPoints': oldPoints,
+          'newPoints': newPoints,
+          'delta': delta,
+          'syncedAt': syncedAt,
+        });
+      }
+      return;
+    }
+
+    final retryAfterSeconds =
+        ((res.data is Map<String, dynamic>)
+                ? (res.data as Map<String, dynamic>)['retryAfterSeconds']
+                : null)
+            as num?;
+
+    setState(() {
+      _isSyncing = false;
+      _setStage(SyncStage.failed);
+      _errorMessage = retryAfterSeconds != null
+          ? 'Sync throttled. Retry in ${retryAfterSeconds.toInt()}s.'
+          : (res.message ??
+                'Sync failed. Retry sync or open external browser.');
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(res.message ?? 'Auth Error'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  Future<void> _manualSyncWithPoints() async {
+    final value = _manualPointsController.text.trim();
+    final points = int.tryParse(value);
+    if (points == null || points < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid activity points value.')),
+      );
+      return;
+    }
+    await _syncWithManualPoints(points);
+  }
+
+  Future<void> _syncWithManualPoints(int points) async {
+    if (_isSyncing || !mounted) return;
+
+    setState(() {
+      _isSyncing = true;
+      _setStage(SyncStage.syncing);
+      _errorMessage = null;
+    });
+
+    final api = ApiService();
+    final res = await api.put(
+      ApiConstants.psSync,
+      body: {'manualActivityPoints': points},
+    );
+
+    if (!mounted) return;
+
+    if (res.success) {
+      final data = (res.data is Map<String, dynamic>)
+          ? res.data as Map<String, dynamic>
+          : <String, dynamic>{};
+
+      final userJson = (data['user'] is Map<String, dynamic>)
+          ? data['user'] as Map<String, dynamic>
+          : <String, dynamic>{};
+
+      final newPoints = (data['newPoints'] as num?)?.toInt();
+      final oldPoints = (data['oldPoints'] as num?)?.toInt();
+      final delta = (data['delta'] as num?)?.toInt();
+      final syncedAt = data['syncedAt']?.toString();
+      final groupPoints = (userJson['groupPoints'] as num?)?.toInt();
+      final contributionPercent = (userJson['contributionPercent'] as num?)
+          ?.toDouble();
+
+      ref
+          .read(authProvider.notifier)
+          .patchCurrentUser(
+            activityPoints: newPoints,
+            groupPoints: groupPoints,
+            contributionPercent: contributionPercent,
+          );
+
+      setState(() {
+        _isSyncing = false;
+        _oldPoints = oldPoints;
+        _newPoints = newPoints;
+        _delta = delta;
+        _lastSyncedAt = syncedAt;
+        _setStage(SyncStage.synced);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Activity Points synced: ${oldPoints ?? '-'} -> ${newPoints ?? '-'} (${delta != null && delta >= 0 ? '+' : ''}${delta ?? 0})',
+          ),
+          backgroundColor: AppColors.primary,
+        ),
+      );
+      await Future.delayed(const Duration(milliseconds: 1200));
+      if (mounted) {
+        Navigator.pop(context, {
+          'synced': true,
+          'oldPoints': oldPoints,
+          'newPoints': newPoints,
+          'delta': delta,
+          'syncedAt': syncedAt,
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _isSyncing = false;
+      _setStage(SyncStage.failed);
+      _errorMessage =
+          res.message ??
+          'Manual sync failed. Enter activity points again and retry.';
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(res.message ?? 'Manual sync failed'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  Widget _buildManualFallbackPanel() {
+    if (_stage == SyncStage.synced) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Manual Fallback: Enter activity points',
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'If portal opening fails, login in external browser, check your Activity Points, then enter the value below.',
+            style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _manualPointsController,
+            keyboardType: TextInputType.number,
+            style: GoogleFonts.inter(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Enter activity points (e.g. 245)',
+              hintStyle: GoogleFonts.inter(color: Colors.white54),
+              filled: true,
+              fillColor: AppColors.background.withValues(alpha: 0.7),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isSyncing ? null : _manualSyncWithPoints,
+              icon: const Icon(Icons.sync_rounded),
+              label: const Text('Sync using entered points'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSyncActionPanel() {
@@ -383,10 +549,9 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
       body: Stack(
         children: [
           WebViewWidget(controller: _controller),
-          if (_isLoading ||
+          if ((_isLoading && !_portalInitialized) ||
               _isSyncing ||
-              _stage == SyncStage.openingPortal ||
-              _stage == SyncStage.waitingForLogin ||
+              (_stage == SyncStage.openingPortal && !_portalInitialized) ||
               _stage == SyncStage.tokenCaptured ||
               _stage == SyncStage.syncing)
             Container(
@@ -423,13 +588,19 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
                 ),
               ),
             ),
-          if (_hasPortalError ||
-              _stage == SyncStage.failed ||
-              _stage == SyncStage.synced)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: _buildSyncActionPanel(),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_hasPortalError ||
+                    _stage == SyncStage.failed ||
+                    _stage == SyncStage.synced)
+                  _buildSyncActionPanel(),
+                _buildManualFallbackPanel(),
+              ],
             ),
+          ),
         ],
       ),
     );

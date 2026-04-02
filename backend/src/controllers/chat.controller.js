@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { sendPushToUsers } = require('../services/pushNotification.service');
 
 const isConversationParticipant = async (conversationId, userId) => {
   const participant = await prisma.chatParticipant.findUnique({
@@ -34,15 +35,41 @@ const getTeamMessages = async (req, res) => {
 /** POST /api/chat/team - Send team message */
 const sendTeamMessage = async (req, res) => {
   try {
-    const { message, imageUrl } = req.body;
-    if (!message && !imageUrl) return res.status(400).json({ success: false, message: 'Message or image required' });
+    const { message, imageUrl, fileUrl, fileName, fileType, replyToId } = req.body;
+    if (!message && !imageUrl && !fileUrl) {
+      return res.status(400).json({ success: false, message: 'Message, image, or file required' });
+    }
 
     const msg = await prisma.teamMessage.create({
-      data: { senderId: req.user.id, message, imageUrl },
+      data: {
+        senderId: req.user.id,
+        message,
+        imageUrl,
+        fileUrl,
+        fileName,
+        fileType,
+        replyToId,
+        isDelivered: true,
+      },
       include: { sender: { select: { id: true, name: true, profileImageUrl: true } } },
     });
 
     res.status(201).json({ success: true, data: msg });
+
+    const members = await prisma.user.findMany({
+      where: { id: { not: req.user.id } },
+      select: { id: true },
+    });
+
+    await sendPushToUsers({
+      userIds: members.map((u) => u.id),
+      title: `${msg.sender?.name || 'Team'} in Team Chat`,
+      body: msg.message || (msg.fileType === 'VOICE' ? 'Voice message' : 'New attachment'),
+      data: {
+        type: 'TEAM_CHAT_MESSAGE',
+        messageId: msg.id,
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to send message' });
   }
@@ -91,10 +118,26 @@ const getConversations = async (req, res) => {
       include: {
         participants: { include: { user: { select: { id: true, name: true, profileImageUrl: true } } } },
         messages: { orderBy: { timestamp: 'desc' }, take: 1 },
+        _count: {
+          select: {
+            messages: {
+              where: {
+                senderId: { not: req.user.id },
+                isRead: false,
+              },
+            },
+          },
+        },
       },
       orderBy: { updatedAt: 'desc' },
     });
-    res.json({ success: true, data: conversations });
+
+    const shaped = conversations.map((conv) => ({
+      ...conv,
+      unreadCount: conv._count?.messages || 0,
+    }));
+
+    res.json({ success: true, data: shaped });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch conversations' });
   }
@@ -183,7 +226,8 @@ const sendConversationMessage = async (req, res) => {
         fileUrl,
         fileName,
         fileType,
-        replyToId
+        replyToId,
+        isDelivered: true,
       },
       include: { sender: { select: { id: true, name: true, profileImageUrl: true } } },
     });
@@ -195,6 +239,23 @@ const sendConversationMessage = async (req, res) => {
     });
 
     res.status(201).json({ success: true, data: msg });
+
+    const recipients = await prisma.chatParticipant.findMany({
+      where: { conversationId: req.params.id, userId: { not: req.user.id } },
+      select: { userId: true },
+    });
+
+    await sendPushToUsers({
+      userIds: recipients.map((r) => r.userId),
+      title: `${msg.sender?.name || 'New'} sent a message`,
+      body: msg.message || (msg.fileType === 'VOICE' ? 'Voice message' : 'New attachment'),
+      data: {
+        type: 'PERSONAL_CHAT_MESSAGE',
+        conversationId: req.params.id,
+        messageId: msg.id,
+        senderName: msg.sender?.name || '',
+      },
+    });
   } catch (error) {
     console.error('sendConversationMessage error:', error);
     res.status(500).json({ success: false, message: 'Failed to send message' });

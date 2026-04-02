@@ -73,7 +73,10 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                   InkWell(
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const TeamChatScreen()),
+                      MaterialPageRoute(
+                        settings: const RouteSettings(name: 'team_chat'),
+                        builder: (_) => const TeamChatScreen(),
+                      ),
                     ),
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
@@ -193,15 +196,22 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                           : null;
 
                       return InkWell(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PersonalChatScreen(
-                              conversationId: conv.id,
-                              otherUserName: otherUser?['name'] ?? 'User',
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              settings: RouteSettings(
+                                name: 'personal_chat',
+                                arguments: {'conversationId': conv.id},
+                              ),
+                              builder: (_) => PersonalChatScreen(
+                                conversationId: conv.id,
+                                otherUserName: otherUser?['name'] ?? 'User',
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                          await _loadData();
+                        },
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(14),
@@ -250,6 +260,25 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                                   ],
                                 ),
                               ),
+                              if (conv.unreadCount > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${conv.unreadCount}',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -340,6 +369,12 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
+                                        settings: RouteSettings(
+                                          name: 'personal_chat',
+                                          arguments: {
+                                            'conversationId': res.data['id'],
+                                          },
+                                        ),
                                         builder: (_) => PersonalChatScreen(
                                           conversationId: res.data['id'],
                                           otherUserName: u.name,
