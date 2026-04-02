@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { validateAndNormalizeUrl } = require('../lib/urlValidation');
 
 
 const PS_SYNC_COOLDOWN_MS = Number(process.env.PS_SYNC_COOLDOWN_MS || 45000);
@@ -64,6 +65,18 @@ const updateProfile = async (req, res) => {
       linkedinUrl, githubUrl, leetcodeUrl, twitterUrl,
       rewardPoints, activityPoints } = req.body;
 
+    let normalizedProfileImageUrl = profileImageUrl;
+    if (profileImageUrl !== undefined) {
+      try {
+        normalizedProfileImageUrl = validateAndNormalizeUrl(
+          profileImageUrl,
+          'profileImageUrl',
+        );
+      } catch (e) {
+        return res.status(400).json({ success: false, message: e.message });
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id: req.user.id },
       data: {
@@ -73,7 +86,7 @@ const updateProfile = async (req, res) => {
         ...(year !== undefined && { year }),
         ...(mobile !== undefined && { mobile }),
         ...(cgpa !== undefined && { cgpa: cgpa ? parseFloat(cgpa) : null }),
-        ...(profileImageUrl !== undefined && { profileImageUrl }),
+        ...(profileImageUrl !== undefined && { profileImageUrl: normalizedProfileImageUrl }),
         ...(primarySkills && { primarySkills }),
         ...(secondarySkills && { secondarySkills }),
         ...(specialSkills && { specialSkills }),

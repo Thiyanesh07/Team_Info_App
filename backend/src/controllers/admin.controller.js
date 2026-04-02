@@ -227,67 +227,10 @@ const deleteProject = async (req, res) => {
 };
 
 /**
- * Administrative: Sync Reward Points from Google Sheets
- */
-/**
- * Administrative: Sync Reward Points using the Hugging Face API
+ * Administrative: Sync Reward Points for all teammates via Hugging Face using stored roll numbers.
  */
 const syncRewards = async (req, res) => {
   try {
-    const regNo = req.body?.regNo?.toString()?.trim()?.toUpperCase();
-
-    if (regNo) {
-      const user = await prisma.user.findFirst({
-        where: { regNo: { equals: regNo, mode: 'insensitive' } },
-        select: { id: true, regNo: true, rewardPoints: true, name: true }
-      });
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: `No member found for roll number ${regNo}`,
-        });
-      }
-
-      const newPoints = await huggingFaceService.syncUserByRollNo(user.regNo);
-      if (newPoints === null) {
-        return res.status(404).json({
-          success: false,
-          message: `No reward data found for ${user.regNo}`,
-        });
-      }
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { rewardPoints: newPoints }
-      });
-
-      await prisma.systemActivity.create({
-        data: {
-          userId: req.user.id,
-          title: 'Points Synchronized',
-          content: `Reward points synced for ${user.regNo} (${user.name}).`,
-          type: 'SYNC',
-          metadata: {
-            regNo: user.regNo,
-            source: 'HUGGING_FACE',
-            previous: user.rewardPoints,
-            current: newPoints,
-          }
-        }
-      });
-
-      return res.json({
-        success: true,
-        message: `Points synced successfully for ${user.regNo}`,
-        summary: {
-          regNo: user.regNo,
-          rewardPoints: newPoints,
-          updated: user.rewardPoints !== newPoints,
-        },
-      });
-    }
-
     const result = await huggingFaceService.syncAllUsers();
     
     // Create a system activity record
@@ -295,7 +238,7 @@ const syncRewards = async (req, res) => {
       data: {
         userId: req.user.id,
         title: 'Points Synchronized',
-        content: `Reward points synced via Hugging Face. ${result.updatedCount} users updated, ${result.failedCount} failures.`,
+        content: `Reward points synced for all teammates via Hugging Face roll-number lookup. ${result.updatedCount} users updated, ${result.failedCount} failures.`,
         type: 'SYNC',
         metadata: {
             updatedCount: result.updatedCount,
@@ -307,7 +250,7 @@ const syncRewards = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Points synced successfully from Hugging Face',
+      message: 'Team reward points synced successfully from Hugging Face',
       summary: result
     });
   } catch (error) {

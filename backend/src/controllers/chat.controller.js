@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const { sendPushToUsers } = require('../services/pushNotification.service');
+const { validateAndNormalizeUrl } = require('../lib/urlValidation');
 
 const isConversationParticipant = async (conversationId, userId) => {
   const participant = await prisma.chatParticipant.findUnique({
@@ -40,12 +41,21 @@ const sendTeamMessage = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Message, image, or file required' });
     }
 
+    let normalizedImageUrl = imageUrl;
+    let normalizedFileUrl = fileUrl;
+    try {
+      normalizedImageUrl = validateAndNormalizeUrl(imageUrl, 'imageUrl');
+      normalizedFileUrl = validateAndNormalizeUrl(fileUrl, 'fileUrl');
+    } catch (e) {
+      return res.status(400).json({ success: false, message: e.message });
+    }
+
     const msg = await prisma.teamMessage.create({
       data: {
         senderId: req.user.id,
         message,
-        imageUrl,
-        fileUrl,
+        imageUrl: normalizedImageUrl,
+        fileUrl: normalizedFileUrl,
         fileName,
         fileType,
         replyToId,
@@ -217,13 +227,22 @@ const sendConversationMessage = async (req, res) => {
     const { message, imageUrl, fileUrl, fileName, fileType, replyToId } = req.body;
     if (!message && !imageUrl && !fileUrl) return res.status(400).json({ success: false, message: 'Message, image, or file required' });
 
+    let normalizedImageUrl = imageUrl;
+    let normalizedFileUrl = fileUrl;
+    try {
+      normalizedImageUrl = validateAndNormalizeUrl(imageUrl, 'imageUrl');
+      normalizedFileUrl = validateAndNormalizeUrl(fileUrl, 'fileUrl');
+    } catch (e) {
+      return res.status(400).json({ success: false, message: e.message });
+    }
+
     const msg = await prisma.chatMessage.create({
       data: {
         conversationId: req.params.id,
         senderId: req.user.id,
         message, 
-        imageUrl,
-        fileUrl,
+        imageUrl: normalizedImageUrl,
+        fileUrl: normalizedFileUrl,
         fileName,
         fileType,
         replyToId,

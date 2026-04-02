@@ -13,6 +13,7 @@ import 'package:team_info_app/core/enums/user_role.dart';
 import 'package:team_info_app/core/services/excel_export_service.dart';
 import 'package:team_info_app/core/widgets/export_selection_dialog.dart';
 import 'package:team_info_app/widgets/empty_states.dart';
+import 'package:team_info_app/screens/shared/member_data_view_screen.dart';
 
 class ProjectsScreen extends ConsumerStatefulWidget {
   const ProjectsScreen({super.key});
@@ -83,6 +84,21 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
           style: GoogleFonts.inter(fontWeight: FontWeight.w700),
         ),
         actions: [
+          if (user != null && user.role.canViewAllData)
+            IconButton(
+              icon: const Icon(Icons.people_alt_outlined),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MemberDataViewScreen(
+                      dataType: MemberDataType.projects,
+                    ),
+                  ),
+                );
+              },
+              tooltip: 'View Member Projects',
+            ),
           IconButton(
             icon: const Icon(Icons.file_download_outlined),
             onPressed: () => _handleExport(),
@@ -144,33 +160,32 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
   }
 
   void _handleExport() {
-    final user = ref.read(authProvider).user;
-    if (user == null) return;
+    if (ref.read(authProvider).user == null) return;
 
-    final isLeader = [
-      UserRole.admin,
-      UserRole.captain,
-      UserRole.viceCaptain,
-      UserRole.strategist,
-      UserRole.manager,
-    ].contains(user.role);
-
-    if (isLeader) {
-      showDialog(
-        context: context,
-        builder: (_) => ExportSelectionDialog(
-          title: 'Export Team Projects',
-          onExport: (scope, selectedUserId) async {
-            await _runExport(scope: scope, userId: selectedUserId);
-          },
-        ),
-      );
-    } else {
-      _runExport(scope: 'SELF');
-    }
+    showDialog(
+      context: context,
+      builder: (_) => ExportSelectionDialog(
+        title: 'Export Team Projects',
+        onExport: (scope, selectedUserId, timeline, startDate, endDate) async {
+          await _runExport(
+            scope: scope,
+            userId: selectedUserId,
+            timeline: timeline,
+            startDate: startDate,
+            endDate: endDate,
+          );
+        },
+      ),
+    );
   }
 
-  Future<void> _runExport({required String scope, String? userId}) async {
+  Future<void> _runExport({
+    required String scope,
+    String? userId,
+    ExportTimeline timeline = ExportTimeline.today,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Preparing Excel report...')),
@@ -179,7 +194,15 @@ class _ProjectsScreenState extends ConsumerState<ProjectsScreen>
       await _excelService.downloadAndOpenReport(
         endpoint: ApiConstants.exportProjects,
         filename: 'TeamProjects_${DateTime.now().millisecondsSinceEpoch}.xlsx',
-        queryParams: {'scope': scope, if (userId != null) 'userId': userId},
+        queryParams: {
+          'scope': scope,
+          'timeline': timeline.name.toUpperCase(),
+          if (startDate != null)
+            'startDate': startDate.toIso8601String().split('T')[0],
+          if (endDate != null)
+            'endDate': endDate.toIso8601String().split('T')[0],
+          if (userId != null) 'userId': userId,
+        },
       );
     } catch (e) {
       if (mounted) {

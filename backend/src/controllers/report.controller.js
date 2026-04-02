@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const { sendPushToUsers } = require('../services/pushNotification.service');
+const { validateAndNormalizeUrl } = require('../lib/urlValidation');
 
 
 /**
@@ -120,6 +121,13 @@ exports.submitReport = async (req, res) => {
       return res.status(400).json({ success: false, message: 'File URL is required. Please upload a file first.' });
     }
 
+    let normalizedFileUrl;
+    try {
+      normalizedFileUrl = validateAndNormalizeUrl(fileUrl, 'fileUrl');
+    } catch (e) {
+      return res.status(400).json({ success: false, message: e.message });
+    }
+
     const submission = await prisma.reportSubmission.upsert({
       where: {
         reportRequestId_userId: {
@@ -128,7 +136,7 @@ exports.submitReport = async (req, res) => {
         }
       },
       update: {
-        fileUrl,
+        fileUrl: normalizedFileUrl,
         notes,
         status: 'PENDING',
         updatedAt: new Date()
@@ -136,7 +144,7 @@ exports.submitReport = async (req, res) => {
       create: {
         reportRequestId: requestId,
         userId: userId,
-        fileUrl,
+        fileUrl: normalizedFileUrl,
         notes,
         status: 'PENDING'
       }

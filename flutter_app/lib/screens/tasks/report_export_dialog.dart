@@ -27,6 +27,7 @@ class _ReportExportDialogState extends ConsumerState<ReportExportDialog> {
   UserModel? _selectedUser;
   bool _exporting = false;
   String _format = 'PDF';
+  String _timeline = 'TODAY';
 
   @override
   void initState() {
@@ -74,8 +75,14 @@ class _ReportExportDialogState extends ConsumerState<ReportExportDialog> {
       setState(() {
         if (isStart) {
           _startDate = picked;
+          if (_startDate.isAfter(_endDate)) {
+            _endDate = _startDate;
+          }
         } else {
           _endDate = picked;
+          if (_endDate.isBefore(_startDate)) {
+            _startDate = _endDate;
+          }
         }
       });
     }
@@ -84,11 +91,22 @@ class _ReportExportDialogState extends ConsumerState<ReportExportDialog> {
   Future<void> _exportData() async {
     setState(() => _exporting = true);
 
-    String query =
-        '?startDate=${_startDate.toIso8601String().split('T')[0]}&endDate=${_endDate.toIso8601String().split('T')[0]}';
+    String query = '?timeline=$_timeline';
+    if (_timeline == 'RANGE') {
+      query +=
+          '&startDate=${_startDate.toIso8601String().split('T')[0]}&endDate=${_endDate.toIso8601String().split('T')[0]}';
+    }
     if (_selectedUser != null) {
       query += '&userId=${_selectedUser!.id}';
     }
+
+    final fileNameSuffix = switch (_timeline) {
+      'TODAY' => '_today',
+      'ALL' => '_all',
+      'RANGE' =>
+        '_range_${_startDate.toIso8601String().split('T')[0]}_to_${_endDate.toIso8601String().split('T')[0]}',
+      _ => '',
+    };
 
     final res = await _api.get('${ApiConstants.tasks}/reports/export$query');
 
@@ -110,9 +128,17 @@ class _ReportExportDialogState extends ConsumerState<ReportExportDialog> {
 
       try {
         if (_format == 'PDF') {
-          await ReportExportService.exportToPdf(reports, title);
+          await ReportExportService.exportToPdf(
+            reports,
+            title,
+            fileNameSuffix: fileNameSuffix,
+          );
         } else {
-          await ReportExportService.exportToExcel(reports, title);
+          await ReportExportService.exportToExcel(
+            reports,
+            title,
+            fileNameSuffix: fileNameSuffix,
+          );
         }
         if (mounted) {
           Navigator.pop(context);
@@ -210,59 +236,109 @@ class _ReportExportDialogState extends ConsumerState<ReportExportDialog> {
               ],
 
               Text(
-                'Date Range',
+                'Timeline',
                 style: GoogleFonts.inter(
                   color: AppColors.textSecondary,
                   fontSize: 13,
                 ),
               ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectDate(true),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceLight.withAlpha(50),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          DateFormat('MMM dd').format(_startDate),
-                          style: const TextStyle(color: Colors.white),
-                          textAlign: TextAlign.center,
-                        ),
+              RadioGroup<String>(
+                groupValue: _timeline,
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() => _timeline = v);
+                  }
+                },
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      title: const Text(
+                        'Today',
+                        style: TextStyle(color: Colors.white, fontSize: 14),
                       ),
+                      value: 'TODAY',
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: AppColors.primary,
                     ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(
-                      Icons.arrow_forward_rounded,
-                      color: AppColors.textMuted,
-                      size: 16,
-                    ),
-                  ),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectDate(false),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceLight.withAlpha(50),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          DateFormat('MMM dd').format(_endDate),
-                          style: const TextStyle(color: Colors.white),
-                          textAlign: TextAlign.center,
-                        ),
+                    RadioListTile<String>(
+                      title: const Text(
+                        'Between Dates',
+                        style: TextStyle(color: Colors.white, fontSize: 14),
                       ),
+                      value: 'RANGE',
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: AppColors.primary,
                     ),
-                  ),
-                ],
+                    RadioListTile<String>(
+                      title: const Text(
+                        'All Time',
+                        style: TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                      value: 'ALL',
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: AppColors.primary,
+                    ),
+                  ],
+                ),
               ),
+              if (_timeline == 'RANGE') ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Date Range',
+                  style: GoogleFonts.inter(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectDate(true),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceLight.withAlpha(50),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            DateFormat('MMM dd').format(_startDate),
+                            style: const TextStyle(color: Colors.white),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Icon(
+                        Icons.arrow_forward_rounded,
+                        color: AppColors.textMuted,
+                        size: 16,
+                      ),
+                    ),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectDate(false),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceLight.withAlpha(50),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            DateFormat('MMM dd').format(_endDate),
+                            style: const TextStyle(color: Colors.white),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 16),
 
               Text(

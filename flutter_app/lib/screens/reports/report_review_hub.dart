@@ -261,16 +261,10 @@ class _SubmissionReviewCardState extends ConsumerState<_SubmissionReviewCard> {
     );
   }
 
-  String _toCloudinaryDownloadUrl(String url) {
-    if (!url.contains('/upload/')) return url;
-    if (url.contains('/upload/fl_attachment/')) return url;
-    return url.replaceFirst('/upload/', '/upload/fl_attachment/');
-  }
-
   Future<void> _downloadOriginal(String url) async {
     await InAppFileActions.downloadAndOpen(
       context,
-      _toCloudinaryDownloadUrl(url),
+      url,
       // fileName: widget.submission.fileName,
     );
   }

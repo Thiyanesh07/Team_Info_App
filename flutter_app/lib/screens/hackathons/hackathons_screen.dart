@@ -10,8 +10,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:team_info_app/core/services/excel_export_service.dart';
 import 'package:team_info_app/core/widgets/export_selection_dialog.dart';
 import 'package:team_info_app/providers/auth_provider.dart';
-import 'package:team_info_app/core/enums/user_role.dart';
 import 'package:team_info_app/widgets/empty_states.dart';
+import 'package:team_info_app/screens/shared/member_data_view_screen.dart';
 
 class HackathonsScreen extends ConsumerStatefulWidget {
   const HackathonsScreen({super.key});
@@ -47,6 +47,9 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authProvider).user;
+    final canViewOthers = user != null && user.role.canViewAllData;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -56,6 +59,21 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
         ),
         centerTitle: true,
         actions: [
+          if (canViewOthers)
+            IconButton(
+              icon: const Icon(Icons.people_alt_outlined),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MemberDataViewScreen(
+                      dataType: MemberDataType.hackathons,
+                    ),
+                  ),
+                );
+              },
+              tooltip: 'View Member Hackathons',
+            ),
           IconButton(
             icon: const Icon(Icons.file_download_outlined),
             onPressed: () => _handleExport(),
@@ -83,7 +101,8 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
                     _HackathonCard(
                           hackathon: _hackathons[i],
                           onRefresh: _loadHackathons,
-                          onEdit: (h) => _showHackathonDialog(context, hackathon: h),
+                          onEdit: (h) =>
+                              _showHackathonDialog(context, hackathon: h),
                           onDelete: _deleteHackathon,
                         )
                         .animate()
@@ -95,28 +114,32 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
   }
 
   void _handleExport() {
-    final user = ref.read(authProvider).user;
-    if (user == null) return;
+    if (ref.read(authProvider).user == null) return;
 
-    final isLeader = [UserRole.admin, UserRole.captain, UserRole.viceCaptain, UserRole.strategist, UserRole.manager]
-        .contains(user.role);
-
-    if (isLeader) {
-      showDialog(
-        context: context,
-        builder: (_) => ExportSelectionDialog(
-          title: 'Export Hackathons',
-          onExport: (scope, selectedUserId) async {
-            await _runExport(scope: scope, userId: selectedUserId);
-          },
-        ),
-      );
-    } else {
-      _runExport(scope: 'SELF');
-    }
+    showDialog(
+      context: context,
+      builder: (_) => ExportSelectionDialog(
+        title: 'Export Hackathons',
+        onExport: (scope, selectedUserId, timeline, startDate, endDate) async {
+          await _runExport(
+            scope: scope,
+            userId: selectedUserId,
+            timeline: timeline,
+            startDate: startDate,
+            endDate: endDate,
+          );
+        },
+      ),
+    );
   }
 
-  Future<void> _runExport({required String scope, String? userId}) async {
+  Future<void> _runExport({
+    required String scope,
+    String? userId,
+    ExportTimeline timeline = ExportTimeline.today,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Preparing Excel report...')),
@@ -127,13 +150,21 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
         filename: 'Hackathons_${DateTime.now().millisecondsSinceEpoch}.xlsx',
         queryParams: {
           'scope': scope,
+          'timeline': timeline.name.toUpperCase(),
+          if (startDate != null)
+            'startDate': startDate.toIso8601String().split('T')[0],
+          if (endDate != null)
+            'endDate': endDate.toIso8601String().split('T')[0],
           if (userId != null) 'userId': userId,
         },
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -149,16 +180,32 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
     final contributionC = TextEditingController(text: hackathon?.contribution);
     final skillC = TextEditingController();
     final teamMemberC = TextEditingController();
-    
-    DateTime selectedDate = hackathon?.date != null ? DateTime.parse(hackathon!.date!) : DateTime.now();
+
+    DateTime selectedDate = hackathon?.date != null
+        ? DateTime.parse(hackathon!.date!)
+        : DateTime.now();
     bool isTeam = hackathon?.isTeam ?? false;
     String status = hackathon?.status ?? 'UPCOMING';
-    List<String> skills = hackathon != null ? List.from(hackathon.skillsUsed) : [];
-    List<String> teamMembers = hackathon != null ? List.from(hackathon.teamMembers) : [];
-    
-    List<Map<String, String>> rounds = hackathon != null && hackathon.rounds.isNotEmpty
-        ? hackathon.rounds.map((r) => { 'roundName': r.roundName, 'description': r.description ?? '' }).toList()
-        : [{ 'roundName': 'Round 1', 'description': '' }];
+    List<String> skills = hackathon != null
+        ? List.from(hackathon.skillsUsed)
+        : [];
+    List<String> teamMembers = hackathon != null
+        ? List.from(hackathon.teamMembers)
+        : [];
+
+    List<Map<String, String>> rounds =
+        hackathon != null && hackathon.rounds.isNotEmpty
+        ? hackathon.rounds
+              .map(
+                (r) => {
+                  'roundName': r.roundName,
+                  'description': r.description ?? '',
+                },
+              )
+              .toList()
+        : [
+            {'roundName': 'Round 1', 'description': ''},
+          ];
 
     showModalBottomSheet(
       context: context,
@@ -172,7 +219,12 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
           onTap: () => FocusScope.of(stc).unfocus(),
           child: Container(
             height: MediaQuery.of(stc).size.height * 0.85,
-            padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(stc).viewInsets.bottom + 24),
+            padding: EdgeInsets.fromLTRB(
+              24,
+              12,
+              24,
+              MediaQuery.of(stc).viewInsets.bottom + 24,
+            ),
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               child: Column(
@@ -180,22 +232,51 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
                 children: [
                   Center(
                     child: Container(
-                      width: 40, height: 4,
+                      width: 40,
+                      height: 4,
                       margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(
+                        color: AppColors.divider,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                  Text(isEdit ? 'Edit Achievement' : 'Log Competition', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
+                  Text(
+                    isEdit ? 'Edit Achievement' : 'Log Competition',
+                    style: GoogleFonts.outfit(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
                   const SizedBox(height: 24),
-                  
+
                   _sectionTitle('Basic Information'),
-                  _textField(nameC, 'Hackathon Name *', Icons.emoji_events_outlined),
+                  _textField(
+                    nameC,
+                    'Hackathon Name *',
+                    Icons.emoji_events_outlined,
+                  ),
                   const SizedBox(height: 12),
-                  _textField(projectC, 'Project / Product Name', Icons.rocket_launch_outlined),
+                  _textField(
+                    projectC,
+                    'Project / Product Name',
+                    Icons.rocket_launch_outlined,
+                  ),
                   const SizedBox(height: 12),
-                  _textField(descC, 'Short Description', Icons.description_outlined, maxLines: 2),
+                  _textField(
+                    descC,
+                    'Short Description',
+                    Icons.description_outlined,
+                    maxLines: 2,
+                  ),
                   const SizedBox(height: 12),
-                  _textField(contributionC, 'Your Contribution', Icons.handyman_outlined, maxLines: 2),
+                  _textField(
+                    contributionC,
+                    'Your Contribution',
+                    Icons.handyman_outlined,
+                    maxLines: 2,
+                  ),
                   const SizedBox(height: 12),
 
                   // Date & Status
@@ -205,19 +286,31 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
                         child: InkWell(
                           onTap: () async {
                             final d = await showDatePicker(
-                              context: stc, initialDate: selectedDate,
-                              firstDate: DateTime(2020), lastDate: DateTime(2030),
+                              context: stc,
+                              initialDate: selectedDate,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2030),
                             );
-                            if (d != null) setModalState(() => selectedDate = d);
+                            if (d != null) {
+                              setModalState(() => selectedDate = d);
+                            }
                           },
-                          child: _fakeField(DateFormat('dd MMM yyyy').format(selectedDate), Icons.calendar_month),
+                          child: _fakeField(
+                            DateFormat('dd MMM yyyy').format(selectedDate),
+                            Icons.calendar_month,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _dropdownField(
                           value: status,
-                          items: ['UPCOMING', 'COMPLETED', 'PARTICIPATED', 'WINNER'],
+                          items: [
+                            'UPCOMING',
+                            'COMPLETED',
+                            'PARTICIPATED',
+                            'WINNER',
+                          ],
                           onChanged: (v) => setModalState(() => status = v!),
                         ),
                       ),
@@ -228,9 +321,17 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
                   _sectionTitle('Participation Type'),
                   Row(
                     children: [
-                      _choiceChip('Solo', !isTeam, () => setModalState(() => isTeam = false)),
+                      _choiceChip(
+                        'Solo',
+                        !isTeam,
+                        () => setModalState(() => isTeam = false),
+                      ),
                       const SizedBox(width: 12),
-                      _choiceChip('Team', isTeam, () => setModalState(() => isTeam = true)),
+                      _choiceChip(
+                        'Team',
+                        isTeam,
+                        () => setModalState(() => isTeam = true),
+                      ),
                     ],
                   ),
 
@@ -241,7 +342,8 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
                       hint: 'Team Member Name',
                       tags: teamMembers,
                       onAdd: (val) => setModalState(() => teamMembers.add(val)),
-                      onRemove: (idx) => setModalState(() => teamMembers.removeAt(idx)),
+                      onRemove: (idx) =>
+                          setModalState(() => teamMembers.removeAt(idx)),
                     ),
                   ],
 
@@ -252,7 +354,8 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
                     hint: 'e.g. Flutter, Node.js',
                     tags: skills,
                     onAdd: (val) => setModalState(() => skills.add(val)),
-                    onRemove: (idx) => setModalState(() => skills.removeAt(idx)),
+                    onRemove: (idx) =>
+                        setModalState(() => skills.removeAt(idx)),
                   ),
 
                   const SizedBox(height: 24),
@@ -261,7 +364,12 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
                     children: [
                       _sectionTitle('Competition Rounds'),
                       TextButton.icon(
-                        onPressed: () => setModalState(() => rounds.add({'roundName': 'Round ${rounds.length + 1}', 'description': ''})),
+                        onPressed: () => setModalState(
+                          () => rounds.add({
+                            'roundName': 'Round ${rounds.length + 1}',
+                            'description': '',
+                          }),
+                        ),
                         icon: const Icon(Icons.add_circle_outline, size: 18),
                         label: const Text('Add Round'),
                       ),
@@ -282,20 +390,52 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
                             ),
                             child: Column(
                               children: [
-                                _textField(TextEditingController(text: rounds[idx]['roundName'])..selection = TextSelection.fromPosition(TextPosition(offset: rounds[idx]['roundName']!.length)), 'Round Name', Icons.label_important_outline, 
-                                  onChanged: (v) => rounds[idx]['roundName'] = v),
+                                _textField(
+                                  TextEditingController(
+                                      text: rounds[idx]['roundName'],
+                                    )
+                                    ..selection = TextSelection.fromPosition(
+                                      TextPosition(
+                                        offset:
+                                            rounds[idx]['roundName']!.length,
+                                      ),
+                                    ),
+                                  'Round Name',
+                                  Icons.label_important_outline,
+                                  onChanged: (v) =>
+                                      rounds[idx]['roundName'] = v,
+                                ),
                                 const SizedBox(height: 8),
-                                _textField(TextEditingController(text: rounds[idx]['description'])..selection = TextSelection.fromPosition(TextPosition(offset: rounds[idx]['description']!.length)), 'Result / Description', Icons.notes, 
-                                  onChanged: (v) => rounds[idx]['description'] = v),
+                                _textField(
+                                  TextEditingController(
+                                      text: rounds[idx]['description'],
+                                    )
+                                    ..selection = TextSelection.fromPosition(
+                                      TextPosition(
+                                        offset:
+                                            rounds[idx]['description']!.length,
+                                      ),
+                                    ),
+                                  'Result / Description',
+                                  Icons.notes,
+                                  onChanged: (v) =>
+                                      rounds[idx]['description'] = v,
+                                ),
                               ],
                             ),
                           ),
                           if (rounds.length > 1)
                             Positioned(
-                              right: 0, top: 0,
+                              right: 0,
+                              top: 0,
                               child: IconButton(
-                                icon: const Icon(Icons.close, size: 18, color: AppColors.error),
-                                onPressed: () => setModalState(() => rounds.removeAt(idx)),
+                                icon: const Icon(
+                                  Icons.close,
+                                  size: 18,
+                                  color: AppColors.error,
+                                ),
+                                onPressed: () =>
+                                    setModalState(() => rounds.removeAt(idx)),
                               ),
                             ),
                         ],
@@ -310,7 +450,9 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         elevation: 8,
                         shadowColor: AppColors.primary.withAlpha(100),
                       ),
@@ -329,17 +471,29 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
                           'rounds': rounds,
                         };
 
-                        final res = isEdit 
-                          ? await _api.put('${ApiConstants.hackathons}/${hackathon.id}', body: body)
-                          : await _api.post(ApiConstants.hackathons, body: body);
-                        
+                        final res = isEdit
+                            ? await _api.put(
+                                '${ApiConstants.hackathons}/${hackathon.id}',
+                                body: body,
+                              )
+                            : await _api.post(
+                                ApiConstants.hackathons,
+                                body: body,
+                              );
+
                         if (!stc.mounted) return;
                         if (res.success) {
                           Navigator.pop(stc);
                           _loadHackathons();
                         }
                       },
-                      child: Text(isEdit ? 'Save Changes' : 'Save Achievement', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16)),
+                      child: Text(
+                        isEdit ? 'Save Changes' : 'Save Achievement',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -357,10 +511,22 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: const Text('Delete Log', style: TextStyle(color: Colors.white)),
-        content: const Text('Are you sure you want to delete this competition entry?', style: TextStyle(color: Colors.white70)),
+        content: const Text(
+          'Are you sure you want to delete this competition entry?',
+          style: TextStyle(color: Colors.white70),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: AppColors.error))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
         ],
       ),
     );
@@ -373,7 +539,14 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
   Widget _sectionTitle(String t) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Text(t, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
+      child: Text(
+        t,
+        style: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primary,
+        ),
+      ),
     );
   }
 
@@ -391,7 +564,7 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
           const SizedBox(width: 4),
           Expanded(
             child: Text(
-              t, 
+              t,
               maxLines: 1,
               style: const TextStyle(color: Colors.white, fontSize: 12),
               overflow: TextOverflow.ellipsis,
@@ -402,7 +575,11 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
     );
   }
 
-  Widget _dropdownField({required String value, required List<String> items, required Function(String?) onChanged}) {
+  Widget _dropdownField({
+    required String value,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
@@ -417,10 +594,18 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
           dropdownColor: AppColors.cardDark,
           isExpanded: true,
           style: const TextStyle(color: Colors.white, fontSize: 12),
-          items: items.map((e) => DropdownMenuItem(
-            value: e, 
-            child: Text(e, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12))
-          )).toList(),
+          items: items
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(
+                    e,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              )
+              .toList(),
           onChanged: onChanged,
         ),
       ),
@@ -433,16 +618,32 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.surfaceLight.withAlpha(50),
+          color: selected
+              ? AppColors.primary
+              : AppColors.surfaceLight.withAlpha(50),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? AppColors.primary : AppColors.divider),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.divider,
+          ),
         ),
-        child: Text(label, style: TextStyle(color: selected ? Colors.white : AppColors.textSecondary, fontWeight: FontWeight.bold)),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : AppColors.textSecondary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
 
-  Widget _tagInput({required TextEditingController controller, required String hint, required List<String> tags, required Function(String) onAdd, required Function(int) onRemove}) {
+  Widget _tagInput({
+    required TextEditingController controller,
+    required String hint,
+    required List<String> tags,
+    required Function(String) onAdd,
+    required Function(int) onRemove,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -460,29 +661,51 @@ class _HackathonsScreenState extends ConsumerState<HackathonsScreen> {
             ),
           ),
           onSubmitted: (v) {
-             if (v.isEmpty) return;
-             onAdd(v.trim());
-             controller.clear();
+            if (v.isEmpty) return;
+            onAdd(v.trim());
+            controller.clear();
           },
         ),
         if (tags.isNotEmpty) ...[
           const SizedBox(height: 12),
           Wrap(
-            spacing: 8, runSpacing: 8,
-            children: tags.asMap().entries.map((e) => Chip(
-              label: Text(e.value, style: const TextStyle(fontSize: 12, color: Colors.white)),
-              backgroundColor: AppColors.primary.withAlpha(50),
-              deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white),
-              onDeleted: () => onRemove(e.key),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            )).toList(),
+            spacing: 8,
+            runSpacing: 8,
+            children: tags
+                .asMap()
+                .entries
+                .map(
+                  (e) => Chip(
+                    label: Text(
+                      e.value,
+                      style: const TextStyle(fontSize: 12, color: Colors.white),
+                    ),
+                    backgroundColor: AppColors.primary.withAlpha(50),
+                    deleteIcon: const Icon(
+                      Icons.close,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                    onDeleted: () => onRemove(e.key),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                )
+                .toList(),
           ),
         ],
       ],
     );
   }
 
-  Widget _textField(TextEditingController c, String hint, IconData icon, {int maxLines = 1, Function(String)? onChanged}) {
+  Widget _textField(
+    TextEditingController c,
+    String hint,
+    IconData icon, {
+    int maxLines = 1,
+    Function(String)? onChanged,
+  }) {
     return TextField(
       controller: c,
       maxLines: maxLines,
@@ -505,7 +728,7 @@ class _HackathonCard extends StatelessWidget {
   final Function(String) onDelete;
 
   const _HackathonCard({
-    required this.hackathon, 
+    required this.hackathon,
     required this.onRefresh,
     required this.onEdit,
     required this.onDelete,
@@ -513,9 +736,10 @@ class _HackathonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasDetails = hackathon.description != null || 
-                       hackathon.contribution != null || 
-                       hackathon.skillsUsed.isNotEmpty;
+    final hasDetails =
+        hackathon.description != null ||
+        hackathon.contribution != null ||
+        hackathon.skillsUsed.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -548,7 +772,11 @@ class _HackathonCard extends StatelessWidget {
                       color: AppColors.primary.withAlpha(30),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(Icons.emoji_events_rounded, color: AppColors.primary, size: 24),
+                    child: const Icon(
+                      Icons.emoji_events_rounded,
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -563,7 +791,8 @@ class _HackathonCard extends StatelessWidget {
                             color: Colors.white,
                           ),
                         ),
-                        if (hackathon.projectName != null && hackathon.projectName!.isNotEmpty)
+                        if (hackathon.projectName != null &&
+                            hackathon.projectName!.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
                             child: Text(
@@ -580,15 +809,30 @@ class _HackathonCard extends StatelessWidget {
                   ),
                   _statusBadge(hackathon.status),
                   PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, color: AppColors.textMuted),
+                    icon: const Icon(
+                      Icons.more_vert,
+                      color: AppColors.textMuted,
+                    ),
                     color: AppColors.cardDark,
                     onSelected: (val) {
                       if (val == 'edit') onEdit(hackathon);
                       if (val == 'delete') onDelete(hackathon.id);
                     },
                     itemBuilder: (ctx) => [
-                      const PopupMenuItem(value: 'edit', child: Text('Edit', style: TextStyle(color: Colors.white))),
-                      const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Text(
+                          'Edit',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Text(
+                          'Delete',
+                          style: TextStyle(color: AppColors.error),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -602,22 +846,36 @@ class _HackathonCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (hackathon.description != null && hackathon.description!.isNotEmpty)
+                    if (hackathon.description != null &&
+                        hackathon.description!.isNotEmpty)
                       Text(
                         hackathon.description!,
-                        style: GoogleFonts.inter(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                          height: 1.5,
+                        ),
                       ),
-                    if (hackathon.contribution != null && hackathon.contribution!.isNotEmpty) ...[
+                    if (hackathon.contribution != null &&
+                        hackathon.contribution!.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.handyman_outlined, size: 14, color: AppColors.primary),
+                          const Icon(
+                            Icons.handyman_outlined,
+                            size: 14,
+                            color: AppColors.primary,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Contribution: ${hackathon.contribution}',
-                              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, fontStyle: FontStyle.italic),
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                                fontStyle: FontStyle.italic,
+                              ),
                             ),
                           ),
                         ],
@@ -632,18 +890,30 @@ class _HackathonCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                   child: Wrap(
-                    spacing: 8, runSpacing: 8,
-                    children: hackathon.skillsUsed.map((s) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceLight.withAlpha(40),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        s,
-                        style: GoogleFonts.inter(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w600),
-                      ),
-                    )).toList(),
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: hackathon.skillsUsed
+                        .map(
+                          (s) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceLight.withAlpha(40),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              s,
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ),
             ],
@@ -653,19 +923,26 @@ class _HackathonCard extends StatelessWidget {
             // BOTTOM BAR: TEAM, DATE, ROUNDS
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.black.withAlpha(20),
-              ),
+              decoration: BoxDecoration(color: Colors.black.withAlpha(20)),
               child: Row(
                 children: [
-                   _infoRow(Icons.calendar_month_outlined, _formatDate(hackathon.date)),
-                   const Spacer(),
-                   if (hackathon.isTeam)
-                      _infoRow(Icons.groups_outlined, '${hackathon.teamMembers.length + 1} members'),
-                   if (hackathon.rounds.isNotEmpty) ...[
-                      if (hackathon.isTeam) const SizedBox(width: 12),
-                      _infoRow(Icons.layers_outlined, '${hackathon.rounds.length} rounds'),
-                   ],
+                  _infoRow(
+                    Icons.calendar_month_outlined,
+                    _formatDate(hackathon.date),
+                  ),
+                  const Spacer(),
+                  if (hackathon.isTeam)
+                    _infoRow(
+                      Icons.groups_outlined,
+                      '${hackathon.teamMembers.length + 1} members',
+                    ),
+                  if (hackathon.rounds.isNotEmpty) ...[
+                    if (hackathon.isTeam) const SizedBox(width: 12),
+                    _infoRow(
+                      Icons.layers_outlined,
+                      '${hackathon.rounds.length} rounds',
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -688,12 +965,19 @@ class _HackathonCard extends StatelessWidget {
   Widget _statusBadge(String status) {
     Color color;
     switch (status) {
-      case 'WINNER': color = AppColors.success; break;
-      case 'PARTICIPATED': color = AppColors.primary; break;
-      case 'COMPLETED': color = AppColors.accent; break;
-      default: color = AppColors.warning;
+      case 'WINNER':
+        color = AppColors.success;
+        break;
+      case 'PARTICIPATED':
+        color = AppColors.primary;
+        break;
+      case 'COMPLETED':
+        color = AppColors.accent;
+        break;
+      default:
+        color = AppColors.warning;
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -720,7 +1004,11 @@ class _HackathonCard extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           text,
-          style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w500),
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            color: AppColors.textMuted,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );

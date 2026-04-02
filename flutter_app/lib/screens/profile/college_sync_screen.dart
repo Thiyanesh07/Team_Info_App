@@ -28,6 +28,7 @@ class CollegeSyncScreen extends ConsumerStatefulWidget {
 class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
   late final WebViewController _controller;
   final TextEditingController _manualPointsController = TextEditingController();
+  bool _manualFallbackExpanded = false;
   bool _isLoading = true;
   bool _isSyncing = false;
   bool _hasPortalError = false;
@@ -144,6 +145,7 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
   Future<void> _retrySync() async {
     if (_isSyncing) return;
     setState(() {
+      _manualFallbackExpanded = false;
       _errorMessage = null;
       _hasPortalError = false;
       _isLoading = true;
@@ -391,7 +393,37 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
   }
 
   Widget _buildManualFallbackPanel() {
-    if (_stage == SyncStage.synced) return const SizedBox.shrink();
+    if (_stage == SyncStage.synced) {
+      return const SizedBox.shrink();
+    }
+
+    final shouldExpand =
+        _manualFallbackExpanded ||
+        _hasPortalError ||
+        _stage == SyncStage.failed;
+
+    if (!shouldExpand) {
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              setState(() {
+                _manualFallbackExpanded = true;
+              });
+            },
+            icon: const Icon(Icons.expand_less_rounded, size: 18),
+            label: const Text('Manual fallback'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Container(
       width: double.infinity,
@@ -406,12 +438,36 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Manual Fallback: Enter activity points',
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _manualFallbackExpanded = false;
+                  });
+                },
+                tooltip: 'Collapse manual fallback',
+                icon: const Icon(
+                  Icons.expand_more_rounded,
+                  color: Colors.white70,
+                ),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
           Text(
-            'Manual Fallback: Enter activity points',
-            style: GoogleFonts.outfit(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
+            'Use this only if portal login or auto sync fails.',
+            style: GoogleFonts.inter(color: Colors.white60, fontSize: 11),
           ),
           const SizedBox(height: 8),
           Text(

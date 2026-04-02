@@ -269,7 +269,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           ),
           const SizedBox(height: 8),
           const Text(
-            'Keep student reward points up-to-date by syncing across all department sheets.',
+            'Fetch reward points for all teammates using each member\'s roll number from Hugging Face.',
             style: TextStyle(color: AppColors.textMuted, fontSize: 13),
           ),
           const SizedBox(height: 20),
@@ -278,27 +278,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             child: ElevatedButton.icon(
               onPressed: _showSyncConfirmation,
               icon: const Icon(Icons.cloud_download_outlined, size: 18),
-              label: const Text('Sync Rewards from Google Sheets'),
+              label: const Text('Sync Reward Points (All Teammates)'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _showSingleSyncDialog,
-              icon: const Icon(Icons.person_search_outlined, size: 18),
-              label: const Text('Sync by Roll Number'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: BorderSide(color: AppColors.primary.withAlpha(180)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -321,7 +304,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           style: GoogleFonts.outfit(color: Colors.white),
         ),
         content: const Text(
-          'This will fetch Reward Points from all department Google Sheets and update all matching Register Numbers in the database. This action cannot be undone.',
+          'This will fetch reward points for all teammates from Hugging Face using stored roll numbers and update the database. This action cannot be undone.',
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
@@ -349,100 +332,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
-    final res = await _api.post(ApiConstants.syncRewardsSheets);
+    final res = await _api.post(ApiConstants.syncRewards);
 
     if (!mounted) return;
     Navigator.pop(context); // Close loading
 
     if (res.success) {
-      final summary = res.data['summary'];
+      final summary =
+          (res.data['summary'] as Map?)?.cast<String, dynamic>() ??
+          <String, dynamic>{};
       _showSyncSummary(summary);
-      _loadOverview();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(res.message ?? 'Sync failed'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    }
-  }
-
-  void _showSingleSyncDialog() {
-    final rollController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardDark,
-        title: Text(
-          'Sync Single Member',
-          style: GoogleFonts.outfit(color: Colors.white),
-        ),
-        content: TextField(
-          controller: rollController,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'Enter Roll Number (e.g. 21CS001)',
-            hintStyle: const TextStyle(color: AppColors.textMuted),
-            filled: true,
-            fillColor: AppColors.background,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final regNo = rollController.text.trim();
-              if (regNo.isEmpty) return;
-              Navigator.pop(ctx);
-              _syncRewardPointForRoll(regNo);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Sync Now'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _syncRewardPointForRoll(String regNo) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-
-    final res = await _api.post(
-      ApiConstants.syncRewardsSheets,
-      body: {'regNo': regNo},
-    );
-
-    if (!mounted) return;
-    Navigator.pop(context);
-
-    if (res.success) {
-      final summary = res.data['summary'] as Map<String, dynamic>?;
-      final points = summary?['rewardPoints'];
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            points != null
-                ? 'Synced $regNo successfully. New points: $points'
-                : 'Synced $regNo successfully.',
-          ),
-          backgroundColor: AppColors.success,
-        ),
-      );
       _loadOverview();
       _loadAllUsers();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(res.message ?? 'Sync failed for $regNo'),
+          content: Text(res.message ?? 'Sync failed'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -470,24 +375,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           children: [
             _summaryItem(
               'Users Updated',
-              summary['updated'].toString(),
+              (summary['updatedCount'] ?? 0).toString(),
               Colors.green,
             ),
             _summaryItem(
-              'Not Matched',
-              summary['notFound'].toString(),
+              'No Data / Failed',
+              (summary['failedCount'] ?? 0).toString(),
               Colors.orange,
             ),
             _summaryItem(
-              'Database Total',
-              summary['totalInDatabase'].toString(),
+              'Total Processed',
+              (summary['total'] ?? 0).toString(),
               Colors.blue,
-            ),
-            const Divider(color: AppColors.divider, height: 24),
-            _summaryItem(
-              'Sheet Records',
-              summary['totalInSheet'].toString(),
-              Colors.white,
             ),
           ],
         ),

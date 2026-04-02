@@ -32,7 +32,7 @@ router.put('/manage/projects/:id', updateProject);
 
 /**
  * @route POST /api/admin/sync/rewards
- * @desc Sync reward points for all users (New API integration pending)
+ * @desc Sync reward points for all teammates via Hugging Face roll-number lookup
  */
 router.post('/sync/rewards', syncRewardsFromSheets);
 

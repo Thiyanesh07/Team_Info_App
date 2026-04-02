@@ -10,7 +10,7 @@ import 'package:team_info_app/screens/learning/learning_detail_screen.dart';
 import 'package:team_info_app/core/services/excel_export_service.dart';
 import 'package:team_info_app/core/widgets/export_selection_dialog.dart';
 import 'package:team_info_app/providers/auth_provider.dart';
-import 'package:team_info_app/core/enums/user_role.dart';
+import 'package:team_info_app/screens/shared/member_data_view_screen.dart';
 
 class LearningScreen extends ConsumerStatefulWidget {
   const LearningScreen({super.key});
@@ -46,6 +46,9 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authProvider).user;
+    final canViewOthers = user != null && user.role.canViewAllData;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -55,6 +58,21 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
         ),
         centerTitle: true,
         actions: [
+          if (canViewOthers)
+            IconButton(
+              icon: const Icon(Icons.people_alt_outlined),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MemberDataViewScreen(
+                      dataType: MemberDataType.learning,
+                    ),
+                  ),
+                );
+              },
+              tooltip: 'View Member Learning',
+            ),
           IconButton(
             icon: const Icon(Icons.file_download_outlined),
             onPressed: () => _handleExport(),
@@ -94,28 +112,32 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
   }
 
   void _handleExport() {
-    final user = ref.read(authProvider).user;
-    if (user == null) return;
+    if (ref.read(authProvider).user == null) return;
 
-    final isLeader = [UserRole.admin, UserRole.captain, UserRole.viceCaptain, UserRole.strategist, UserRole.manager]
-        .contains(user.role);
-
-    if (isLeader) {
-      showDialog(
-        context: context,
-        builder: (_) => ExportSelectionDialog(
-          title: 'Export Learning Logs',
-          onExport: (scope, selectedUserId) async {
-            await _runExport(scope: scope, userId: selectedUserId);
-          },
-        ),
-      );
-    } else {
-      _runExport(scope: 'SELF');
-    }
+    showDialog(
+      context: context,
+      builder: (_) => ExportSelectionDialog(
+        title: 'Export Learning Logs',
+        onExport: (scope, selectedUserId, timeline, startDate, endDate) async {
+          await _runExport(
+            scope: scope,
+            userId: selectedUserId,
+            timeline: timeline,
+            startDate: startDate,
+            endDate: endDate,
+          );
+        },
+      ),
+    );
   }
 
-  Future<void> _runExport({required String scope, String? userId}) async {
+  Future<void> _runExport({
+    required String scope,
+    String? userId,
+    ExportTimeline timeline = ExportTimeline.today,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Preparing Excel report...')),
@@ -126,13 +148,21 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
         filename: 'LearningLogs_${DateTime.now().millisecondsSinceEpoch}.xlsx',
         queryParams: {
           'scope': scope,
+          'timeline': timeline.name.toUpperCase(),
+          if (startDate != null)
+            'startDate': startDate.toIso8601String().split('T')[0],
+          if (endDate != null)
+            'endDate': endDate.toIso8601String().split('T')[0],
           if (userId != null) 'userId': userId,
         },
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -219,41 +249,90 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text('Level', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              const Text(
+                'Level',
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED']
-                    .map((l) => GestureDetector(
-                  onTap: () => setModalState(() => level = l),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: level == l ? AppColors.primary.withAlpha(30) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: level == l ? AppColors.primary : AppColors.divider),
-                    ),
-                    child: Text(l, style: TextStyle(color: level == l ? AppColors.primary : Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
-                )).toList(),
+                    .map(
+                      (l) => GestureDetector(
+                        onTap: () => setModalState(() => level = l),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: level == l
+                                ? AppColors.primary.withAlpha(30)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: level == l
+                                  ? AppColors.primary
+                                  : AppColors.divider,
+                            ),
+                          ),
+                          child: Text(
+                            l,
+                            style: TextStyle(
+                              color: level == l
+                                  ? AppColors.primary
+                                  : Colors.white70,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
               ),
               const SizedBox(height: 16),
-              const Text('Status', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              const Text(
+                'Status',
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
               const SizedBox(height: 8),
               Row(
-                children: ['ONGOING', 'COMPLETED'].map((s) => GestureDetector(
-                  onTap: () => setModalState(() => status = s),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: status == s ? AppColors.success.withAlpha(30) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: status == s ? AppColors.success : AppColors.divider),
-                    ),
-                    child: Text(s, style: TextStyle(color: status == s ? AppColors.success : Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
-                )).toList(),
+                children: ['ONGOING', 'COMPLETED']
+                    .map(
+                      (s) => GestureDetector(
+                        onTap: () => setModalState(() => status = s),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: status == s
+                                ? AppColors.success.withAlpha(30)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: status == s
+                                  ? AppColors.success
+                                  : AppColors.divider,
+                            ),
+                          ),
+                          child: Text(
+                            s,
+                            style: TextStyle(
+                              color: status == s
+                                  ? AppColors.success
+                                  : Colors.white70,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -267,7 +346,10 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
                       body: {
                         'skillName': skillC.text,
                         'level': level,
-                        'topics': topicsC.text.split(',').map((e) => e.trim()).toList(),
+                        'topics': topicsC.text
+                            .split(',')
+                            .map((e) => e.trim())
+                            .toList(),
                         'status': status,
                       },
                     );
@@ -292,11 +374,26 @@ class _LearningScreenState extends ConsumerState<LearningScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Delete Tracker', style: TextStyle(color: Colors.white)),
-        content: const Text('Are you sure you want to delete this learning tracker?', style: TextStyle(color: Colors.white70)),
+        title: const Text(
+          'Delete Tracker',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Are you sure you want to delete this learning tracker?',
+          style: TextStyle(color: Colors.white70),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: AppColors.error))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
         ],
       ),
     );
@@ -513,11 +610,27 @@ class _LearningCard extends StatelessWidget {
                   ),
                 ),
                 PopupMenuButton(
-                  icon: const Icon(Icons.more_vert, color: AppColors.textMuted, size: 20),
+                  icon: const Icon(
+                    Icons.more_vert,
+                    color: AppColors.textMuted,
+                    size: 20,
+                  ),
                   color: AppColors.surface,
                   itemBuilder: (_) => [
-                    const PopupMenuItem(value: 'edit', child: Text('Edit', style: TextStyle(color: AppColors.primary))),
-                    const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Text(
+                        'Edit',
+                        style: TextStyle(color: AppColors.primary),
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text(
+                        'Delete',
+                        style: TextStyle(color: AppColors.error),
+                      ),
+                    ),
                   ],
                   onSelected: (v) {
                     if (v == 'edit') onEdit();
@@ -560,4 +673,3 @@ class _LearningCard extends StatelessWidget {
     );
   }
 }
-

@@ -6,7 +6,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ReportExportService {
-  static Future<void> exportToPdf(List<dynamic> reports, String title) async {
+  static Future<void> exportToPdf(
+    List<dynamic> reports,
+    String title, {
+    String fileNameSuffix = '',
+  }) async {
     final pdf = pw.Document();
 
     pdf.addPage(
@@ -54,7 +58,9 @@ class ReportExportService {
     );
 
     final output = await getTemporaryDirectory();
-    final file = File('${output.path}/${title.replaceAll(' ', '_')}.pdf');
+    final file = File(
+      '${output.path}/${title.replaceAll(' ', '_')}$fileNameSuffix.pdf',
+    );
     await file.writeAsBytes(await pdf.save());
 
     await SharePlus.instance.share(
@@ -62,7 +68,11 @@ class ReportExportService {
     );
   }
 
-  static Future<void> exportToExcel(List<dynamic> reports, String title) async {
+  static Future<void> exportToExcel(
+    List<dynamic> reports,
+    String title, {
+    String fileNameSuffix = '',
+  }) async {
     var excel = Excel.createExcel();
     var sheet = excel['Sheet1'];
 
@@ -94,7 +104,9 @@ class ReportExportService {
     var fileBytes = excel.save();
 
     final output = await getTemporaryDirectory();
-    final file = File('${output.path}/${title.replaceAll(' ', '_')}.xlsx');
+    final file = File(
+      '${output.path}/${title.replaceAll(' ', '_')}$fileNameSuffix.xlsx',
+    );
 
     if (fileBytes != null) {
       await file.writeAsBytes(fileBytes);

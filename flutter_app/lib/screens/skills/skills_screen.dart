@@ -6,11 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:team_info_app/core/services/excel_export_service.dart';
 import 'package:team_info_app/core/widgets/export_selection_dialog.dart';
 import 'package:team_info_app/providers/auth_provider.dart';
-import 'package:team_info_app/core/enums/user_role.dart';
 import 'package:team_info_app/services/api_service.dart';
 import 'package:team_info_app/core/constants/api_constants.dart';
-import 'package:team_info_app/models/app_models.dart'; 
+import 'package:team_info_app/models/app_models.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
+import 'package:team_info_app/screens/shared/member_data_view_screen.dart';
 
 class SkillsScreen extends ConsumerStatefulWidget {
   final UserModel? targetUser; // If null, manage own skills
@@ -50,6 +50,8 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
   @override
   Widget build(BuildContext context) {
     final isMe = widget.targetUser == null;
+    final user = ref.watch(authProvider).user;
+    final canViewOthers = user != null && user.role.canViewAllData;
     final title = isMe
         ? 'Skills Portfolio'
         : '${widget.targetUser!.name.split(' ').first}\'s Skills';
@@ -63,6 +65,21 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
         ),
         centerTitle: true,
         actions: [
+          if (isMe && canViewOthers)
+            IconButton(
+              icon: const Icon(Icons.people_alt_outlined),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MemberDataViewScreen(
+                      dataType: MemberDataType.skills,
+                    ),
+                  ),
+                );
+              },
+              tooltip: 'View Member Skills',
+            ),
           IconButton(
             icon: const Icon(Icons.file_download_outlined),
             onPressed: () => _handleExport(),
@@ -103,10 +120,12 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
                           onDelete: () => _deleteSkill(_skills[i].id),
                           onEdit: () => _showEditSkillDialog(_skills[i]),
                           onTap: () async {
-                            final res = await ref.read(apiServiceProvider).put(
-                              '${ApiConstants.psSkills}/${_skills[i].id}',
-                              body: {'completed': !_skills[i].completed},
-                            );
+                            final res = await ref
+                                .read(apiServiceProvider)
+                                .put(
+                                  '${ApiConstants.psSkills}/${_skills[i].id}',
+                                  body: {'completed': !_skills[i].completed},
+                                );
                             if (res.success) _loadSkills();
                           },
                         )
@@ -119,28 +138,32 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
   }
 
   void _handleExport() {
-    final user = ref.read(authProvider).user;
-    if (user == null) return;
+    if (ref.read(authProvider).user == null) return;
 
-    final isLeader = [UserRole.admin, UserRole.captain, UserRole.viceCaptain, UserRole.strategist, UserRole.manager]
-        .contains(user.role);
-
-    if (isLeader) {
-      showDialog(
-        context: context,
-        builder: (_) => ExportSelectionDialog(
-          title: 'Export Skills',
-          onExport: (scope, selectedUserId) async {
-            await _runExport(scope: scope, userId: selectedUserId);
-          },
-        ),
-      );
-    } else {
-      _runExport(scope: 'SELF');
-    }
+    showDialog(
+      context: context,
+      builder: (_) => ExportSelectionDialog(
+        title: 'Export Skills',
+        onExport: (scope, selectedUserId, timeline, startDate, endDate) async {
+          await _runExport(
+            scope: scope,
+            userId: selectedUserId,
+            timeline: timeline,
+            startDate: startDate,
+            endDate: endDate,
+          );
+        },
+      ),
+    );
   }
 
-  Future<void> _runExport({required String scope, String? userId}) async {
+  Future<void> _runExport({
+    required String scope,
+    String? userId,
+    ExportTimeline timeline = ExportTimeline.today,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Preparing Excel report...')),
@@ -148,16 +171,25 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
 
       await _excelService.downloadAndOpenReport(
         endpoint: ApiConstants.exportSkills,
-        filename: 'SkillsPortfolio_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+        filename:
+            'SkillsPortfolio_${DateTime.now().millisecondsSinceEpoch}.xlsx',
         queryParams: {
           'scope': scope,
+          'timeline': timeline.name.toUpperCase(),
+          if (startDate != null)
+            'startDate': startDate.toIso8601String().split('T')[0],
+          if (endDate != null)
+            'endDate': endDate.toIso8601String().split('T')[0],
           if (userId != null) 'userId': userId,
         },
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -267,15 +299,17 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (nameC.text.isEmpty) return;
-                    final res = await ref.read(apiServiceProvider).post(
-                      ApiConstants.psSkills,
-                      body: {
-                        'skillName': nameC.text,
-                        'type': type,
-                        if (widget.targetUser != null)
-                          'userId': widget.targetUser!.id,
-                      },
-                    );
+                    final res = await ref
+                        .read(apiServiceProvider)
+                        .post(
+                          ApiConstants.psSkills,
+                          body: {
+                            'skillName': nameC.text,
+                            'type': type,
+                            if (widget.targetUser != null)
+                              'userId': widget.targetUser!.id,
+                          },
+                        );
                     if (!context.mounted) return;
                     if (res.success) {
                       Navigator.pop(context);
@@ -363,13 +397,12 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (nameC.text.isEmpty) return;
-                    final res = await ref.read(apiServiceProvider).put(
-                      '${ApiConstants.psSkills}/${skill.id}',
-                      body: {
-                        'skillName': nameC.text,
-                        'type': type,
-                      },
-                    );
+                    final res = await ref
+                        .read(apiServiceProvider)
+                        .put(
+                          '${ApiConstants.psSkills}/${skill.id}',
+                          body: {'skillName': nameC.text, 'type': type},
+                        );
                     if (!context.mounted) return;
                     if (res.success) {
                       Navigator.pop(context);
@@ -387,7 +420,9 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
   }
 
   Future<void> _deleteSkill(String id) async {
-    final res = await ref.read(apiServiceProvider).delete('${ApiConstants.psSkills}/$id');
+    final res = await ref
+        .read(apiServiceProvider)
+        .delete('${ApiConstants.psSkills}/$id');
     if (res.success) _loadSkills();
   }
 }

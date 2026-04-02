@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { sendPushToUsers } = require('../services/pushNotification.service');
+const { validateAndNormalizeUrl } = require('../lib/urlValidation');
 
 /**
  * Socket.io handlers for real-time chat
@@ -51,12 +52,22 @@ const setupSocketHandlers = (io, prisma) => {
     // ─── Team Chat ───────────────────────────────
     socket.on('team-message', async (data) => {
       try {
+        let normalizedImageUrl;
+        let normalizedFileUrl;
+        try {
+          normalizedImageUrl = validateAndNormalizeUrl(data.imageUrl, 'imageUrl');
+          normalizedFileUrl = validateAndNormalizeUrl(data.fileUrl, 'fileUrl');
+        } catch (e) {
+          socket.emit('error', { message: e.message });
+          return;
+        }
+
         const msg = await prisma.teamMessage.create({
           data: {
             senderId: socket.userId,
             message: data.message,
-            imageUrl: data.imageUrl,
-            fileUrl: data.fileUrl,
+            imageUrl: normalizedImageUrl,
+            fileUrl: normalizedFileUrl,
             fileName: data.fileName,
             fileType: data.fileType,
             replyToId: data.replyToId,
@@ -109,13 +120,23 @@ const setupSocketHandlers = (io, prisma) => {
           return;
         }
 
+        let normalizedImageUrl;
+        let normalizedFileUrl;
+        try {
+          normalizedImageUrl = validateAndNormalizeUrl(data.imageUrl, 'imageUrl');
+          normalizedFileUrl = validateAndNormalizeUrl(data.fileUrl, 'fileUrl');
+        } catch (e) {
+          socket.emit('error', { message: e.message });
+          return;
+        }
+
         const msg = await prisma.chatMessage.create({
           data: {
             conversationId: data.conversationId,
             senderId: socket.userId,
             message: data.message,
-            imageUrl: data.imageUrl,
-            fileUrl: data.fileUrl,
+            imageUrl: normalizedImageUrl,
+            fileUrl: normalizedFileUrl,
             fileName: data.fileName,
             fileType: data.fileType,
             replyToId: data.replyToId,

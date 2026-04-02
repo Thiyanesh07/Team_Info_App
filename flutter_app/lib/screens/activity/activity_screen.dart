@@ -10,7 +10,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:team_info_app/core/services/excel_export_service.dart';
 import 'package:team_info_app/core/widgets/export_selection_dialog.dart';
 import 'package:team_info_app/providers/auth_provider.dart';
-import 'package:team_info_app/core/enums/user_role.dart';
+import 'package:team_info_app/screens/shared/member_data_view_screen.dart';
 
 class ActivityScreen extends ConsumerStatefulWidget {
   const ActivityScreen({super.key});
@@ -68,6 +68,9 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authProvider).user;
+    final canViewOthers = user != null && user.role.canViewAllData;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -77,6 +80,21 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
         ),
         centerTitle: true,
         actions: [
+          if (canViewOthers)
+            IconButton(
+              icon: const Icon(Icons.people_alt_outlined),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MemberDataViewScreen(
+                      dataType: MemberDataType.activities,
+                    ),
+                  ),
+                );
+              },
+              tooltip: 'View Member Logs',
+            ),
           IconButton(
             icon: const Icon(Icons.file_download_outlined),
             onPressed: _handleExport,
@@ -120,45 +138,58 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
   }
 
   void _handleExport() {
-    final user = ref.read(authProvider).user;
-    if (user == null) return;
+    if (ref.read(authProvider).user == null) return;
 
-    final isLeader = [UserRole.admin, UserRole.captain, UserRole.viceCaptain, UserRole.strategist, UserRole.manager]
-        .contains(user.role);
-
-    if (isLeader) {
-      showDialog(
-        context: context,
-        builder: (_) => ExportSelectionDialog(
-          title: 'Export Activities',
-          onExport: (scope, selectedUserId) async {
-            await _runExport(scope: scope, userId: selectedUserId);
-          },
-        ),
-      );
-    } else {
-      _runExport(scope: 'SELF');
-    }
+    showDialog(
+      context: context,
+      builder: (_) => ExportSelectionDialog(
+        title: 'Export Activities',
+        onExport: (scope, selectedUserId, timeline, startDate, endDate) async {
+          await _runExport(
+            scope: scope,
+            userId: selectedUserId,
+            timeline: timeline,
+            startDate: startDate,
+            endDate: endDate,
+          );
+        },
+      ),
+    );
   }
 
-  Future<void> _runExport({required String scope, String? userId}) async {
+  Future<void> _runExport({
+    required String scope,
+    String? userId,
+    ExportTimeline timeline = ExportTimeline.today,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Preparing Excel report...')),
       );
-      
+
       await _excelService.downloadAndOpenReport(
         endpoint: ApiConstants.exportActivities,
-        filename: 'DailyActivities_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+        filename:
+            'DailyActivities_${DateTime.now().millisecondsSinceEpoch}.xlsx',
         queryParams: {
           'scope': scope,
+          'timeline': timeline.name.toUpperCase(),
+          if (startDate != null)
+            'startDate': startDate.toIso8601String().split('T')[0],
+          if (endDate != null)
+            'endDate': endDate.toIso8601String().split('T')[0],
           if (userId != null) 'userId': userId,
         },
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -595,6 +626,8 @@ class _ActivityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final startTime = _formatTime(activity.startTime);
     final endTime = _formatTime(activity.endTime);
+    final displayTitle = _displayTitle();
+    final displayDescription = _displayDescription();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -627,7 +660,11 @@ class _ActivityCard extends StatelessWidget {
                       backgroundColor: color.withAlpha(20),
                       child: Text(
                         (activity.user?['name'] ?? 'U')[0].toUpperCase(),
-                        style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: color,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -643,17 +680,17 @@ class _ActivityCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  activity.customType ?? activity.type,
+                  displayTitle,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
                 ),
-                if (activity.description?.isNotEmpty == true) ...[
+                if (displayDescription.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
-                    activity.description!,
+                    displayDescription,
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       color: AppColors.textSecondary,
@@ -740,6 +777,49 @@ class _ActivityCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _displayTitle() {
+    // Learning logs may store the Learning record id in customType;
+    // use the first "Topic: ..." line as human-friendly title.
+    if (activity.type == 'LEARNING') {
+      final topic = _extractTopicFromDescription();
+      if (topic.isNotEmpty) return topic;
+    }
+
+    final custom = activity.customType?.trim();
+    if (custom != null && custom.isNotEmpty && !_looksLikeUuid(custom)) {
+      return custom;
+    }
+    return activity.type;
+  }
+
+  String _displayDescription() {
+    final raw = activity.description?.trim() ?? '';
+    if (raw.isEmpty) return '';
+
+    if (activity.type == 'LEARNING') {
+      final lines = raw.split('\n');
+      if (lines.isNotEmpty && lines.first.trim().startsWith('Topic: ')) {
+        return lines.skip(1).join('\n').trim();
+      }
+    }
+    return raw;
+  }
+
+  String _extractTopicFromDescription() {
+    final raw = activity.description?.trim() ?? '';
+    if (raw.isEmpty) return '';
+    final firstLine = raw.split('\n').first.trim();
+    if (!firstLine.startsWith('Topic: ')) return '';
+    return firstLine.substring(7).trim();
+  }
+
+  bool _looksLikeUuid(String value) {
+    final uuidPattern = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+    );
+    return uuidPattern.hasMatch(value);
   }
 
   String _formatTime(String iso) {

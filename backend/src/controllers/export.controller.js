@@ -25,13 +25,71 @@ const getTargetUserIds = async (req) => {
   return [req.user.id]; // Default to self
 };
 
+const getTimelineRange = (req) => {
+  const timelineRaw = req.query?.timeline;
+  const timeline = typeof timelineRaw === 'string'
+    ? timelineRaw.trim().toUpperCase()
+    : '';
+  const startDate = req.query?.startDate;
+  const endDate = req.query?.endDate;
+
+  // Backward compatibility: old clients sending only startDate/endDate.
+  if (!timeline && startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(`${endDate}T23:59:59.999Z`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      const err = new Error('Invalid startDate or endDate');
+      err.statusCode = 400;
+      throw err;
+    }
+    return { gte: start, lte: end };
+  }
+
+  if (!timeline || timeline === 'ALL') {
+    return null;
+  }
+
+  if (timeline === 'TODAY') {
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+    return { gte: start, lte: end };
+  }
+
+  if (timeline === 'RANGE') {
+    if (!startDate || !endDate) {
+      const err = new Error('startDate and endDate are required for RANGE timeline');
+      err.statusCode = 400;
+      throw err;
+    }
+    const start = new Date(startDate);
+    const end = new Date(`${endDate}T23:59:59.999Z`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      const err = new Error('Invalid startDate or endDate');
+      err.statusCode = 400;
+      throw err;
+    }
+    return { gte: start, lte: end };
+  }
+
+  const err = new Error('Invalid timeline. Use TODAY, RANGE, or ALL');
+  err.statusCode = 400;
+  throw err;
+};
+
 const exportMethods = {
   /** Export Daily Activities */
   async exportActivities(req, res) {
     try {
       const userIds = await getTargetUserIds(req);
+      const dateRange = getTimelineRange(req);
       const data = await prisma.dailyActivity.findMany({
-        where: { userId: { in: userIds } },
+        where: {
+          userId: { in: userIds },
+          ...(dateRange ? { date: dateRange } : {}),
+        },
         include: { user: { select: { name: true, regNo: true, department: true } } },
         orderBy: { date: 'desc' }
       });
@@ -63,7 +121,7 @@ const exportMethods = {
       res.send(buffer);
     } catch (error) {
       console.error('ExportActivities error:', error);
-      res.status(500).json({ success: false, message: 'Failed to export activities' });
+      res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to export activities' });
     }
   },
 
@@ -71,9 +129,13 @@ const exportMethods = {
   async exportProjects(req, res) {
     try {
       const userIds = await getTargetUserIds(req);
+      const dateRange = getTimelineRange(req);
       // For projects, we might want to export projects where these users are members
       const data = await prisma.teamProject.findMany({
-        where: { members: { some: { userId: { in: userIds } } } },
+        where: {
+          members: { some: { userId: { in: userIds } } },
+          ...(dateRange ? { createdAt: dateRange } : {}),
+        },
         include: { 
           members: { include: { user: { select: { name: true } } } },
           assignedCaptain: { select: { name: true } }
@@ -104,7 +166,7 @@ const exportMethods = {
       res.send(buffer);
     } catch (error) {
        console.error('ExportProjects error:', error);
-       res.status(500).json({ success: false, message: 'Failed to export projects' });
+       res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to export projects' });
     }
   },
 
@@ -112,8 +174,12 @@ const exportMethods = {
   async exportHackathons(req, res) {
     try {
       const userIds = await getTargetUserIds(req);
+      const dateRange = getTimelineRange(req);
       const data = await prisma.hackathon.findMany({
-        where: { userId: { in: userIds } },
+        where: {
+          userId: { in: userIds },
+          ...(dateRange ? { date: dateRange } : {}),
+        },
         include: { user: { select: { name: true, regNo: true } } },
         orderBy: { date: 'desc' }
       });
@@ -143,7 +209,7 @@ const exportMethods = {
       res.send(buffer);
     } catch (error) {
        console.error('ExportHackathons error:', error);
-       res.status(500).json({ success: false, message: 'Failed to export hackathons' });
+       res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to export hackathons' });
     }
   },
 
@@ -151,8 +217,12 @@ const exportMethods = {
   async exportSkills(req, res) {
     try {
       const userIds = await getTargetUserIds(req);
+      const dateRange = getTimelineRange(req);
       const psSkills = await prisma.psSkill.findMany({
-        where: { userId: { in: userIds } },
+        where: {
+          userId: { in: userIds },
+          ...(dateRange ? { createdAt: dateRange } : {}),
+        },
         include: { user: { select: { name: true, regNo: true } } }
       });
 
@@ -179,7 +249,7 @@ const exportMethods = {
       res.send(buffer);
     } catch (error) {
        console.error('ExportSkills error:', error);
-       res.status(500).json({ success: false, message: 'Failed to export skills portfolio: ' + error.message });
+       res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to export skills portfolio' });
     }
   },
 
@@ -187,8 +257,12 @@ const exportMethods = {
   async exportLearning(req, res) {
     try {
       const userIds = await getTargetUserIds(req);
+      const dateRange = getTimelineRange(req);
       const data = await prisma.learning.findMany({
-        where: { userId: { in: userIds } },
+        where: {
+          userId: { in: userIds },
+          ...(dateRange ? { createdAt: dateRange } : {}),
+        },
         include: { user: { select: { name: true, regNo: true } } },
         orderBy: { createdAt: 'desc' }
       });
@@ -214,7 +288,7 @@ const exportMethods = {
       res.send(buffer);
     } catch (error) {
        console.error('ExportLearning error:', error);
-       res.status(500).json({ success: false, message: 'Failed to export learning' });
+       res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to export learning' });
     }
   },
 
@@ -222,8 +296,20 @@ const exportMethods = {
   async exportCertifications(req, res) {
     try {
       const userIds = await getTargetUserIds(req);
+      const dateRange = getTimelineRange(req);
+      const certificationWhere = {
+        userId: { in: userIds },
+      };
+
+      if (dateRange) {
+        certificationWhere.OR = [
+          { issuedDate: dateRange },
+          { issuedDate: null, createdAt: dateRange },
+        ];
+      }
+
       const data = await prisma.certification.findMany({
-        where: { userId: { in: userIds } },
+        where: certificationWhere,
         include: { user: { select: { name: true, regNo: true } } },
         orderBy: { createdAt: 'desc' }
       });
@@ -249,7 +335,7 @@ const exportMethods = {
       res.send(buffer);
     } catch (error) {
        console.error('ExportCertifications error:', error);
-       res.status(500).json({ success: false, message: 'Failed to export certifications' });
+       res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to export certifications' });
     }
   }
 };

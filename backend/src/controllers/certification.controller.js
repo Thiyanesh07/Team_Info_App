@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { validateAndNormalizeUrl } = require('../lib/urlValidation');
 
 /** GET /api/certifications */
 const getMyCertifications = async (req, res) => {
@@ -30,9 +31,16 @@ const createCertification = async (req, res) => {
     const { skill, provider, description, issuedDate, proofUrl } = req.body;
     if (!skill) return res.status(400).json({ success: false, message: 'Skill is required' });
 
+    let normalizedProofUrl = proofUrl;
+    try {
+      normalizedProofUrl = validateAndNormalizeUrl(proofUrl, 'proofUrl');
+    } catch (e) {
+      return res.status(400).json({ success: false, message: e.message });
+    }
+
     const cert = await prisma.certification.create({
       data: {
-        userId: req.user.id, skill, provider, description, proofUrl,
+        userId: req.user.id, skill, provider, description, proofUrl: normalizedProofUrl,
         issuedDate: issuedDate ? new Date(issuedDate) : null,
       },
     });
@@ -51,6 +59,13 @@ const updateCertification = async (req, res) => {
 
     const data = { ...req.body };
     if (data.issuedDate) data.issuedDate = new Date(data.issuedDate);
+    if (data.proofUrl !== undefined) {
+      try {
+        data.proofUrl = validateAndNormalizeUrl(data.proofUrl, 'proofUrl');
+      } catch (e) {
+        return res.status(400).json({ success: false, message: e.message });
+      }
+    }
 
     const cert = await prisma.certification.update({ where: { id: req.params.id }, data });
     res.json({ success: true, message: 'Certification updated', data: cert });

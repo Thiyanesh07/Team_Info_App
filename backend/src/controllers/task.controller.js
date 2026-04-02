@@ -154,6 +154,14 @@ const updateTaskStatus = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Only the assignee can update status' });
     }
 
+    const leaderRoles = ['ADMIN', 'CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'];
+    if (!leaderRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only assigned leaders can update status',
+      });
+    }
+
     const { status } = req.body;
     const validStatuses = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
     if (!validStatuses.includes(status)) {
@@ -262,16 +270,42 @@ const exportReports = async (req, res) => {
   try {
     const { startDate, endDate, userId } = req.query;
     const isLeaderOrAdmin = req.user.role !== 'MEMBER';
+    const timeline = typeof req.query?.timeline === 'string'
+      ? req.query.timeline.trim().toUpperCase()
+      : '';
 
     // Base filter
     let where = {};
 
     // Date filtering
-    if (startDate && endDate) {
+    if (!timeline && startDate && endDate) {
       where.createdAt = {
         gte: new Date(startDate),
-        lte: new Date(endDate + 'T23:59:59.999Z'),
+        lte: new Date(`${endDate}T23:59:59.999Z`),
       };
+    } else if (timeline === 'TODAY') {
+      const now = new Date();
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(now);
+      end.setHours(23, 59, 59, 999);
+      where.createdAt = { gte: start, lte: end };
+    } else if (timeline === 'RANGE') {
+      if (!startDate || !endDate) {
+        return res.status(400).json({
+          success: false,
+          message: 'startDate and endDate are required for RANGE timeline',
+        });
+      }
+      where.createdAt = {
+        gte: new Date(startDate),
+        lte: new Date(`${endDate}T23:59:59.999Z`),
+      };
+    } else if (timeline && timeline !== 'ALL') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid timeline. Use TODAY, RANGE, or ALL',
+      });
     }
 
     // Role-based user filtering

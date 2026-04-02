@@ -8,6 +8,35 @@ import '../constants/api_constants.dart';
 class ExcelExportService {
   final _storage = const FlutterSecureStorage();
 
+  String _timelineSuffix(Map<String, String>? queryParams) {
+    if (queryParams == null) return '';
+
+    final timeline = (queryParams['timeline'] ?? '').trim().toUpperCase();
+    if (timeline.isEmpty) return '';
+    if (timeline == 'TODAY') return '_today';
+    if (timeline == 'ALL') return '_all';
+    if (timeline == 'RANGE') {
+      final start = (queryParams['startDate'] ?? '').trim();
+      final end = (queryParams['endDate'] ?? '').trim();
+      if (start.isNotEmpty && end.isNotEmpty) {
+        return '_range_${start}_to_$end';
+      }
+      return '_range';
+    }
+    return '';
+  }
+
+  String _withSuffix(String filename, String suffix) {
+    if (suffix.isEmpty) return filename;
+    final dot = filename.lastIndexOf('.');
+    if (dot <= 0 || dot == filename.length - 1) {
+      return '$filename$suffix';
+    }
+    final base = filename.substring(0, dot);
+    final ext = filename.substring(dot);
+    return '$base$suffix$ext';
+  }
+
   /// Download and open an Excel report from the backend.
   ///
   /// [endpoint] is the export endpoint (e.g. ApiConstants.exportActivities).
@@ -20,16 +49,17 @@ class ExcelExportService {
   }) async {
     try {
       final token = await _storage.read(key: 'auth_token');
-      
-      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint').replace(
-        queryParameters: queryParams,
-      );
+
+      final uri = Uri.parse(
+        '${ApiConstants.baseUrl}$endpoint',
+      ).replace(queryParameters: queryParams);
 
       final response = await http.get(
         uri,
         headers: {
           'Authorization': 'Bearer $token',
-          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'Accept':
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         },
       );
 
@@ -40,12 +70,17 @@ class ExcelExportService {
       // Save to temporary directory or Downloads
       Directory? directory;
       if (Platform.isAndroid) {
-        directory = await getExternalStorageDirectory(); // Android: /storage/emulated/0/Android/data/...
+        directory =
+            await getExternalStorageDirectory(); // Android: /storage/emulated/0/Android/data/...
       } else {
         directory = await getApplicationDocumentsDirectory(); // iOS / Other
       }
 
-      final filePath = '${directory!.path}/$filename';
+      final fileNameWithSuffix = _withSuffix(
+        filename,
+        _timelineSuffix(queryParams),
+      );
+      final filePath = '${directory!.path}/$fileNameWithSuffix';
       final file = File(filePath);
       await file.writeAsBytes(response.bodyBytes);
 
