@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "build": "npx puppeteer browsers install chrome && npx prisma generate && npx prisma migrate deploy && npx prisma db push",
-    "start": "node src/server.js",
+    "start": "npx prisma db push && node src/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
