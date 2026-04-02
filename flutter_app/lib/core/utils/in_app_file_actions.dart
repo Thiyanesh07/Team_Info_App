@@ -234,8 +234,13 @@ class _InAppFilePreviewScreenState extends State<_InAppFilePreviewScreen> {
         source.endsWith('.xls') ||
         source.endsWith('.xlsx');
 
-    // Google docs viewer cannot access protected URLs that require auth headers.
-    if (isDocument && headers.isEmpty) {
+    final uri = Uri.tryParse(url);
+    final isCloudinaryDelivery =
+        uri != null && uri.host.contains('res.cloudinary.com');
+
+    // Google docs viewer cannot access protected URLs that require auth headers,
+    // and can be flaky for direct Cloudinary delivery links.
+    if (isDocument && headers.isEmpty && !isCloudinaryDelivery) {
       return 'https://docs.google.com/gview?embedded=1&url=${Uri.encodeComponent(url)}';
     }
 

@@ -2,11 +2,11 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:team_info_app/services/api_service.dart';
 import '../constants/api_constants.dart';
 
 class ExcelExportService {
-  final _storage = const FlutterSecureStorage();
+  final _api = ApiService();
 
   String _timelineSuffix(Map<String, String>? queryParams) {
     if (queryParams == null) return '';
@@ -48,7 +48,10 @@ class ExcelExportService {
     Map<String, String>? queryParams,
   }) async {
     try {
-      final token = await _storage.read(key: 'auth_token');
+      final token = (await _api.getToken())?.trim();
+      if (token == null || token.isEmpty) {
+        throw Exception('Not authenticated. Please sign in again.');
+      }
 
       final uri = Uri.parse(
         '${ApiConstants.baseUrl}$endpoint',
@@ -64,6 +67,9 @@ class ExcelExportService {
       );
 
       if (response.statusCode != 200) {
+        if (response.statusCode == 401) {
+          throw Exception('Unauthorized (401). Please login again and retry.');
+        }
         throw Exception('Failed to download report: ${response.statusCode}');
       }
 
