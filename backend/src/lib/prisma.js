@@ -1,10 +1,32 @@
 const { PrismaClient } = require('@prisma/client');
 
+const getNormalizedDatabaseUrl = () => {
+  const raw = process.env.DATABASE_URL;
+  if (!raw) return raw;
+
+  try {
+    const parsed = new URL(raw);
+    if (parsed.hostname.includes('supabase.com') && !parsed.searchParams.get('sslmode')) {
+      parsed.searchParams.set('sslmode', 'require');
+      return parsed.toString();
+    }
+  } catch (_err) {
+    return raw;
+  }
+
+  return raw;
+};
+
 /**
  * Prisma Client Singleton
  * Prevents multiple instances and connection exhaustion in serverless/dev environments
  */
 const prisma = global.prisma || new PrismaClient({
+  datasources: {
+    db: {
+      url: getNormalizedDatabaseUrl(),
+    },
+  },
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
 
