@@ -13,13 +13,20 @@ class GoogleSheetsService {
     const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
     
     if (email && privateKey) {
-      this.auth = new google.auth.JWT(
-        email,
-        null,
-        privateKey,
-        ['https://www.googleapis.com/auth/spreadsheets.readonly']
-      );
-      this.sheets = google.sheets({ version: 'v4', auth: this.auth });
+      console.log(`[GoogleSheetsService] Initializing with: ${email}, Key Length: ${privateKey.length}`);
+      try {
+        this.auth = new google.auth.JWT(
+          email,
+          null,
+          privateKey,
+          ['https://www.googleapis.com/auth/spreadsheets.readonly']
+        );
+        this.sheets = google.sheets({ version: 'v4', auth: this.auth });
+      } catch (authError) {
+        console.error('[GoogleSheetsService] Error creating JWT Client:', authError.message);
+      }
+    } else {
+      console.warn('[GoogleSheetsService] MISSING CREDENTIALS. email:', !!email, 'key:', !!privateKey);
     }
   }
 

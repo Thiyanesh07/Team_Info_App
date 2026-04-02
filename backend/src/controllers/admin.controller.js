@@ -231,7 +231,9 @@ const deleteProject = async (req, res) => {
  */
 const syncRewardsFromSheets = async (req, res) => {
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
-  const tabs = (process.env.GOOGLE_SHEET_DEPARTMENTS || 'IT,ISE,FD,FT,EIE,ECE,EEE,CT,CSE,CSD,CSBS,CIVIL,BT,BIOMEDICAL,AIML').split(',');
+  const tabs = (process.env.GOOGLE_SHEET_DEPARTMENTS || 'IT,ISE,FD,FT,EIE,ECE,EEE,CT,CSE,CSD,CSBS,CIVIL,BT,BIOMEDICAL,AIML')
+    .split(',')
+    .map(t => t.trim()); // Trim whitespace/newlines to prevent %0A errors
 
   try {
     const pointsMap = await googleSheetsService.fetchAllDepartments(spreadsheetId, tabs);
