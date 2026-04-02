@@ -191,17 +191,18 @@ server.listen(PORT, '0.0.0.0', async () => {
   console.log(`📡 Socket.io integration ready`);
   console.log(`🔗 Health check available at: http://0.0.0.0:${PORT}/api/health`);
   
-  // Initial DB connection attempt
-  try {
-    await prisma.$connect();
-    console.log('📦 Database connection via Prisma established');
-    
-    // Start background services after DB is ready
-    await schedulerService.init();
-  } catch (err) {
-    console.error('❌ Database connection via Prisma FAILED:');
-    console.error(err.message);
-  }
+    // Initial DB connection attempt with retry
+    try {
+      await prisma.$connectWithRetry();
+      
+      // Start background services after DB is ready
+      await schedulerService.init();
+    } catch (err) {
+      console.error('❌ Database connection via Prisma FATAL ERROR:');
+      console.error(err.message);
+      // In production we keep the process alive so Render doesn't loop forever,
+      // but the health checks will fail.
+    }
 });
 
 // Graceful shutdown
