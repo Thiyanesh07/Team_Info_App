@@ -562,16 +562,26 @@ class _ReportSubmissionScreenState
   }
 
   Widget _buildLabel(String label) {
-    // ...
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 0, top: 4),
+      child: Text(
+        label,
+        style: GoogleFonts.outfit(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
+      ),
+    );
   }
 
   Widget _buildDeadlinePassedAlert() {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.1),
+        color: AppColors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [

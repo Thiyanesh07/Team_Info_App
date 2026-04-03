@@ -145,7 +145,6 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     final now = DateTime.now();
     final deadline = _task!.deadline != null ? DateTime.parse(_task!.deadline!) : null;
     final isDeadlinePassed = deadline != null && now.isAfter(deadline);
-    final canSubmitReport = isAssignee && !isDeadlinePassed;
 
     return Scaffold(
       appBar: AppBar(
@@ -375,9 +374,9 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.1),
+                    color: AppColors.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -546,7 +545,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                       firstDate: DateTime.now().subtract(const Duration(days: 365)),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (picked != null) {
+                    if (picked != null && context.mounted) {
                       final time = await showTimePicker(
                         context: context,
                         initialTime: TimeOfDay.fromDateTime(newDeadline ?? DateTime.now()),

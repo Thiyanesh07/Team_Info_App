@@ -194,7 +194,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
               ),
             ),
             data: (config) => SwitchListTile(
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
               title: Text(
                 'AP Sync via Portal',
                 style: GoogleFonts.outfit(

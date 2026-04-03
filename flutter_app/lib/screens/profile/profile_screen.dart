@@ -296,7 +296,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ref.watch(systemConfigProvider).when(
                   data: (config) => config.apSyncEnabled,
                   loading: () => true,
-                  error: (_, __) => true,
+                  error: (err, stack) => true,
                 )) ...[
               SizedBox(
                 width: double.infinity,

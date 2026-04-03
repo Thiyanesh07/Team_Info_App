@@ -105,7 +105,7 @@ class _ReportAnalyticsScreenState extends ConsumerState<ReportAnalyticsScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -136,7 +136,7 @@ class _ReportAnalyticsScreenState extends ConsumerState<ReportAnalyticsScreen> {
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isLate ? AppColors.error.withOpacity(0.5) : AppColors.divider,
+          color: isLate ? AppColors.error.withValues(alpha: 0.5) : AppColors.divider,
         ),
       ),
       child: Row(

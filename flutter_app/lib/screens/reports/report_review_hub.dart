@@ -8,6 +8,7 @@ import 'package:team_info_app/repositories/app_data_repository.dart';
 import 'package:team_info_app/screens/reports/report_analytics_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:team_info_app/services/api_service.dart';
+import 'package:team_info_app/providers/auth_provider.dart';
 
 class ReportReviewHub extends ConsumerStatefulWidget {
   final ReportRequest request;
@@ -84,6 +85,8 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
     }
   }
 
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final isAdmin = user?.role.name.toUpperCase() == 'ADMIN';
     final isCreator = widget.request.assignedBy?['id'] == user?.id;
@@ -261,7 +264,7 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
                       firstDate: DateTime.now().subtract(const Duration(days: 365)),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (picked != null) {
+                    if (picked != null && context.mounted) {
                       final time = await showTimePicker(
                         context: context,
                         initialTime: TimeOfDay.fromDateTime(newDeadline ?? DateTime.now()),
