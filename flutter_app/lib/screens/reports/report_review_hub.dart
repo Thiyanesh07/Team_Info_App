@@ -95,8 +95,14 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
     // 1. Any leader, the creator, or admin can view analytics (Participation Audit)
     final canViewAnalytics = isCreator || isAdmin || user?.role.isLeader == true;
     
-    // 2. Only the creator or admin can edit deadlines or delete the request
-    final canEditRequest = isCreator || isAdmin;
+    final isLeader = user?.role.isLeader ?? false;
+    
+    // 2. Only the creator, admin or an assigned leader (who is also a target) can edit deadlines
+    final isTarget = widget.request.targetAudience == ReportAudience.TEAM ||
+        (widget.request.targetAudience == ReportAudience.ROLE && widget.request.targetRoles.contains(user?.role.apiValue)) ||
+        (widget.request.targetAudience == ReportAudience.INDIVIDUAL && widget.request.targetUserIds.contains(user?.id));
+    
+    final canEditRequest = isCreator || isAdmin || (isLeader && isTarget);
 
     return Scaffold(
       backgroundColor: AppColors.background,

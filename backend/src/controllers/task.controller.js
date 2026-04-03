@@ -122,7 +122,11 @@ const updateTask = async (req, res) => {
     if (!existing) return res.status(404).json({ success: false, message: 'Task not found' });
 
     if (existing.assignedById !== req.user.id && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ success: false, message: 'Only the task creator can edit it' });
+      // Allow if user is assignee AND has a leader role
+      const leaderRoles = ['ADMIN', 'CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'];
+      if (existing.assignedToId !== req.user.id || !leaderRoles.includes(req.user.role)) {
+        return res.status(403).json({ success: false, message: 'Only the task creator or assigned leaders can edit it' });
+      }
     }
 
     const { title, description, deadline, priority, assignedToId } = req.body;
@@ -351,7 +355,11 @@ const reopenTask = async (req, res) => {
     if (!existing) return res.status(404).json({ success: false, message: 'Task not found' });
 
     if (existing.assignedById !== req.user.id && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
+      // Allow if user is assignee AND has a leader role
+      const leaderRoles = ['ADMIN', 'CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'];
+      if (existing.assignedToId !== req.user.id || !leaderRoles.includes(req.user.role)) {
+        return res.status(403).json({ success: false, message: 'Unauthorized' });
+      }
     }
 
     const { newDeadline, status } = req.body;
@@ -376,7 +384,7 @@ const reopenTask = async (req, res) => {
  */
 const deleteTaskReport = async (req, res) => {
   try {
-    const { taskId, reportId } = req.params;
+    const { id: taskId, reportId } = req.params;
     const report = await prisma.taskReport.findUnique({ where: { id: reportId } });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found' });
 
@@ -398,7 +406,7 @@ const deleteTaskReport = async (req, res) => {
  */
 const updateTaskReport = async (req, res) => {
   try {
-    const { taskId, reportId } = req.params;
+    const { id: taskId, reportId } = req.params;
     const { reportText } = req.body;
 
     const report = await prisma.taskReport.findUnique({ where: { id: reportId } });

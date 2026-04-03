@@ -48,10 +48,10 @@ export default function RewardsStatus() {
   };
 
   if (loading) return (
-    <div className="flex h-screen bg-slate-950 items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 shadow-lg shadow-blue-500/20"></div>
-        <p className="text-slate-500 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Calculating Eligibility Matrix</p>
+    <div className="flex h-screen bg-[#131313] items-center justify-center">
+      <div className="flex flex-col items-center gap-6">
+        <div className="h-16 w-16 border-4 border-[#EFD395]/20 border-t-[#EFD395] rounded-full animate-spin"></div>
+        <p className="text-[#A4A4A4] text-[10px] font-black uppercase tracking-[0.4em] animate-pulse italic">Calculating Eligibility Matrix</p>
       </div>
     </div>
   );
@@ -68,19 +68,19 @@ export default function RewardsStatus() {
   });
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-50">
+    <div className="flex min-h-screen bg-[#131313] text-[#FFFFFF]">
       <Sidebar />
       
-      <main className="flex-1 p-8 overflow-y-auto">
-        <header className="mb-12 border-b border-slate-800 pb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+      <main className="flex-1 p-8 overflow-y-auto custom-scrollbar no-scrollbar">
+        <header className="mb-12 border-b border-[#4B4A48] pb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
           <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
-            <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic">Reward Eligibility</h1>
-            <p className="text-slate-400 mt-1 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] opacity-60">Global mapping of points vs. internal marks thresholds.</p>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-[#FFFFFF] uppercase italic">Reward Eligibility</h1>
+            <p className="text-[#A4A4A4] mt-1 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] opacity-60">Global mapping of points vs. internal marks thresholds.</p>
           </motion.div>
           <div className="flex gap-2">
             <button 
               onClick={() => fetchStatus()}
-              className="px-6 py-2.5 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 hover:bg-blue-500 transition-all font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-600/20 active:scale-95"
+              className="px-8 py-3 bg-[#EFD395] text-[#131313] rounded flex items-center justify-center gap-2 hover:bg-white transition-all font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95"
             >
               <RefreshCcw size={14} />
               Sync Metrics
@@ -97,58 +97,58 @@ export default function RewardsStatus() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.05 }}
               whileHover={{ y: -5 }}
-              className="bg-slate-900/50 border border-slate-800 p-6 rounded-[2rem] group hover:border-slate-700 transition-all text-center backdrop-blur-xl"
+              className="bg-[#262625] border border-[#4B4A48] p-6 rounded group hover:border-[#EFD395]/40 transition-all text-center"
             >
-              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3 opacity-60">Year {year}</p>
-              <p className="text-3xl font-black text-white italic group-hover:text-blue-500 transition-colors uppercase tracking-tighter">{val}</p>
-              <p className="text-[8px] font-black text-slate-700 uppercase mt-3 tracking-widest">Target Index</p>
+              <p className="text-[10px] font-black text-[#A4A4A4] uppercase tracking-[0.3em] mb-4 opacity-60">Year {year}</p>
+              <p className="text-4xl font-black text-white italic group-hover:text-[#EFD395] transition-colors uppercase tracking-tighter">{val}</p>
+              <p className="text-[9px] font-black text-[#777674] uppercase mt-4 tracking-[0.2em] italic">Target Index</p>
             </motion.div>
           ))}
         </div>
 
         {/* Global Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
            <SummaryCard 
               label="Ready for Internals" 
               value={summary.eligibleCount} 
-              icon={<CheckCircle2 size={24} className="text-emerald-500" />}
-              color="emerald"
+              icon={<CheckCircle2 size={24} className="text-[#EFD395]" />}
+              color="straw"
            />
            <SummaryCard 
               label="Below Threshold" 
               value={summary.belowAverageCount} 
-              icon={<AlertCircle size={24} className="text-orange-500" />}
-              color="orange"
+              icon={<AlertCircle size={24} className="text-red-500" />}
+              color="red"
            />
            <SummaryCard 
               label="Team Reach" 
               value={summary.totalUsers} 
-              icon={<Users size={24} className="text-blue-500" />}
-              color="blue"
+              icon={<Users size={24} className="text-[#A4A4A4]" />}
+              color="grey"
            />
         </div>
 
         {/* Main List Section */}
-        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden backdrop-blur-xl">
-           <div className="p-8 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="relative flex-1 max-w-md">
-                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+        <div className="bg-[#262625] border border-[#4B4A48] rounded overflow-hidden shadow-2xl mb-12">
+           <div className="p-8 border-b border-[#4B4A48] flex flex-col md:flex-row md:items-center justify-between gap-8 bg-[#131313]/30">
+              <div className="relative flex-1 max-w-lg">
+                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[#4B4A48]" size={20} />
                  <input 
                     type="text" 
                     placeholder="Search by name or register number..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all"
+                    className="w-full bg-[#131313] border border-[#4B4A48] rounded px-5 py-4 pl-14 text-xs text-white focus:outline-none focus:border-[#EFD395] transition-all font-black uppercase italic shadow-inner"
                  />
               </div>
-              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <div className="flex bg-[#131313] p-1.5 rounded border border-[#4B4A48]">
                  {(['ALL', 'ELIGIBLE', 'BELOW'] as const).map((t) => (
                     <button
                        key={t}
                        onClick={() => setFilter(t)}
                        className={cn(
-                          "px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-                          filter === t ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-slate-500 hover:text-slate-300"
+                          "px-8 py-2.5 rounded text-[10px] font-black uppercase tracking-[0.3em] transition-all italic",
+                          filter === t ? "bg-[#EFD395] text-[#131313] shadow-xl" : "text-[#777674] hover:text-[#FFFFFF]"
                        )}
                     >
                        {t}
@@ -157,16 +157,16 @@ export default function RewardsStatus() {
               </div>
            </div>
 
-           <div className="p-4 overflow-x-auto">
-              <table className="w-full text-left border-separate border-spacing-y-3">
+           <div className="p-6 overflow-x-auto custom-scrollbar no-scrollbar">
+              <table className="w-full text-left border-separate border-spacing-y-4">
                  <thead>
-                    <tr className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                       <th className="px-6 py-2">Engineering Agent</th>
-                       <th className="px-6 py-2 text-center">Year</th>
-                       <th className="px-6 py-2 text-right">Reward Points</th>
-                       <th className="px-6 py-2 text-right">Target Pulse</th>
-                       <th className="px-6 py-2 text-center">Eligibility Status</th>
-                       <th className="px-6 py-2 text-right">Requirement</th>
+                    <tr className="text-[10px] font-black text-[#777674] uppercase tracking-[0.4em] italic">
+                       <th className="px-6 py-4">Engineering Agent</th>
+                       <th className="px-6 py-4 text-center">Year</th>
+                       <th className="px-6 py-4 text-right">Reward Points</th>
+                       <th className="px-6 py-4 text-right">Target Pulse</th>
+                       <th className="px-6 py-4 text-center">Eligibility Status</th>
+                       <th className="px-6 py-4 text-right">Requirement</th>
                     </tr>
                  </thead>
                  <tbody>
@@ -179,47 +179,47 @@ export default function RewardsStatus() {
                              exit={{ opacity: 0, scale: 0.95 }}
                              transition={{ delay: i * 0.02 }}
                              key={m.id} 
-                             className="group hover:scale-[1.01] transition-transform duration-200"
+                             className="group hover:bg-[#131313]/50 transition-colors"
                           >
-                             <td className="px-6 py-4 bg-slate-950/50 border-y border-l border-slate-800 rounded-l-2xl group-hover:border-slate-700">
-                                <div className="flex items-center gap-3">
-                                   <div className="h-10 w-10 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-center font-black text-slate-500 group-hover:border-blue-500/30 transition-all overflow-hidden">
+                             <td className="px-6 py-5 bg-[#131313] border-y border-l border-[#4B4A48] rounded-l group-hover:border-[#EFD395]/40">
+                                <div className="flex items-center gap-4">
+                                   <div className="h-12 w-12 bg-[#262625] rounded border border-[#4B4A48] flex items-center justify-center font-black text-[#EFD395] group-hover:border-[#EFD395] transition-all overflow-hidden italic shadow-inner">
                                       {m.profileImageUrl ? <img src={m.profileImageUrl} alt="" className="h-full w-full object-cover" /> : m.name[0]}
                                    </div>
                                    <div>
-                                      <p className="text-sm font-bold text-white transition-colors">{m.name}</p>
-                                      <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{m.regNo}</p>
+                                      <p className="text-sm font-black text-white uppercase italic tracking-tight">{m.name}</p>
+                                      <p className="text-[10px] font-black text-[#777674] uppercase tracking-[0.2em] italic">{m.regNo}</p>
                                    </div>
                                 </div>
                              </td>
-                             <td className="px-6 py-4 bg-slate-950/50 border-y border-slate-800 text-center font-black text-slate-400 group-hover:border-slate-700">
+                             <td className="px-6 py-5 bg-[#131313] border-y border-[#4B4A48] text-center font-black text-[#A4A4A4] group-hover:border-[#EFD395]/40 italic">
                                 {m.year}
                              </td>
-                             <td className="px-6 py-4 bg-slate-950/50 border-y border-slate-800 text-right group-hover:border-slate-700">
-                                <span className={cn("text-lg font-black", m.isEligible ? "text-emerald-500" : "text-orange-500")}>
+                             <td className="px-6 py-5 bg-[#131313] border-y border-[#4B4A48] text-right group-hover:border-[#EFD395]/40">
+                                <span className={cn("text-xl font-black italic tracking-tighter", m.isEligible ? "text-[#EFD395]" : "text-red-500")}>
                                    {m.rewardPoints}
                                 </span>
                              </td>
-                             <td className="px-6 py-4 bg-slate-950/50 border-y border-slate-800 text-right font-bold text-slate-500 group-hover:border-slate-700">
+                             <td className="px-6 py-5 bg-[#131313] border-y border-[#4B4A48] text-right font-black text-[#777674] group-hover:border-[#EFD395]/40 italic">
                                 {m.target}
                              </td>
-                             <td className="px-6 py-4 bg-slate-950/50 border-y border-slate-800 text-center group-hover:border-slate-700">
+                             <td className="px-6 py-5 bg-[#131313] border-y border-[#4B4A48] text-center group-hover:border-[#EFD395]/40">
                                 <div className={cn(
-                                   "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border",
-                                   m.isEligible ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-orange-500/10 text-orange-500 border-orange-500/20"
+                                   "inline-flex items-center gap-2 px-4 py-1.5 rounded border text-[9px] font-black uppercase tracking-[0.2em] italic",
+                                   m.isEligible ? "bg-[#EFD395]/10 text-[#EFD395] border-[#EFD395]/20" : "bg-red-500/10 text-red-500 border-red-500/20"
                                 )}>
                                    {m.isEligible ? <CheckCircle2 size={12} /> : <Calculator size={12} />}
                                    {m.isEligible ? 'Eligible' : 'Below Multiplier'}
                                 </div>
                              </td>
-                             <td className="px-6 py-4 bg-slate-950/50 border-y border-r border-slate-800 rounded-r-2xl text-right group-hover:border-slate-700">
+                             <td className="px-6 py-5 bg-[#131313] border-y border-r border-[#4B4A48] rounded-r text-right group-hover:border-[#EFD395]/40">
                                 {m.isEligible ? (
-                                   <div className="flex items-center justify-end gap-1 text-emerald-500 font-black text-xs">
-                                      <ArrowUpRight size={14} />
+                                   <div className="flex items-center justify-end gap-2 text-[#EFD395] font-black text-[10px] uppercase italic tracking-[0.2em]">
+                                      <ArrowUpRight size={16} />
                                       PASS
                                    </div>
                                 ) : (
-                                   <span className="text-orange-500/80 font-black text-xs">+{m.pointsNeeded} needed</span>
+                                   <span className="text-red-500 font-black text-[10px] uppercase italic tracking-[0.2em]">+{m.pointsNeeded} needed</span>
                                 )}
                              </td>
                           </motion.tr>
@@ -236,18 +236,18 @@ export default function RewardsStatus() {
 
 function SummaryCard({ label, value, icon, color }: { label: string, value: any, icon: React.ReactNode, color: string }) {
   const colors: any = {
-    emerald: "border-emerald-500/20 bg-emerald-500/5",
-    orange: "border-orange-500/20 bg-orange-500/5",
-    blue: "border-blue-500/20 bg-blue-500/5",
+    straw: "border-[#EFD395]/20 bg-[#EFD395]/5",
+    red: "border-red-500/20 bg-red-500/5",
+    grey: "border-[#4B4A48]/20 bg-[#4B4A48]/5",
   };
 
   return (
-    <div className={cn("p-8 rounded-[2rem] border backdrop-blur-xl flex items-center justify-between", colors[color])}>
+    <div className={cn("p-10 rounded border flex items-center justify-between group hover:border-white/20 transition-all shadow-xl", colors[color])}>
        <div>
-          <p className="text-4xl font-black text-white mb-1">{value}</p>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</p>
+          <p className="text-5xl font-black text-white mb-2 italic tracking-tighter">{value}</p>
+          <p className="text-[10px] font-black text-[#A4A4A4] uppercase tracking-[0.3em] group-hover:text-white transition-colors italic">{label}</p>
        </div>
-       <div className="h-12 w-12 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-center shadow-2xl">
+       <div className="h-14 w-14 bg-[#131313] border border-[#4B4A48] rounded flex items-center justify-center shadow-2xl group-hover:border-[#EFD395]/40 transition-colors">
           {icon}
        </div>
     </div>

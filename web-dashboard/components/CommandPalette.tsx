@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Users, Rocket, CheckSquare, X, Command } from 'lucide-react';
+import { Search, Users, Rocket, CheckSquare, X, Command, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -79,44 +79,44 @@ export default function CommandPalette() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsOpen(false)}
-            className="absolute inset-0 bg-slate-950/40 backdrop-blur-md"
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
           />
           <motion.div 
             initial={{ scale: 0.95, opacity: 0, y: -20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: -20 }}
-            className="relative w-full max-w-2xl bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl overflow-hidden shadow-blue-500/10"
+            className="relative w-full max-w-2xl bg-[#262625] border border-[#4B4A48] rounded shadow-2xl overflow-hidden shadow-black/80"
           >
-            <div className="p-6 border-b border-slate-800 flex items-center gap-4">
-              <Search className="text-slate-400" size={20} />
+            <div className="p-8 border-b border-[#4B4A48] flex items-center gap-6 bg-[#131313]/30">
+              <Search className="text-[#EFD395]" size={24} />
               <input 
                 ref={inputRef}
                 type="text" 
                 placeholder="Search Team Hierarchy, Projects, or Assignments..." 
-                className="flex-1 bg-transparent border-none text-lg text-white focus:outline-none placeholder:text-slate-600 font-bold"
+                className="flex-1 bg-transparent border-none text-xl text-white focus:outline-none placeholder:text-[#4B4A48] font-black uppercase italic tracking-tighter"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
-              <div className="flex items-center gap-1 px-2 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[10px] font-black text-slate-500 uppercase">
-                 <Command size={10} /> K
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#131313] border border-[#4B4A48] rounded text-[10px] font-black text-[#A4A4A4] uppercase italic shadow-inner">
+                 <Command size={12} className="text-[#EFD395]" /> K
               </div>
             </div>
 
-            <div className="max-h-[400px] overflow-y-auto p-4 custom-scrollbar">
+            <div className="max-h-[450px] overflow-y-auto p-6 custom-scrollbar no-scrollbar">
                {query.length < 3 ? (
-                 <div className="p-8 text-center text-slate-500">
-                    <p className="text-sm font-bold uppercase tracking-widest opacity-50">Type to bridge the gap</p>
-                    <div className="mt-6 flex justify-center gap-6">
-                       <QuickLink icon={<Users size={14}/>} label="Members" onClick={() => navigateTo('/members')} />
-                       <QuickLink icon={<Rocket size={14}/>} label="Projects" onClick={() => navigateTo('/projects')} />
-                       <QuickLink icon={<CheckSquare size={14}/>} label="Tasks" onClick={() => navigateTo('/tasks')} />
+                 <div className="p-12 text-center">
+                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-[#777674] italic opacity-60">Type to bridge the tactical gap</p>
+                    <div className="mt-10 flex justify-center gap-8">
+                       <QuickLink icon={<Users size={16}/>} label="Members" onClick={() => navigateTo('/members')} />
+                       <QuickLink icon={<Rocket size={16}/>} label="Projects" onClick={() => navigateTo('/projects')} />
+                       <QuickLink icon={<CheckSquare size={16}/>} label="Tasks" onClick={() => navigateTo('/tasks')} />
                     </div>
                  </div>
                ) : (
-                 <div className="space-y-6 p-2">
+                 <div className="space-y-8 p-2">
                     {/* Users Section */}
                     {results.users.length > 0 && (
-                      <SearchSection title="Accounts" icon={<Users size={12}/>}>
+                      <SearchSection title="Accounts" icon={<Users size={14}/>}>
                         {results.users.map((u: any) => (
                            <SearchResult 
                             key={u.id} 
@@ -130,7 +130,7 @@ export default function CommandPalette() {
 
                     {/* Projects Section */}
                     {results.projects.length > 0 && (
-                      <SearchSection title="Directives" icon={<Rocket size={12}/>}>
+                      <SearchSection title="Directives" icon={<Rocket size={14}/>}>
                         {results.projects.map((p: any) => (
                            <SearchResult 
                             key={p.id} 
@@ -143,20 +143,20 @@ export default function CommandPalette() {
                     )}
 
                     {!loading && results.users.length === 0 && results.projects.length === 0 && (
-                      <div className="p-12 text-center text-slate-600">
-                         <p className="font-bold uppercase tracking-widest text-xs">No administrative matches</p>
+                      <div className="p-20 text-center border border-dashed border-[#4B4A48] rounded group">
+                         <p className="font-black uppercase tracking-[0.4em] text-[10px] text-[#777674] italic group-hover:text-[#EFD395] transition-colors">No administrative matches</p>
                       </div>
                     )}
                  </div>
                )}
             </div>
 
-            <div className="p-4 bg-slate-950/50 border-t border-slate-800 flex justify-between items-center text-[10px] font-black text-slate-500 uppercase tracking-widest">
-               <div className="flex gap-4">
-                  <span>ESC to exit</span>
-                  <span>ENTER to select</span>
+            <div className="p-5 bg-[#131313] border-t border-[#4B4A48] flex justify-between items-center text-[9px] font-black text-[#777674] uppercase tracking-[0.3em] italic">
+               <div className="flex gap-6">
+                  <span className="flex items-center gap-2 px-3 py-1 bg-[#262625] rounded shadow-inner">ESC <span className="opacity-40">EXIT</span></span>
+                  <span className="flex items-center gap-2 px-3 py-1 bg-[#262625] rounded shadow-inner">ENTER <span className="opacity-40">SELECT</span></span>
                </div>
-               <span className="text-blue-500">Intelligent Search Core</span>
+               <span className="text-[#EFD395] opacity-60">Intelligent Search Core</span>
             </div>
           </motion.div>
         </div>
@@ -167,12 +167,14 @@ export default function CommandPalette() {
 
 function SearchSection({ title, icon, children }: any) {
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2 px-2">
-         {icon}
-         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{title}</span>
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 px-2">
+         <div className="p-1.5 bg-[#131313] border border-[#4B4A48] rounded text-[#EFD395]">
+            {icon}
+         </div>
+         <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#A4A4A4] italic">{title}</span>
       </div>
-      <div className="space-y-1">
+      <div className="space-y-2">
         {children}
       </div>
     </div>
@@ -183,14 +185,14 @@ function SearchResult({ title, subtitle, onClick }: any) {
   return (
     <button 
       onClick={onClick}
-      className="w-full text-left p-3 rounded-2xl hover:bg-blue-600/10 hover:border-blue-500/20 border border-transparent transition-all group flex items-center justify-between"
+      className="w-full text-left p-4 rounded bg-[#131313]/40 hover:bg-[#131313] border border-[#4B4A48]/30 hover:border-[#EFD395]/40 transition-all group flex items-center justify-between"
     >
       <div>
-        <p className="text-sm font-bold text-slate-200 group-hover:text-blue-400 transition-colors uppercase tracking-tight">{title}</p>
-        <p className="text-[10px] text-slate-500 font-medium group-hover:text-slate-400">{subtitle}</p>
+        <p className="text-sm font-black text-white group-hover:text-[#EFD395] transition-colors uppercase italic tracking-tight">{title}</p>
+        <p className="text-[10px] text-[#777674] font-black uppercase italic tracking-widest mt-1 opacity-60">{subtitle}</p>
       </div>
-      <div className="h-6 w-6 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-         <X size={10} className="rotate-45 text-blue-500" />
+      <div className="h-8 w-8 rounded bg-[#262625] border border-[#4B4A48] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-inner">
+         <ChevronRight size={14} className="text-[#EFD395]" />
       </div>
     </button>
   );
@@ -198,11 +200,11 @@ function SearchResult({ title, subtitle, onClick }: any) {
 
 function QuickLink({ icon, label, onClick }: any) {
   return (
-    <button onClick={onClick} className="flex flex-col items-center gap-2 group">
-       <div className="h-10 w-10 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:border-blue-500/30 transition-all">
+    <button onClick={onClick} className="flex flex-col items-center gap-3 group">
+       <div className="h-14 w-14 rounded bg-[#131313] border border-[#4B4A48] flex items-center justify-center text-[#A4A4A4] group-hover:text-[#EFD395] group-hover:border-[#EFD395] transition-all shadow-inner group-hover:scale-110 duration-300">
           {icon}
        </div>
-       <span className="text-[8px] font-black uppercase tracking-widest text-slate-600 group-hover:text-slate-400">{label}</span>
+       <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#777674] group-hover:text-white transition-colors italic">{label}</span>
     </button>
   );
 }

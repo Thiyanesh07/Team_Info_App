@@ -4,7 +4,7 @@ const {
   getMyTasks, getAssignedTasks, getAllTasks,
   createTask, updateTask, updateTaskStatus,
   addReport, getTaskReports, exportReports, deleteTask,
-  reopenTask, deleteTaskReport,
+  reopenTask, deleteTaskReport, updateTaskReport,
 } = require('../controllers/task.controller');
 const { authenticate, isLeader, isAdmin } = require('../middleware/auth.middleware');
 

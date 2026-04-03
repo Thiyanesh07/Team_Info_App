@@ -141,6 +141,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     final isAdmin = user?.role.name.toUpperCase() == 'ADMIN';
     final isLeader = user != null && user.role.name.toUpperCase() != 'MEMBER';
     final canUpdateStatus = isAssignee && isLeader;
+    final canEditTask = isCreator || isAdmin || (isAssignee && isLeader);
     
     final now = DateTime.now();
     final deadline = _task!.deadline != null ? DateTime.parse(_task!.deadline!) : null;
@@ -150,7 +151,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       appBar: AppBar(
         title: const Text('Task Details'),
         actions: [
-          if (isCreator || isAdmin) ...[
+          if (canEditTask) ...[
             IconButton(
               icon: const Icon(Icons.edit_calendar, color: AppColors.primary),
               onPressed: _showEditDialog,

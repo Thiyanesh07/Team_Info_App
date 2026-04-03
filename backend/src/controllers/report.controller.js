@@ -308,7 +308,16 @@ exports.deleteRequest = async (req, res) => {
     }
 
     if (request.assignedById !== userId && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
+      const leaderRoles = ['ADMIN', 'CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'];
+      const isTargetLeader = leaderRoles.includes(req.user.role) && (
+        request.targetAudience === 'TEAM' ||
+        (request.targetAudience === 'ROLE' && request.targetRoles.includes(req.user.role)) ||
+        (request.targetAudience === 'INDIVIDUAL' && request.targetUserIds.includes(req.user.id))
+      );
+
+      if (!isTargetLeader) {
+        return res.status(403).json({ success: false, message: 'Unauthorized' });
+      }
     }
 
     await prisma.reportRequest.delete({ where: { id: requestId } });
@@ -331,7 +340,16 @@ exports.updateRequest = async (req, res) => {
     if (!existing) return res.status(404).json({ success: false, message: 'Request not found' });
 
     if (existing.assignedById !== req.user.id && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
+      const leaderRoles = ['ADMIN', 'CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'];
+      const isTargetLeader = leaderRoles.includes(req.user.role) && (
+        existing.targetAudience === 'TEAM' ||
+        (existing.targetAudience === 'ROLE' && existing.targetRoles.includes(req.user.role)) ||
+        (existing.targetAudience === 'INDIVIDUAL' && existing.targetUserIds.includes(req.user.id))
+      );
+
+      if (!isTargetLeader) {
+        return res.status(403).json({ success: false, message: 'Unauthorized' });
+      }
     }
 
     const updated = await prisma.reportRequest.update({
@@ -365,7 +383,16 @@ exports.reopenRequest = async (req, res) => {
     if (!existing) return res.status(404).json({ success: false, message: 'Request not found' });
 
     if (existing.assignedById !== req.user.id && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ success: false, message: 'Unauthorized' });
+      const leaderRoles = ['ADMIN', 'CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'];
+      const isTargetLeader = leaderRoles.includes(req.user.role) && (
+        existing.targetAudience === 'TEAM' ||
+        (existing.targetAudience === 'ROLE' && existing.targetRoles.includes(req.user.role)) ||
+        (existing.targetAudience === 'INDIVIDUAL' && existing.targetUserIds.includes(req.user.id))
+      );
+
+      if (!isTargetLeader) {
+        return res.status(403).json({ success: false, message: 'Unauthorized' });
+      }
     }
 
     const updated = await prisma.reportRequest.update({
