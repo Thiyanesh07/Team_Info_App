@@ -442,6 +442,7 @@ class TaskAssignment {
   final Map<String, dynamic>? assignedBy;
   final Map<String, dynamic>? assignedTo;
   final String? deadline;
+  final String? originalDeadline;
   final String priority;
   final String status;
   // Use @JsonKey to map the Prisma count correctly
@@ -457,6 +458,7 @@ class TaskAssignment {
     this.assignedBy,
     this.assignedTo,
     this.deadline,
+    this.originalDeadline,
     this.priority = 'MEDIUM',
     this.status = 'PENDING',
     this.count,
@@ -567,6 +569,7 @@ class ReportRequest {
   final String title;
   final String? description;
   final String? deadline;
+  final String? originalDeadline;
   final String assignedById;
   final ReportAudience targetAudience;
   final List<String> targetRoles;
@@ -582,6 +585,7 @@ class ReportRequest {
     required this.title,
     this.description,
     this.deadline,
+    this.originalDeadline,
     required this.assignedById,
     this.targetAudience = ReportAudience.TEAM,
     this.targetRoles = const [],

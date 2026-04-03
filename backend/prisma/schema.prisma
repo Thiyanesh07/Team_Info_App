@@ -213,6 +213,9 @@ model TaskAssignment {
   assignedById String
   assignedToId String
   deadline     DateTime?
+  originalDeadline DateTime?
+  reminderStage Int         @default(0)
+  lateReminderStage Int     @default(0)
   priority     TaskPriority @default(MEDIUM)
   status       TaskStatus   @default(PENDING)
   createdAt    DateTime     @default(now())
@@ -420,6 +423,9 @@ model ReportRequest {
   title           String
   description     String?
   deadline        DateTime?
+  originalDeadline DateTime?
+  reminderStage   Int              @default(0)
+  lateReminderStage Int            @default(0)
   assignedById    String
   targetAudience  ReportAudience   @default(TEAM)
   targetRoles     UserRole[]       @default([])

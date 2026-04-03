@@ -141,16 +141,27 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     final isAdmin = user?.role.name.toUpperCase() == 'ADMIN';
     final isLeader = user != null && user.role.name.toUpperCase() != 'MEMBER';
     final canUpdateStatus = isAssignee && isLeader;
+    
+    final now = DateTime.now();
+    final deadline = _task!.deadline != null ? DateTime.parse(_task!.deadline!) : null;
+    final isDeadlinePassed = deadline != null && now.isAfter(deadline);
+    final canSubmitReport = isAssignee && !isDeadlinePassed;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Task Details'),
         actions: [
-          if (isCreator || isAdmin)
+          if (isCreator || isAdmin) ...[
+            IconButton(
+              icon: const Icon(Icons.edit_calendar, color: AppColors.primary),
+              onPressed: _showEditDialog,
+              tooltip: 'Edit / Reopen Task',
+            ),
             IconButton(
               icon: const Icon(Icons.delete, color: AppColors.error),
               onPressed: _deleteTask,
             ),
+          ],
         ],
       ),
       body: SingleChildScrollView(
@@ -326,6 +337,16 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                                         color: AppColors.textMuted,
                                       ),
                                     ),
+                                  if (isCreator || isAdmin)
+                                    IconButton(
+                                      icon: const Icon(Icons.close, size: 14, color: AppColors.error),
+                                      onPressed: () async {
+                                        final res = await _api.delete("${ApiConstants.tasks}/${widget.taskId}/reports/${r.id}");
+                                        if (res.success) _loadReports();
+                                      },
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
                                 ],
                               ),
                               const SizedBox(height: 8),
@@ -347,47 +368,73 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                         .slideY(begin: 0.1, end: 0, curve: Curves.easeOut),
               ),
 
-            // Add Report (Assignee only)
+            // Add Report (Assignee only + Before Deadline)
             if (isAssignee) ...[
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _reportController,
-                      maxLines: null,
-                      keyboardType: TextInputType.multiline,
-                      decoration: InputDecoration(
-                        hintText: 'Add a progress report...',
-                        filled: true,
-                        fillColor: AppColors.cardDark,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+              if (isDeadlinePassed)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.lock_clock, color: AppColors.error, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Submission Closed. The deadline has passed. Please contact your leader to reopen.',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: AppColors.error,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
-                      style: const TextStyle(color: Colors.white),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  CircleAvatar(
-                    backgroundColor: AppColors.primary,
-                    radius: 24,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.send,
-                        color: Colors.white,
-                        size: 20,
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _reportController,
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+                        decoration: InputDecoration(
+                          hintText: 'Add a progress report...',
+                          filled: true,
+                          fillColor: AppColors.cardDark,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                        style: const TextStyle(color: Colors.white),
                       ),
-                      onPressed: _submitReport,
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 8),
+                    CircleAvatar(
+                      backgroundColor: AppColors.primary,
+                      radius: 24,
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.send,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        onPressed: _submitReport,
+                      ),
+                    ),
+                  ],
+                ),
             ],
             const SizedBox(height: 40),
           ],
@@ -450,6 +497,88 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                 fontSize: 10,
                 color: isSelected ? AppColors.primary : AppColors.textSecondary,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEditDialog() async {
+    DateTime? newDeadline = _task!.deadline != null ? DateTime.parse(_task!.deadline!) : DateTime.now().add(const Duration(days: 1));
+    final controller = TextEditingController(text: _task!.description);
+    final titleController = TextEditingController(text: _task!.title);
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.cardDark,
+          title: Text('Manage Task', style: GoogleFonts.inter(color: Colors.white)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(labelText: 'Title', labelStyle: TextStyle(color: Colors.grey)),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  maxLines: 3,
+                  decoration: const InputDecoration(labelText: 'Description', labelStyle: TextStyle(color: Colors.grey)),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  title: const Text('Deadline', style: TextStyle(color: Colors.white)),
+                  subtitle: Text(
+                    newDeadline != null ? DateFormat.yMMMd().add_Hm().format(newDeadline!) : 'No Deadline',
+                    style: const TextStyle(color: AppColors.primary),
+                  ),
+                  trailing: const Icon(Icons.calendar_today, color: AppColors.primary),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: newDeadline ?? DateTime.now(),
+                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.fromDateTime(newDeadline ?? DateTime.now()),
+                      );
+                      if (time != null) {
+                        setDialogState(() {
+                          newDeadline = DateTime(picked.year, picked.month, picked.day, time.hour, time.minute);
+                        });
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              onPressed: () async {
+                final nav = Navigator.of(ctx);
+                final res = await _api.updateTask(_task!.id, {
+                  'title': titleController.text.trim(),
+                  'description': controller.text.trim(),
+                  'deadline': newDeadline?.toIso8601String(),
+                });
+                if (res.success) {
+                  nav.pop();
+                  _loadTaskDetails();
+                }
+              },
+              child: const Text('Save Changes', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),

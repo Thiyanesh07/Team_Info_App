@@ -68,20 +68,40 @@ router.post('/image', authenticate, upload.single('file'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'No file provided. Make sure field name is "file".' });
     }
 
-    console.log(`📤 Upload attempt: ${req.file.originalname} | type: ${req.file.mimetype} | size: ${req.file.size} bytes`);
-    console.log(`☁️ Cloudinary config: cloud=${process.env.CLOUDINARY_CLOUD_NAME} | key=${process.env.CLOUDINARY_API_KEY ? 'SET' : 'MISSING'} | secret=${process.env.CLOUDINARY_API_SECRET ? 'SET' : 'MISSING'}`);
+    const requestedFolder = resolveUploadFolder(req);
+    const customFileName = req.body?.fileName;
 
-    const folder = resolveUploadFolder(req);
+    // Build the public_id based on the custom name if provided
+    let public_id = null;
+    if (customFileName && typeof customFileName === 'string') {
+      // 1. Sanitize the name for Cloudinary (alphanumeric, underscores, hyphens)
+      const sanitized = customFileName
+        .replace(/[^a-z0-9_-]/gi, '_')
+        .replace(/_{2,}/g, '_')
+        .replace(/^_|_$/g, '');
+      
+      // 2. Add a unique short suffix to prevent collisions
+      const uniqueSuffix = Math.random().toString(36).substring(2, 6);
+      public_id = `${sanitized}_${uniqueSuffix}`;
+    }
 
     // Upload to Cloudinary
     const result = await new Promise((resolve, reject) => {
+      const options = { 
+        folder: requestedFolder, 
+        resource_type: 'auto',
+        type: 'upload',
+        access_mode: 'public'
+      };
+      
+      if (public_id) {
+        options.public_id = public_id;
+        options.use_filename = true;
+        options.unique_filename = false; // We already added our own suffix
+      }
+
       const uploadStream = cloudinary.uploader.upload_stream(
-        { 
-          folder, 
-          resource_type: 'auto',
-          type: 'upload',
-          access_mode: 'public'
-        },
+        options,
         (error, result) => {
           if (error) {
             console.error('❌ Cloudinary error:', JSON.stringify(error));
@@ -94,14 +114,14 @@ router.post('/image', authenticate, upload.single('file'), async (req, res) => {
       uploadStream.end(req.file.buffer);
     });
 
-    console.log(`✅ Upload success: ${result.secure_url}`);
+    console.log(`✅ Upload success: ${result.secure_url} (ID: ${result.public_id})`);
 
     res.json({
       success: true,
       data: {
         url: result.secure_url,
         publicId: result.public_id,
-        folder,
+        folder: requestedFolder,
       },
     });
   } catch (error) {

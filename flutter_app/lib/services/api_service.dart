@@ -189,14 +189,19 @@ class ApiService {
     String filePath, {
     String fieldName = 'file',
     String? folder,
+    String? fileName,
   }) async {
     try {
       final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
       final request = http.MultipartRequest('POST', uri);
       final token = await getToken();
       if (token != null) request.headers['Authorization'] = 'Bearer $token';
+      
       if (folder != null && folder.isNotEmpty) {
         request.fields['folder'] = folder;
+      }
+      if (fileName != null && fileName.isNotEmpty) {
+        request.fields['fileName'] = fileName;
       }
       request.files.add(await http.MultipartFile.fromPath(fieldName, filePath));
       final streamedResponse = await request.send();
@@ -207,13 +212,45 @@ class ApiService {
     }
   }
 
-  Future<ApiResponse> uploadImage(String filePath, {String? folder}) async {
+  Future<ApiResponse> uploadImage(
+    String filePath, {
+    String? folder,
+    String? fileName,
+  }) async {
     return uploadFile(
       ApiConstants.uploadImage,
       filePath,
       fieldName: 'file',
       folder: folder,
+      fileName: fileName,
     );
+  }
+
+  // ─── Task Management Helpers ────────────────
+  Future<ApiResponse> updateTask(String taskId, Map<String, dynamic> body) async {
+    return put("${ApiConstants.tasks}/$taskId", body: body);
+  }
+
+  Future<ApiResponse> reopenTask(String taskId, DateTime newDeadline) async {
+    return post("${ApiConstants.tasks}/$taskId/reopen", body: {
+      'newDeadline': newDeadline.toIso8601String(),
+    });
+  }
+
+  // ─── Report Management Helpers ──────────────
+  Future<ApiResponse> updateReportRequest(String requestId, Map<String, dynamic> body) async {
+    return put("${ApiConstants.reportRequest}/$requestId", body: body);
+  }
+
+  Future<ApiResponse> reopenReport(String requestId, DateTime newDeadline) async {
+    return post("${ApiConstants.baseUrl}/reports/reopen/$requestId", body: {
+      'newDeadline': newDeadline.toIso8601String(),
+    });
+  }
+
+  Future<ApiResponse> getReportAnalytics(String requestId) async {
+    // Note: This matches the new backend route router.get('/analytics/:requestId', ...)
+    return get("${ApiConstants.baseUrl}/reports/analytics/$requestId");
   }
 
   // ─── Response Handler ──────────────────────

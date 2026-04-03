@@ -5,6 +5,9 @@ import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/core/utils/in_app_file_actions.dart';
 import 'package:team_info_app/models/app_models.dart';
 import 'package:team_info_app/repositories/app_data_repository.dart';
+import 'package:team_info_app/screens/reports/report_analytics_screen.dart';
+import 'package:intl/intl.dart';
+import 'package:team_info_app/services/api_service.dart';
 
 class ReportReviewHub extends ConsumerStatefulWidget {
   final ReportRequest request;
@@ -81,8 +84,11 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+    final user = ref.watch(authProvider).user;
+    final isAdmin = user?.role.name.toUpperCase() == 'ADMIN';
+    final isCreator = widget.request.assignedBy?['id'] == user?.id;
+    final canManage = isCreator || isAdmin;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -93,13 +99,30 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.delete_sweep_outlined,
-              color: AppColors.error,
+          if (canManage) ...[
+            IconButton(
+              icon: const Icon(Icons.analytics_outlined, color: AppColors.secondary),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ReportAnalyticsScreen(request: widget.request),
+                  ),
+                );
+              },
+              tooltip: 'View Participation',
             ),
-            onPressed: _deleteRequest,
-          ),
+            IconButton(
+              icon: const Icon(Icons.edit_calendar, color: AppColors.primary),
+              onPressed: _showEditDialog,
+              tooltip: 'Edit / Reopen',
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_sweep_outlined, color: AppColors.error),
+              onPressed: _deleteRequest,
+              tooltip: 'Delete Request',
+            ),
+          ],
         ],
       ),
       body: Column(
@@ -176,15 +199,104 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
               _buildSmallBadge(
                 Icons.calendar_today,
                 widget.request.deadline != null
-                    ? widget.request.deadline!
-                          .substring(0, 10)
-                          .replaceAll('-', '/')
+                    ? DateFormat.yMMMd().add_Hm().format(DateTime.parse(widget.request.deadline!))
                     : 'No Deadline',
                 AppColors.secondary,
               ),
             ],
           ),
+          if (widget.request.originalDeadline != null && widget.request.deadline != widget.request.originalDeadline) ...[
+            const SizedBox(height: 8),
+            _buildSmallBadge(
+              Icons.history,
+              'Original: ${DateFormat.yMMMd().add_Hm().format(DateTime.parse(widget.request.originalDeadline!))}',
+              AppColors.textMuted,
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  Future<void> _showEditDialog() async {
+    final api = ApiService();
+    DateTime? newDeadline = widget.request.deadline != null ? DateTime.parse(widget.request.deadline!) : DateTime.now().add(const Duration(days: 1));
+    final titleController = TextEditingController(text: widget.request.title);
+    final descController = TextEditingController(text: widget.request.description);
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.cardDark,
+          title: const Text('Manage Report Request', style: TextStyle(color: Colors.white)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(labelText: 'Title', labelStyle: TextStyle(color: Colors.grey)),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(labelText: 'Description', labelStyle: TextStyle(color: Colors.grey)),
+                  style: const TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  title: const Text('Deadline', style: TextStyle(color: Colors.white)),
+                  subtitle: Text(
+                    newDeadline != null ? DateFormat.yMMMd().add_Hm().format(newDeadline!) : 'No Deadline',
+                    style: const TextStyle(color: AppColors.primary),
+                  ),
+                  trailing: const Icon(Icons.calendar_today, color: AppColors.primary),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: newDeadline ?? DateTime.now(),
+                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.fromDateTime(newDeadline ?? DateTime.now()),
+                      );
+                      if (time != null) {
+                        setDialogState(() {
+                          newDeadline = DateTime(picked.year, picked.month, picked.day, time.hour, time.minute);
+                        });
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              onPressed: () async {
+                final nav = Navigator.of(ctx);
+                final res = await api.updateReportRequest(widget.request.id, {
+                  'title': titleController.text.trim(),
+                  'description': descController.text.trim(),
+                  'deadline': newDeadline?.toIso8601String(),
+                });
+                if (res.success) {
+                  nav.pop();
+                  _loadSubmissions();
+                }
+              },
+              child: const Text('Save Changes', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
       ),
     );
   }

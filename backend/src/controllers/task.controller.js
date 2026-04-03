@@ -83,6 +83,7 @@ const createTask = async (req, res) => {
         assignedById: req.user.id,
         assignedToId,
         deadline: deadline ? new Date(deadline) : null,
+        originalDeadline: deadline ? new Date(deadline) : null,
         priority: priority || 'MEDIUM',
       },
       include: taskInclude,
@@ -197,6 +198,13 @@ const addReport = async (req, res) => {
   try {
     const existing = await prisma.taskAssignment.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ success: false, message: 'Task not found' });
+
+    if (existing.deadline && new Date() > new Date(existing.deadline)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Task submission is closed. The deadline has passed. Please contact your leader.' 
+      });
+    }
 
     if (existing.assignedToId !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Only the assignee can submit reports' });
@@ -334,9 +342,61 @@ const exportReports = async (req, res) => {
   }
 };
 
+/**
+ * Leader/Admin: Reopen task and set new deadline
+ */
+const reopenTask = async (req, res) => {
+  try {
+    const existing = await prisma.taskAssignment.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ success: false, message: 'Task not found' });
+
+    if (existing.assignedById !== req.user.id && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const { newDeadline, status } = req.body;
+    const task = await prisma.taskAssignment.update({
+      where: { id: req.params.id },
+      data: {
+        deadline: new Date(newDeadline),
+        status: status || 'PENDING',
+        lateReminderStage: 0, // Reset late reminders
+      },
+      include: taskInclude,
+    });
+
+    res.json({ success: true, message: 'Task reopened', data: task });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to reopen task' });
+  }
+};
+
+/**
+ * Leader/Admin: Delete a specific task report
+ */
+const deleteTaskReport = async (req, res) => {
+  try {
+    const { taskId, reportId } = req.params;
+    const report = await prisma.taskReport.findUnique({ where: { id: reportId } });
+    if (!report) return res.status(404).json({ success: false, message: 'Report not found' });
+
+    // Only creator of task or admin can delete reports
+    const task = await prisma.taskAssignment.findUnique({ where: { id: taskId } });
+    if (task.assignedById !== req.user.id && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'Only leaders can delete reports' });
+    }
+
+    await prisma.taskReport.delete({ where: { id: reportId } });
+    res.json({ success: true, message: 'Report deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to delete report' });
+  }
+};
+
 module.exports = {
   getMyTasks, getAssignedTasks, getAllTasks,
   createTask, updateTask, updateTaskStatus,
   addReport, getTaskReports, exportReports, deleteTask,
+  reopenTask, deleteTaskReport
 };
 

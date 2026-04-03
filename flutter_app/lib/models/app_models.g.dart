@@ -404,6 +404,7 @@ TaskAssignment _$TaskAssignmentFromJson(Map<String, dynamic> json) =>
       assignedBy: json['assignedBy'] as Map<String, dynamic>?,
       assignedTo: json['assignedTo'] as Map<String, dynamic>?,
       deadline: json['deadline'] as String?,
+      originalDeadline: json['originalDeadline'] as String?,
       priority: json['priority'] as String? ?? 'MEDIUM',
       status: json['status'] as String? ?? 'PENDING',
       count: json['_count'] as Map<String, dynamic>?,
@@ -419,6 +420,7 @@ Map<String, dynamic> _$TaskAssignmentToJson(TaskAssignment instance) =>
       'assignedBy': instance.assignedBy,
       'assignedTo': instance.assignedTo,
       'deadline': instance.deadline,
+      'originalDeadline': instance.originalDeadline,
       'priority': instance.priority,
       'status': instance.status,
       '_count': instance.count,
@@ -510,6 +512,7 @@ ReportRequest _$ReportRequestFromJson(Map<String, dynamic> json) =>
       title: json['title'] as String,
       description: json['description'] as String?,
       deadline: json['deadline'] as String?,
+      originalDeadline: json['originalDeadline'] as String?,
       assignedById: json['assignedById'] as String,
       targetAudience: $enumDecodeNullable(
               _$ReportAudienceEnumMap, json['targetAudience']) ??
@@ -541,6 +544,7 @@ Map<String, dynamic> _$ReportRequestToJson(ReportRequest instance) =>
       'title': instance.title,
       'description': instance.description,
       'deadline': instance.deadline,
+      'originalDeadline': instance.originalDeadline,
       'assignedById': instance.assignedById,
       'targetAudience': _$ReportAudienceEnumMap[instance.targetAudience]!,
       'targetRoles': instance.targetRoles,

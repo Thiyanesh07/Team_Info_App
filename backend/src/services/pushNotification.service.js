@@ -15,6 +15,19 @@ function _resolveServiceAccount() {
     }
   }
 
+  // Try individual environment variables
+  if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
+    try {
+      return {
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      };
+    } catch (e) {
+      console.error('Failed to resolve Firebase from individual ENV vars:', e.message);
+    }
+  }
+
   const configuredPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
   if (configuredPath) {
     const absPath = path.isAbsolute(configuredPath)
@@ -48,11 +61,13 @@ function ensureFirebaseInitialized() {
     if (!admin.apps.length) {
       const serviceAccount = _resolveServiceAccount();
       if (!serviceAccount) {
+        console.warn('Firebase Service Account not found. Push notifications will be disabled.');
         return false;
       }
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
+      console.log('✅ Firebase Admin Initialized Successfully');
     }
 
     initialized = true;

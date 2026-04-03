@@ -8,6 +8,7 @@ import 'package:team_info_app/repositories/app_data_repository.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:team_info_app/core/utils/in_app_file_actions.dart';
 import 'package:team_info_app/services/api_service.dart';
+import 'package:team_info_app/providers/auth_provider.dart';
 
 class ReportSubmissionScreen extends ConsumerStatefulWidget {
   final ReportRequest request;
@@ -91,9 +92,15 @@ class _ReportSubmissionScreenState
 
       // 1. Upload file if a new one is selected
       if (_selectedFile != null) {
+        // Construct custom filename: [ReportTitle]_[UserName]
+        final authState = ref.read(authProvider);
+        final userName = authState.user?.name ?? 'Unknown_User';
+        final customName = '${widget.request.title}_$userName';
+
         final uploadRes = await api.uploadImage(
           _selectedFile!.path!,
           folder: 'reports/submissions',
+          fileName: customName,
         );
         if (uploadRes.success) {
           finalUrl = uploadRes.data['url'];
@@ -183,7 +190,12 @@ class _ReportSubmissionScreenState
   @override
   Widget build(BuildContext context) {
     final status = widget.submission?.status ?? ReportSubmissionStatus.PENDING;
-    final isLocked = status == ReportSubmissionStatus.COMPLETED;
+    final isApproved = status == ReportSubmissionStatus.COMPLETED;
+    
+    final now = DateTime.now();
+    final deadline = widget.request.deadline != null ? DateTime.parse(widget.request.deadline!) : null;
+    final isDeadlinePassed = deadline != null && now.isAfter(deadline);
+    final isLocked = isApproved || isDeadlinePassed;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -211,8 +223,10 @@ class _ReportSubmissionScreenState
             _buildDetailsCard(),
             const SizedBox(height: 32),
 
-            if (isLocked)
+            if (isApproved)
               _buildLockedAlert()
+            else if (isDeadlinePassed)
+              _buildDeadlinePassedAlert()
             else ...[
               _buildLabel('Submission Notes'),
               const SizedBox(height: 12),
@@ -548,12 +562,55 @@ class _ReportSubmissionScreenState
   }
 
   Widget _buildLabel(String label) {
-    return Text(
-      label,
-      style: GoogleFonts.inter(
-        color: Colors.white,
-        fontWeight: FontWeight.w600,
-        fontSize: 14,
+    // ...
+  }
+
+  Widget _buildDeadlinePassedAlert() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.error.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.timer_off_outlined, color: AppColors.error, size: 64),
+          const SizedBox(height: 16),
+          Text(
+            'Deadline Reached',
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'This report submission is now closed because the deadline has passed. If you still need to submit, please contact your team leader to request a reopen.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 14, height: 1.5),
+          ),
+          const SizedBox(height: 24),
+          if (_uploadUrl != null) ...[
+            const Text(
+              'You can still view your previous submission:',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _openPreview(_uploadUrl!),
+                  icon: const Icon(Icons.remove_red_eye_outlined, size: 16),
+                  label: const Text('View Submission'),
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

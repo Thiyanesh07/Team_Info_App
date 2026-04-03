@@ -27,6 +27,15 @@ router.get('/submissions/:requestId', authenticate, isLeader, reportController.g
 // Review a member's submission (approve/redo)
 router.patch('/review/:submissionId', authenticate, isLeader, reportController.reviewSubmission);
 
+// Update report request
+router.put('/request/:requestId', authenticate, isLeader, reportController.updateRequest);
+
+// Reopen submission with new deadline
+router.post('/reopen/:requestId', authenticate, isLeader, reportController.reopenRequest);
+
+// Get detailed analytics for a report card
+router.get('/analytics/:requestId', authenticate, isLeader, reportController.getDetailedAnalytics);
+
 // Delete an entire report request
 router.delete('/request/:requestId', authenticate, isLeader, reportController.deleteRequest);
 

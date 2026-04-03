@@ -334,6 +334,18 @@ class _TeamChatScreenState extends ConsumerState<TeamChatScreen> {
                   icon: const Icon(Icons.reply, size: 18),
                   label: const Text('Reply'),
                 ),
+                if (isLeader)
+                  TextButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      await _togglePin(msg);
+                    },
+                    icon: Icon(
+                      msg.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                      size: 18,
+                    ),
+                    label: Text(msg.isPinned ? 'Unpin' : 'Pin'),
+                  ),
                 if (canDelete)
                   TextButton.icon(
                     onPressed: () async {
@@ -374,6 +386,40 @@ class _TeamChatScreenState extends ConsumerState<TeamChatScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(res.message ?? 'Failed to delete message')),
+    );
+  }
+
+  Future<void> _togglePin(TeamMessage msg) async {
+    final res = await _api.put('${ApiConstants.teamChat}/${msg.id}/pin');
+    if (!mounted) return;
+
+    if (res.success) {
+      setState(() {
+        final idx = _messages.indexWhere((m) => m.id == msg.id);
+        if (idx != -1) {
+          _messages[idx] = TeamMessage(
+            id: _messages[idx].id,
+            senderIdValue: _messages[idx].senderIdValue,
+            message: _messages[idx].message,
+            imageUrl: _messages[idx].imageUrl,
+            fileUrl: _messages[idx].fileUrl,
+            fileName: _messages[idx].fileName,
+            fileType: _messages[idx].fileType,
+            replyToId: _messages[idx].replyToId,
+            reactions: _messages[idx].reactions,
+            isPinned: !msg.isPinned,
+            isRead: _messages[idx].isRead,
+            isDelivered: _messages[idx].isDelivered,
+            timestamp: _messages[idx].timestamp,
+            sender: _messages[idx].sender,
+          );
+        }
+      });
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(res.message ?? 'Failed to update pin')),
     );
   }
 

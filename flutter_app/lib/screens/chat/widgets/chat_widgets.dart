@@ -91,7 +91,7 @@ class _PremiumMessageBubbleState extends State<PremiumMessageBubble> {
       margin: const EdgeInsets.fromLTRB(4, 4, 4, 4),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: widget.isMe ? Colors.white.withAlpha(20) : Colors.black.withAlpha(20),
+        color: widget.isMe ? Colors.white.withAlpha(40) : Colors.black.withAlpha(40), // Increased opacity
         borderRadius: BorderRadius.circular(12),
         border: Border(
           left: BorderSide(color: AppColors.primary, width: 3),
@@ -104,8 +104,8 @@ class _PremiumMessageBubbleState extends State<PremiumMessageBubble> {
           Text(
             replySenderName,
             style: GoogleFonts.inter(
-              color: AppColors.primary,
-              fontSize: 10,
+              color: widget.isMe ? Colors.white : AppColors.primary, // Higher contrast (white for me, primary for others)
+              fontSize: 11, // Slightly larger
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -115,7 +115,7 @@ class _PremiumMessageBubbleState extends State<PremiumMessageBubble> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.inter(
-              color: widget.isMe ? Colors.white70 : AppColors.textMuted,
+              color: widget.isMe ? Colors.white.withAlpha(180) : AppColors.textPrimary.withAlpha(200), // Adjusted color
               fontSize: 11,
             ),
           ),
