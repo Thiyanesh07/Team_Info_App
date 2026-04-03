@@ -460,3 +460,11 @@ model YearlyTarget {
 
   @@map("yearly_targets")
 }
+
+model SystemConfig {
+  id              String   @id @default("global_config")
+  apSyncEnabled   Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+
+  @@map("system_config")
+}

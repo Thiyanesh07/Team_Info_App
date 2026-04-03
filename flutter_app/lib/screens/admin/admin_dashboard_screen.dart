@@ -8,15 +8,17 @@ import 'package:team_info_app/screens/admin/user_management_screen.dart';
 import 'package:team_info_app/screens/admin/audit_log_screen.dart';
 import 'package:team_info_app/screens/admin/admin_user_detail_screen.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:team_info_app/providers/system_config_provider.dart';
 
-class AdminDashboardScreen extends StatefulWidget {
+class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+  ConsumerState<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen>
+class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _api = ApiService();
@@ -148,9 +150,81 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             ),
             const SizedBox(height: 12),
             _buildRecentActivityList(stats['recentActivities'] as List),
+            const SizedBox(height: 32),
+
+            // System Controls Section
+            _buildSystemControls(),
+            const SizedBox(height: 40),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSystemControls() {
+    final configAsync = ref.watch(systemConfigProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'System Controls',
+          style: GoogleFonts.outfit(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.cardDark,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.divider),
+          ),
+          child: configAsync.when(
+            loading: () => const LinearProgressIndicator(),
+            error: (err, _) => ListTile(
+              title: const Text('Error loading config',
+                  style: TextStyle(color: AppColors.error)),
+              trailing: IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () =>
+                    ref.read(systemConfigProvider.notifier).fetchConfig(),
+              ),
+            ),
+            data: (config) => SwitchListTile(
+              activeColor: AppColors.primary,
+              title: Text(
+                'AP Sync via Portal',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: const Text(
+                'Allow users to synchronize Activity Points via the Bitsathy portal. If off, users must update points manually.',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+              value: config.apSyncEnabled,
+              onChanged: (val) async {
+                final success = await ref
+                    .read(systemConfigProvider.notifier)
+                    .updateConfig(apSyncEnabled: val);
+                if (mounted && success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Portal Sync ${val ? 'Enabled' : 'Disabled'}'),
+                      backgroundColor: val ? Colors.green : Colors.orange,
+                    ),
+                  );
+                }
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 

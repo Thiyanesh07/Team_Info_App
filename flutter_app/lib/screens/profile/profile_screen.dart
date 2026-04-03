@@ -13,6 +13,7 @@ import 'package:team_info_app/screens/profile/certifications_screen.dart';
 
 import 'package:team_info_app/core/enums/user_role.dart';
 import 'package:team_info_app/screens/profile/college_sync_screen.dart';
+import 'package:team_info_app/providers/system_config_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -291,7 +292,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ],
 
             // Bitsathy API Connection
-            if (user.role != UserRole.admin) ...[
+            if (user.role != UserRole.admin && 
+                ref.watch(systemConfigProvider).when(
+                  data: (config) => config.apSyncEnabled,
+                  loading: () => true,
+                  error: (_, __) => true,
+                )) ...[
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(

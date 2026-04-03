@@ -29,6 +29,7 @@ const systemActivityRoutes = require('./routes/systemActivity.routes');
 const milestoneRoutes = require('./routes/milestone.routes');
 const exportRoutes = require('./routes/export.routes');
 const reportRoutes = require('./routes/report.routes');
+const systemRoutes = require('./routes/system.routes');
 const schedulerService = require('./services/scheduler.service');
 
 // Import socket handler
@@ -141,6 +142,7 @@ app.use('/api/system-activities', systemActivityRoutes); // Remapped to /api/sys
 app.use('/api/milestones', milestoneRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/system', systemRoutes);
 
 // ──────────────────────────────────────
 // ERROR HANDLING
