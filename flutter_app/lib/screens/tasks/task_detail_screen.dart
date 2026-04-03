@@ -336,15 +336,41 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                                         color: AppColors.textMuted,
                                       ),
                                     ),
-                                  if (isCreator || isAdmin)
-                                    IconButton(
-                                      icon: const Icon(Icons.close, size: 14, color: AppColors.error),
-                                      onPressed: () async {
-                                        final res = await _api.delete("${ApiConstants.tasks}/${widget.taskId}/reports/${r.id}");
-                                        if (res.success) _loadReports();
-                                      },
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
+                                  if ((r.user?['id'] == user?.id) || isCreator || isAdmin)
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (r.user?['id'] == user?.id)
+                                          IconButton(
+                                            icon: const Icon(Icons.edit, size: 14, color: AppColors.primary),
+                                            onPressed: () => _editReport(r),
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                          ),
+                                        if (r.user?['id'] == user?.id) const SizedBox(width: 8),
+                                        IconButton(
+                                          icon: const Icon(Icons.close, size: 14, color: AppColors.error),
+                                          onPressed: () async {
+                                            final confirm = await showDialog<bool>(
+                                              context: context,
+                                              builder: (ctx) => AlertDialog(
+                                                title: const Text('Delete Update?'),
+                                                content: const Text('Are you sure you want to remove this progress update?'),
+                                                actions: [
+                                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                                                ],
+                                              ),
+                                            );
+                                            if (confirm == true) {
+                                              final res = await _api.delete("${ApiConstants.tasks}/${widget.taskId}/reports/${r.id}");
+                                              if (res.success) _loadReports();
+                                            }
+                                          },
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                        ),
+                                      ],
                                     ),
                                 ],
                               ),
@@ -581,6 +607,45 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _editReport(TaskReport report) async {
+    final controller = TextEditingController(text: report.reportText);
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        title: Text('Edit Progress Update', style: GoogleFonts.inter(color: Colors.white, fontSize: 16)),
+        content: TextField(
+          controller: controller,
+          maxLines: 4,
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+          decoration: InputDecoration(
+            hintText: 'Enter updated progress...',
+            hintStyle: const TextStyle(color: Colors.grey),
+            filled: true,
+            fillColor: AppColors.surface,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () async {
+              if (controller.text.trim().isEmpty) return;
+              final navigator = Navigator.of(ctx);
+              final res = await _api.updateTaskReport(widget.taskId, report.id, controller.text.trim());
+              if (res.success && mounted) {
+                navigator.pop();
+                _loadReports();
+              }
+            },
+            child: const Text('Save Changes', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }

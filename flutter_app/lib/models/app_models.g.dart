@@ -535,7 +535,7 @@ ReportRequest _$ReportRequestFromJson(Map<String, dynamic> json) =>
               ?.map((e) => ReportSubmission.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      submissionsCount: (json['submissionsCount'] as num?)?.toInt() ?? 0,
+      count: json['_count'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$ReportRequestToJson(ReportRequest instance) =>
@@ -553,7 +553,7 @@ Map<String, dynamic> _$ReportRequestToJson(ReportRequest instance) =>
       'createdAt': instance.createdAt,
       'assignedBy': instance.assignedBy,
       'submissions': instance.submissions,
-      'submissionsCount': instance.submissionsCount,
+      '_count': instance.count,
     };
 
 const _$ReportAudienceEnumMap = {

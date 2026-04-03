@@ -23,6 +23,7 @@ router.patch('/:id/status', updateTaskStatus);
 router.get('/reports/export', exportReports);
 router.post('/:id/reports', addReport);
 router.get('/:id/reports', getTaskReports);
+router.put('/:id/reports/:reportId', updateTaskReport);
 
 // Admin routes
 router.get('/all', isAdmin, getAllTasks);
@@ -32,6 +33,6 @@ router.post('/:id/reopen', isLeader, reopenTask);
 
 // Delete
 router.delete('/:id', deleteTask);
-router.delete('/:id/reports/:reportId', isLeader, deleteTaskReport);
+router.delete('/:id/reports/:reportId', deleteTaskReport);
 
 module.exports = router;

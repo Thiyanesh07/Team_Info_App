@@ -72,32 +72,36 @@ export default function RewardsStatus() {
       <Sidebar />
       
       <main className="flex-1 p-8 overflow-y-auto">
-        <header className="mb-10 flex justify-between items-end">
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+        <header className="mb-12 border-b border-slate-800 pb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
             <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic">Reward Eligibility</h1>
-            <p className="text-slate-400 mt-2 font-medium italic">Tactical mapping of points vs. internal marks thresholds.</p>
+            <p className="text-slate-400 mt-1 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] opacity-60">Global mapping of points vs. internal marks thresholds.</p>
           </motion.div>
-          <button 
-            onClick={() => fetchStatus()}
-            className="p-3 bg-slate-900 border border-slate-800 rounded-2xl text-slate-400 hover:text-white hover:border-slate-700 transition-all active:scale-95"
-          >
-            <RefreshCcw size={20} />
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => fetchStatus()}
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 hover:bg-blue-500 transition-all font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-600/20 active:scale-95"
+            >
+              <RefreshCcw size={14} />
+              Sync Metrics
+            </button>
+          </div>
         </header>
 
         {/* Targets Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
+         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-12">
           {Object.entries(yearlyTargets).map(([year, val]: any, i) => (
             <motion.div 
               key={year}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.05 }}
-              className="bg-slate-900 border border-slate-800 p-4 rounded-2xl group hover:border-blue-500/30 transition-all text-center"
+              whileHover={{ y: -5 }}
+              className="bg-slate-900/50 border border-slate-800 p-6 rounded-[2rem] group hover:border-slate-700 transition-all text-center backdrop-blur-xl"
             >
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Year {year}</p>
-              <p className="text-2xl font-black text-white">{val}</p>
-              <p className="text-[8px] font-bold text-blue-500 uppercase mt-1">Average Target</p>
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3 opacity-60">Year {year}</p>
+              <p className="text-3xl font-black text-white italic group-hover:text-blue-500 transition-colors uppercase tracking-tighter">{val}</p>
+              <p className="text-[8px] font-black text-slate-700 uppercase mt-3 tracking-widest">Target Index</p>
             </motion.div>
           ))}
         </div>

@@ -90,7 +90,13 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
     final user = ref.watch(authProvider).user;
     final isAdmin = user?.role.name.toUpperCase() == 'ADMIN';
     final isCreator = widget.request.assignedBy?['id'] == user?.id;
-    final canManage = isCreator || isAdmin;
+
+    // Permissions:
+    // 1. Any leader, the creator, or admin can view analytics (Participation Audit)
+    final canViewAnalytics = isCreator || isAdmin || user?.role.isLeader == true;
+    
+    // 2. Only the creator or admin can edit deadlines or delete the request
+    final canEditRequest = isCreator || isAdmin;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -102,7 +108,7 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          if (canManage) ...[
+          if (canViewAnalytics) ...[
             IconButton(
               icon: const Icon(Icons.analytics_outlined, color: AppColors.secondary),
               onPressed: () {
@@ -115,6 +121,8 @@ class _ReportReviewHubState extends ConsumerState<ReportReviewHub> {
               },
               tooltip: 'View Participation',
             ),
+          ],
+          if (canEditRequest) ...[
             IconButton(
               icon: const Icon(Icons.edit_calendar, color: AppColors.primary),
               onPressed: _showEditDialog,

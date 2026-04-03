@@ -112,11 +112,11 @@ export default function AdminSupportPage() {
         
         <header className="h-24 border-b border-white/5 flex items-center justify-between px-8 bg-slate-950/50 backdrop-blur-xl z-10">
           <div>
-            <h2 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
+            <h2 className="text-3xl font-black tracking-tighter text-white uppercase italic flex items-center gap-3">
               <ShieldCheck className="text-blue-500" />
               Support Center
             </h2>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-1">Real-time tactical assistance</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-1 opacity-60">Global operational assistance protocol.</p>
           </div>
           <div className="flex items-center gap-4">
              <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-2">

@@ -209,8 +209,8 @@ export default function MembersPage() {
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight uppercase">Team Members</h2>
-            <p className="text-slate-400 mt-1 font-medium italic">Manage accounts, roles and tactical performance metrics.</p>
+            <h2 className="text-4xl font-black tracking-tighter text-white uppercase italic">Team Members</h2>
+            <p className="text-slate-400 mt-1 font-black uppercase text-[10px] tracking-widest opacity-60">Global monitoring of operational squad units.</p>
           </div>
           <div className="flex gap-4">
             <button 

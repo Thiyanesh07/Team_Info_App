@@ -263,7 +263,19 @@ exports.reviewSubmission = async (req, res) => {
   const { status, reviewerNotes } = req.body;
 
   try {
-    const submission = await prisma.reportSubmission.update({
+    const submission = await prisma.reportSubmission.findUnique({
+      where: { id: submissionId },
+      include: { reportRequest: true }
+    });
+
+    if (!submission) return res.status(404).json({ success: false, message: 'Submission not found' });
+
+    // Authorization: Only the creator of the request or an ADMIN can review submissions
+    if (submission.reportRequest.assignedById !== req.user.id && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'Unauthorized: Only the requester can review submissions' });
+    }
+
+    const updated = await prisma.reportSubmission.update({
       where: { id: submissionId },
       data: {
         status,
@@ -391,10 +403,9 @@ exports.getDetailedAnalytics = async (req, res) => {
 
     if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
 
-    // Authorization: Only the creator or an ADMIN can see the detailed analytics
-    if (request.assignedById !== req.user.id && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ success: false, message: 'Unauthorized access to analytics' });
-    }
+    // Authorization: Any leader or the admin can see analytics (Participation Audit)
+    // but we still check isLeader via route middleware. 
+    // This matching our requirement: "other leaders could only view the stats"
 
     // Determine target users
     let targetUsers = [];

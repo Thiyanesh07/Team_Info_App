@@ -243,14 +243,19 @@ class ApiService {
   }
 
   Future<ApiResponse> reopenReport(String requestId, DateTime newDeadline) async {
-    return post("${ApiConstants.baseUrl}/reports/reopen/$requestId", body: {
+    return post("/reports/reopen/$requestId", body: {
       'newDeadline': newDeadline.toIso8601String(),
     });
   }
 
   Future<ApiResponse> getReportAnalytics(String requestId) async {
-    // Note: This matches the new backend route router.get('/analytics/:requestId', ...)
-    return get("${ApiConstants.baseUrl}/reports/analytics/$requestId");
+    return get("/reports/analytics/$requestId");
+  }
+
+  Future<ApiResponse> updateTaskReport(String taskId, String reportId, String reportText) async {
+    return put("/tasks/$taskId/reports/$reportId", body: {
+      'reportText': reportText,
+    });
   }
 
   // ─── Response Handler ──────────────────────

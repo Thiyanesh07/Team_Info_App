@@ -380,10 +380,10 @@ const deleteTaskReport = async (req, res) => {
     const report = await prisma.taskReport.findUnique({ where: { id: reportId } });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found' });
 
-    // Only creator of task or admin can delete reports
+    // Only creator of task, author of report, or admin can delete reports
     const task = await prisma.taskAssignment.findUnique({ where: { id: taskId } });
-    if (task.assignedById !== req.user.id && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ success: false, message: 'Only leaders can delete reports' });
+    if (report.userId !== req.user.id && task.assignedById !== req.user.id && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'Only authors or leaders can delete reports' });
     }
 
     await prisma.taskReport.delete({ where: { id: reportId } });
@@ -393,10 +393,38 @@ const deleteTaskReport = async (req, res) => {
   }
 };
 
+/**
+ * Member/Leader: Update a task report
+ */
+const updateTaskReport = async (req, res) => {
+  try {
+    const { taskId, reportId } = req.params;
+    const { reportText } = req.body;
+
+    const report = await prisma.taskReport.findUnique({ where: { id: reportId } });
+    if (!report) return res.status(404).json({ success: false, message: 'Report not found' });
+
+    // Only author can update
+    if (report.userId !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Only the author can edit this report' });
+    }
+
+    const updated = await prisma.taskReport.update({
+      where: { id: reportId },
+      data: { reportText },
+      include: { user: { select: { id: true, name: true, profileImageUrl: true } } },
+    });
+
+    res.json({ success: true, message: 'Report updated', data: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to update report' });
+  }
+};
+
 module.exports = {
   getMyTasks, getAssignedTasks, getAllTasks,
   createTask, updateTask, updateTaskStatus,
   addReport, getTaskReports, exportReports, deleteTask,
-  reopenTask, deleteTaskReport
+  reopenTask, deleteTaskReport, updateTaskReport
 };
 

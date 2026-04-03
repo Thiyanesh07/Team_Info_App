@@ -578,7 +578,9 @@ class ReportRequest {
   final String? createdAt;
   final Map<String, dynamic>? assignedBy;
   final List<ReportSubmission> submissions;
-  final int submissionsCount;
+  
+  @JsonKey(name: '_count')
+  final Map<String, dynamic>? count;
 
   ReportRequest({
     required this.id,
@@ -594,8 +596,11 @@ class ReportRequest {
     this.createdAt,
     this.assignedBy,
     this.submissions = const [],
-    this.submissionsCount = 0,
+    this.count,
   });
+
+  // Getter for the submission count from the count map
+  int get submissionsCount => count?['submissions'] ?? 0;
 
   factory ReportRequest.fromJson(Map<String, dynamic> json) =>
       _$ReportRequestFromJson(json);

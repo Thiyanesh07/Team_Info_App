@@ -8,7 +8,6 @@ import 'package:team_info_app/screens/analytics/leaderboard_screen.dart';
 import 'package:team_info_app/screens/analytics/reward_status_screen.dart';
 import 'package:team_info_app/screens/analytics/widgets/resource_heatmap.dart';
 import 'package:team_info_app/screens/analytics/widgets/velocity_chart.dart';
-import 'package:team_info_app/screens/analytics/widgets/skill_growth_radar.dart';
 import 'package:team_info_app/repositories/app_data_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -238,24 +237,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Skill Growth Radar
-                  _buildChartSection(
-                    'Skill Matrix',
-                    'Full-stack technical proficiency',
-                    const SkillGrowthRadar(
-                      skillData: {
-                        'Flutter': 8,
-                        'Node.js': 6,
-                        'Prisma': 7,
-                        'Firebase': 5,
-                        'Architecture': 9,
-                        'DevOps': 4,
-                      },
-                    ).animate().scale(
-                      duration: 800.ms,
-                      curve: Curves.easeOutBack,
-                    ),
-                  ),
                   const SizedBox(height: 24),
                   const SizedBox(height: 24),
 

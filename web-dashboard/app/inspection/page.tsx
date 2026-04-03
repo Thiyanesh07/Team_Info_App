@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import { Search, UserCircle, Calendar, Briefcase, GraduationCap, Zap, Activity } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function InspectionPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,9 +54,11 @@ export default function InspectionPage() {
       <Sidebar />
       
       <main className="flex-1 p-8 overflow-y-auto">
-        <header className="mb-10">
-          <h2 className="text-3xl font-bold tracking-tight">Performance Inspection</h2>
-          <p className="text-slate-400 mt-1">Deep-dive into team member history and accountability</p>
+        <header className="mb-12 border-b border-slate-800 pb-8">
+          <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+            <h2 className="text-4xl font-black tracking-tighter text-white uppercase italic">Performance Inspection</h2>
+            <p className="text-slate-400 mt-1 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] opacity-60">Deep-dive into team member history and accountability.</p>
+          </motion.div>
         </header>
 
         <div className="max-w-4xl mx-auto space-y-8">
