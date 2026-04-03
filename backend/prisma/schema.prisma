@@ -276,6 +276,8 @@ model TeamMessage {
   fileName     String?
   fileType     String?  // IMAGE, VIDEO, AUDIO, DOCUMENT, VOICE
   replyToId    String?
+  replyTo      TeamMessage? @relation("TeamReply", fields: [replyToId], references: [id])
+  replies      TeamMessage[] @relation("TeamReply")
   reactions    Json?    @default("{}")
   isPinned     Boolean  @default(false)
   isRead       Boolean  @default(false)
@@ -317,6 +319,8 @@ model ChatMessage {
   fileName       String?
   fileType       String?  // IMAGE, VIDEO, AUDIO, DOCUMENT, VOICE
   replyToId      String?
+  replyTo        ChatMessage?     @relation("PersonalReply", fields: [replyToId], references: [id])
+  replies        ChatMessage[]    @relation("PersonalReply")
   reactions      Json?    @default("{}")
   timestamp      DateTime         @default(now())
   isPinned       Boolean          @default(false)

@@ -23,7 +23,14 @@ const getTeamMessages = async (req, res) => {
 
     const messages = await prisma.teamMessage.findMany({
       where,
-      include: { sender: { select: { id: true, name: true, profileImageUrl: true } } },
+      include: { 
+        sender: { select: { id: true, name: true, profileImageUrl: true } },
+        replyTo: { 
+          include: { 
+            sender: { select: { id: true, name: true } } 
+          } 
+        }
+      },
       orderBy: { timestamp: 'desc' },
       take: parseInt(limit),
     });
@@ -61,7 +68,14 @@ const sendTeamMessage = async (req, res) => {
         replyToId,
         isDelivered: true,
       },
-      include: { sender: { select: { id: true, name: true, profileImageUrl: true } } },
+      include: { 
+        sender: { select: { id: true, name: true, profileImageUrl: true } },
+        replyTo: { 
+          include: { 
+            sender: { select: { id: true, name: true } } 
+          } 
+        }
+      },
     });
 
     res.status(201).json({ success: true, data: msg });
@@ -107,7 +121,14 @@ const getPinnedMessages = async (req, res) => {
   try {
     const messages = await prisma.teamMessage.findMany({
       where: { isPinned: true },
-      include: { sender: { select: { id: true, name: true, profileImageUrl: true } } },
+      include: { 
+        sender: { select: { id: true, name: true, profileImageUrl: true } },
+        replyTo: { 
+          include: { 
+            sender: { select: { id: true, name: true } } 
+          } 
+        }
+      },
       orderBy: { timestamp: 'desc' },
     });
     res.json({ success: true, data: messages });
@@ -231,7 +252,14 @@ const getConversationMessages = async (req, res) => {
 
     const messages = await prisma.chatMessage.findMany({
       where,
-      include: { sender: { select: { id: true, name: true, profileImageUrl: true } } },
+      include: { 
+        sender: { select: { id: true, name: true, profileImageUrl: true } },
+        replyTo: { 
+          include: { 
+            sender: { select: { id: true, name: true } } 
+          } 
+        }
+      },
       orderBy: { timestamp: 'desc' },
       take: parseInt(limit, 10),
     });
@@ -273,7 +301,14 @@ const sendConversationMessage = async (req, res) => {
         replyToId,
         isDelivered: true,
       },
-      include: { sender: { select: { id: true, name: true, profileImageUrl: true } } },
+      include: { 
+        sender: { select: { id: true, name: true, profileImageUrl: true } },
+        replyTo: { 
+          include: { 
+            sender: { select: { id: true, name: true } } 
+          } 
+        }
+      },
     });
 
     // Update conversation timestamp

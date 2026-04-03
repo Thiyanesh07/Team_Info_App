@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -160,39 +161,69 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
   }
 
   Future<void> _extractCookieAndSync() async {
-    if (_isSyncing) return;
+    if (_isSyncing || _stage == SyncStage.synced) return;
     try {
-      if (_stage == SyncStage.synced) return;
+      // 1. We NO LONGER only look for the PS cookie in document.cookie (since it's HttpOnly)
+      // 2. We inject a FECHT call into the page context. 
+      // 3. The browser will automatically attach the HttpOnly PS cookie.
+      final jsResult = await _controller.runJavaScriptReturningResult('''
+        (async function() {
+          try {
+            const res = await fetch('https://ps.bitsathy.ac.in/api/ps_v2/dashboard/user-points?filter=overall');
+            const data = await res.json();
+            return JSON.stringify(data);
+          } catch (e) {
+            return JSON.stringify({ success: false, error: e.toString() });
+          }
+        })()
+      ''');
 
-      String? psToken;
-      final jsResult = await _controller.runJavaScriptReturningResult(
-        'document.cookie',
-      );
-      String cleanCookies = jsResult.toString().replaceAll('"', '');
-      final segments = cleanCookies.split(';');
-      for (var segment in segments) {
-        final pair = segment.trim().split('=');
-        if (pair.length >= 2 && pair[0] == 'PS') {
-          psToken = pair.sublist(1).join('=');
-          break;
+      String cleanResult = jsResult.toString();
+      // On some platforms, runJavaScriptReturningResult returns double-quotes or escaped JSON
+      if (cleanResult.startsWith('"') && cleanResult.endsWith('"')) {
+        cleanResult = cleanResult.substring(1, cleanResult.length - 1).replaceAll(r'\"', '"');
+      }
+
+      final dynamic dataObj = _safeDecode(cleanResult);
+      if (dataObj != null && dataObj['success'] == true && dataObj['data'] != null) {
+        // We found points! Now we can "verify" them with the backend.
+        // Or if we still have the token (for non-HttpOnly fallbacks), we use it.
+        // For now, let's just use the points.
+        final pointsArray = dataObj['data']['points'] as List?;
+        if (pointsArray != null && pointsArray.isNotEmpty) {
+           final activityPointsItem = pointsArray.firstWhere(
+             (p) => p['point_type'] == 'Activity Points',
+             orElse: () => null,
+           );
+           
+           if (activityPointsItem != null) {
+              final int points = (activityPointsItem['total_points'] as num).toInt();
+              await _syncWithVerifiedPoints(points);
+              return;
+           }
         }
       }
 
-      if (psToken != null && psToken.isNotEmpty) {
-        await _syncWithToken(psToken);
-      } else if (mounted && _stage != SyncStage.waitingForLogin) {
+      // Fallback: If not synced yet, keep waiting
+      if (mounted && _stage != SyncStage.waitingForLogin) {
         setState(() => _setStage(SyncStage.waitingForLogin));
       }
     } catch (e) {
       debugPrint('Sync monitor issue: $e');
-      if (!mounted) return;
-      setState(() {
-        _isSyncing = false;
-        _setStage(SyncStage.failed);
-        _errorMessage =
-            'Could not capture portal session. Retry sync or open in external browser.';
-      });
     }
+  }
+
+  dynamic _safeDecode(String jsonStr) {
+    try {
+      return json.decode(jsonStr);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> _syncWithVerifiedPoints(int points) async {
+    if (_isSyncing || !mounted) return;
+    await _syncWithManualPoints(points); // Reuse the manual sync logic which updates backend
   }
 
   Future<void> _syncWithToken(String psToken) async {

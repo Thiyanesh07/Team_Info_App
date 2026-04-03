@@ -75,6 +75,7 @@ const setupSocketHandlers = (io, prisma) => {
           },
           include: {
             sender: { select: { id: true, name: true, profileImageUrl: true } },
+            replyTo: { include: { sender: { select: { id: true, name: true } } } }
           },
         });
 
@@ -144,6 +145,7 @@ const setupSocketHandlers = (io, prisma) => {
           },
           include: {
             sender: { select: { id: true, name: true, profileImageUrl: true } },
+            replyTo: { include: { sender: { select: { id: true, name: true } } } }
           },
         });
 

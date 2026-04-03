@@ -73,6 +73,57 @@ class _PremiumMessageBubbleState extends State<PremiumMessageBubble> {
     return AnyLinkPreview.isValidLink(text);
   }
 
+  String _getReplyPreview(dynamic msg) {
+    if ((msg.message ?? '').trim().isNotEmpty) return msg.message!.trim();
+    if (msg.imageUrl != null) return 'Photo';
+    if (msg.fileType == 'VOICE') return 'Voice message';
+    if (msg.fileName != null) return msg.fileName!.trim();
+    return 'Attachment';
+  }
+
+  Widget _buildReplyHeader(dynamic reply) {
+    if (reply == null) return const SizedBox.shrink();
+
+    final replySenderName = reply.sender?['name'] ?? 'Unknown';
+    final replyText = _getReplyPreview(reply);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: widget.isMe ? Colors.white.withAlpha(20) : Colors.black.withAlpha(20),
+        borderRadius: BorderRadius.circular(12),
+        border: Border(
+          left: BorderSide(color: AppColors.primary, width: 3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            replySenderName,
+            style: GoogleFonts.inter(
+              color: AppColors.primary,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            replyText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              color: widget.isMe ? Colors.white70 : AppColors.textMuted,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final senderName = widget.message.sender?['name'] ?? 'Unknown';
@@ -127,6 +178,8 @@ class _PremiumMessageBubbleState extends State<PremiumMessageBubble> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (widget.message.replyTo != null)
+                      _buildReplyHeader(widget.message.replyTo),
                     if (widget.message.imageUrl != null)
                       ClipRRect(
                         borderRadius: const BorderRadius.vertical(

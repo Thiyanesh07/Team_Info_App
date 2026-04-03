@@ -20,6 +20,10 @@ class InAppFileActions {
       final normalizedUrl = _normalizeAndValidateUrl(fileUrl);
       final headers = await _headersForUrl(normalizedUrl);
 
+      debugPrint('📂 File Preview Request:');
+      debugPrint('   URL: $normalizedUrl');
+      debugPrint('   Headers: ${headers.keys.join(", ")}');
+
       // WebView preview for office docs/PDF is unreliable across devices.
       // For documents, download to local storage and open with installed app.
       if (_looksLikeDocument(normalizedUrl, fileName)) {
@@ -63,6 +67,11 @@ class InAppFileActions {
     try {
       final normalizedUrl = _normalizeAndValidateUrl(fileUrl);
       final headers = await _headersForUrl(normalizedUrl);
+
+      debugPrint('📥 File Download Request:');
+      debugPrint('   URL: $normalizedUrl');
+      debugPrint('   Headers: ${headers.keys.join(", ")}');
+
       final bytes = await _downloadFileBytesInternal(
         normalizedUrl,
         headers: headers,
@@ -115,17 +124,25 @@ class InAppFileActions {
       final fileUri = Uri.parse(fileUrl);
       final apiUri = Uri.parse(ApiConstants.baseUrl);
 
-      if (fileUri.host != apiUri.host) {
+      // CRITICAL: NEVER send Auth headers to Cloudinary or external domains.
+      // 401 errors are often caused by CDNs rejecting unexpected Authorization headers.
+      final isExternal = fileUri.host != apiUri.host ||
+          fileUri.host.contains('cloudinary.com') ||
+          fileUri.host.contains('google.com');
+
+      if (isExternal) {
+        debugPrint('ℹ️ Skipping Auth headers for external host: ${fileUri.host}');
         return const {};
       }
 
       final token = await ApiService().getToken();
-      if (token == null || token.isEmpty) {
+      if (token == null || token.trim().isEmpty) {
         return const {};
       }
 
-      return {'Authorization': 'Bearer $token'};
-    } catch (_) {
+      return {'Authorization': 'Bearer ${token.trim()}'};
+    } catch (e) {
+      debugPrint('⚠️ Error determining headers for URL: $e');
       return const {};
     }
   }

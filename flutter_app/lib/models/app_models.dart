@@ -291,6 +291,7 @@ class TeamMessage {
   final String? fileName;
   final String? fileType;
   final String? replyToId;
+  final TeamMessage? replyTo;
   final Map<String, dynamic>? reactions;
   final bool isPinned;
   final bool isRead;
@@ -307,6 +308,7 @@ class TeamMessage {
     this.fileName,
     this.fileType,
     this.replyToId,
+    this.replyTo,
     this.reactions,
     this.isPinned = false,
     this.isRead = false,
@@ -357,6 +359,7 @@ class ChatMessage {
   final String? fileName;
   final String? fileType;
   final String? replyToId;
+  final ChatMessage? replyTo;
   final Map<String, dynamic>? reactions;
   final bool isPinned;
   final bool isRead;
@@ -374,6 +377,7 @@ class ChatMessage {
     this.fileName,
     this.fileType,
     this.replyToId,
+    this.replyTo,
     this.reactions,
     this.isPinned = false,
     this.isRead = false,

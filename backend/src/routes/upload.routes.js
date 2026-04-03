@@ -76,7 +76,12 @@ router.post('/image', authenticate, upload.single('file'), async (req, res) => {
     // Upload to Cloudinary
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        { folder, resource_type: 'auto' },
+        { 
+          folder, 
+          resource_type: 'auto',
+          type: 'upload',
+          access_mode: 'public'
+        },
         (error, result) => {
           if (error) {
             console.error('❌ Cloudinary error:', JSON.stringify(error));

@@ -39,6 +39,8 @@ backend/dist/
 backend/coverage/
 backend/.tmp/
 backend/.vercel/
+backend/.cache/
+.cache/
 
 # Secrets
 *firebase-adminsdk*.json

@@ -15,6 +15,7 @@ CertificationModel _$CertificationModelFromJson(Map<String, dynamic> json) =>
       description: json['description'] as String?,
       issuedDate: json['issuedDate'] as String?,
       createdAt: json['createdAt'] as String?,
+      proofUrl: json['proofUrl'] as String?,
     );
 
 Map<String, dynamic> _$CertificationModelToJson(CertificationModel instance) =>
@@ -26,4 +27,5 @@ Map<String, dynamic> _$CertificationModelToJson(CertificationModel instance) =>
       'description': instance.description,
       'issuedDate': instance.issuedDate,
       'createdAt': instance.createdAt,
+      'proofUrl': instance.proofUrl,
     };

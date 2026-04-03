@@ -373,13 +373,23 @@ const syncPsPoints = async (req, res) => {
       }
 
       const dataObj = await response.json();
-      if (!dataObj.success || !dataObj.data) {
-          return res.status(400).json({ success: false, message: 'Invalid response from PS portal' });
+      if (!dataObj.success || !dataObj.data || !Array.isArray(dataObj.data.points)) {
+        return res.status(400).json({ success: false, message: 'Invalid response from PS portal' });
       }
 
-      if (dataObj.data.points && dataObj.data.points.length > 0) {
-          activityPoints = Number(dataObj.data.points[0].total_points || 0);
+      // Robust extraction: Search for the object with point_type === 'Activity Points'
+      const activityPointObj = dataObj.data.points.find(
+        (p) => p.point_type === 'Activity Points'
+      );
+      
+      if (!activityPointObj) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Activity Points not found in portal response' 
+        });
       }
+
+      activityPoints = Number(activityPointObj.total_points || 0);
     }
 
     const delta = activityPoints - oldPoints;
