@@ -18,10 +18,15 @@ function _resolveServiceAccount() {
   // Try individual environment variables
   if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
     try {
+      const rawKey = process.env.FIREBASE_PRIVATE_KEY;
+      const normalizedKey = rawKey.includes('\"') 
+        ? JSON.parse(rawKey) 
+        : rawKey.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '');
+
       return {
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        privateKey: normalizedKey,
       };
     } catch (e) {
       console.error('Failed to resolve Firebase from individual ENV vars:', e.message);

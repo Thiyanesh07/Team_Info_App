@@ -37,6 +37,12 @@ router.put('/manage/projects/:id', updateProject);
 router.post('/sync/rewards', syncRewardsFromSheets);
 
 /**
+ * @route POST /api/admin/sync/rewards-sheets
+ * @desc Backward compatibility alias for legacy dashboard calls (now using HF)
+ */
+router.post('/sync/rewards-sheets', syncRewardsFromSheets);
+
+/**
  * @route GET /api/admin/sync-status
  * @desc Check if Reward Benchmarks sync failed
  */

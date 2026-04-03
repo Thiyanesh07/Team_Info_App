@@ -337,7 +337,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                                         color: AppColors.textMuted,
                                       ),
                                     ),
-                                  if ((r.user?['id'] == user?.id) || isCreator || isAdmin)
+                                  // Allow author, creator, admin, or assigned leader (canEditTask covers these)
+                                  if ((r.user?['id'] == user?.id) || canEditTask)
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -349,28 +350,42 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                                             constraints: const BoxConstraints(),
                                           ),
                                         if (r.user?['id'] == user?.id) const SizedBox(width: 8),
-                                        IconButton(
-                                          icon: const Icon(Icons.close, size: 14, color: AppColors.error),
-                                          onPressed: () async {
-                                            final confirm = await showDialog<bool>(
-                                              context: context,
-                                              builder: (ctx) => AlertDialog(
-                                                title: const Text('Delete Update?'),
-                                                content: const Text('Are you sure you want to remove this progress update?'),
-                                                actions: [
-                                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                                                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
-                                                ],
-                                              ),
-                                            );
-                                            if (confirm == true) {
-                                              final res = await _api.delete("${ApiConstants.tasks}/${widget.taskId}/reports/${r.id}");
-                                              if (res.success) _loadReports();
-                                            }
-                                          },
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                        ),
+                                        // Only authors or leaders can delete
+                                        if ((r.user?['id'] == user?.id) || canEditTask)
+                                          IconButton(
+                                            icon: const Icon(Icons.close, size: 14, color: AppColors.error),
+                                            onPressed: () async {
+                                              final confirm = await showDialog<bool>(
+                                                context: context,
+                                                builder: (ctx) => AlertDialog(
+                                                  backgroundColor: AppColors.cardDark,
+                                                  title: Text('Delete Update?', style: GoogleFonts.inter(color: Colors.white)),
+                                                  content: Text('Are you sure you want to remove this progress update?', style: GoogleFonts.inter(color: Colors.white70)),
+                                                  actions: [
+                                                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                                    TextButton(
+                                                      onPressed: () => Navigator.pop(ctx, true), 
+                                                      child: const Text('Delete', style: TextStyle(color: AppColors.error))
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                              if (confirm == true) {
+                                                final res = await _api.delete("${ApiConstants.tasks}/${widget.taskId}/reports/${r.id}");
+                                                if (res.success) {
+                                                  _loadReports();
+                                                } else {
+                                                  if (mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text(res.message ?? 'Failed to delete report'))
+                                                    );
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                          ),
                                       ],
                                     ),
                                 ],

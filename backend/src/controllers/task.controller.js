@@ -385,18 +385,31 @@ const reopenTask = async (req, res) => {
 const deleteTaskReport = async (req, res) => {
   try {
     const { id: taskId, reportId } = req.params;
+    if (!taskId || !reportId) {
+      return res.status(400).json({ success: false, message: 'Missing parameters' });
+    }
+
     const report = await prisma.taskReport.findUnique({ where: { id: reportId } });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found' });
 
-    // Only creator of task, author of report, or admin can delete reports
     const task = await prisma.taskAssignment.findUnique({ where: { id: taskId } });
-    if (report.userId !== req.user.id && task.assignedById !== req.user.id && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ success: false, message: 'Only authors or leaders can delete reports' });
+    if (!task) return res.status(404).json({ success: false, message: 'Parent task not found' });
+
+    // Permissions: Author, Task Creator, Admin, OR Assigned Leader (Assignee + Leader Role)
+    const isAuthor = report.userId === req.user.id;
+    const isCreator = task.assignedById === req.user.id;
+    const isAdmin = req.user.role === 'ADMIN';
+    const leaderRoles = ['ADMIN', 'CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'];
+    const isAssignedLeader = task.assignedToId === req.user.id && leaderRoles.includes(req.user.role);
+
+    if (!isAuthor && !isCreator && !isAdmin && !isAssignedLeader) {
+      return res.status(403).json({ success: false, message: 'Only authors or task leaders can delete reports' });
     }
 
     await prisma.taskReport.delete({ where: { id: reportId } });
     res.json({ success: true, message: 'Report deleted' });
   } catch (error) {
+    console.error('deleteTaskReport error:', error);
     res.status(500).json({ success: false, message: 'Failed to delete report' });
   }
 };
@@ -408,6 +421,10 @@ const updateTaskReport = async (req, res) => {
   try {
     const { id: taskId, reportId } = req.params;
     const { reportText } = req.body;
+
+    if (!taskId || !reportId) {
+      return res.status(400).json({ success: false, message: 'Missing parameters' });
+    }
 
     const report = await prisma.taskReport.findUnique({ where: { id: reportId } });
     if (!report) return res.status(404).json({ success: false, message: 'Report not found' });

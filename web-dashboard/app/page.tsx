@@ -92,15 +92,18 @@ export default function Dashboard() {
   const handleSyncRewards = async () => {
     try {
       setSyncing(true);
-      const res = await api.post('/admin/sync/rewards-sheets');
+      const res = await api.post('/admin/sync/rewards');
       if (res.data.success) {
         toast.success('Sync Complete', {
-          description: `Updated: ${res.data.data.summary.updated} users.`,
+          description: `Successfully synchronized ${res.data.summary?.updatedCount || 0} teammates via HF Hub.`,
         });
         fetchOverview();
       }
     } catch (err: any) {
-      toast.error('Sync Failed');
+      console.error('Sync error:', err);
+      toast.error('Sync Failed', {
+        description: err.response?.data?.message || 'Check connection to Hugging Face Hub.'
+      });
     } finally {
       setSyncing(false);
     }
