@@ -1,4 +1,4 @@
-package com.teaminfo.team_info_app
+package com.teaminfo.team_info_v2
 
 import io.flutter.embedding.android.FlutterActivity
 

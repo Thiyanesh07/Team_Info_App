@@ -15,7 +15,7 @@ const String _googleServerClientId = String.fromEnvironment(
   'GOOGLE_SERVER_CLIENT_ID',
 );
 const String _googleServerClientIdFallback =
-    '638705857828-3r7ammk6lbimalqlcb5spbaesma7tse4.apps.googleusercontent.com';
+    '19475909472-dqmiq69557n6s7bna16nkiohdbgp5m6v.apps.googleusercontent.com';
 
 String _configuredWebClientId() {
   final fromEnv = (dotenv.env['GOOGLE_WEB_CLIENT_ID'] ?? '').trim();

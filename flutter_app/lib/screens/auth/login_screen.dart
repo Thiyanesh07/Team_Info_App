@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/providers/auth_provider.dart';
+import 'package:team_info_app/services/notification_service.dart';
+import 'package:flutter/foundation.dart';
+
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -27,6 +30,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
     );
     _animController.forward();
+
+    // Diagnostic check for Firebase/Notification initialization on first run
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!NotificationService.isInitialized && 
+          NotificationService.initializationError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '⚠️ Notification Sync Issue: ${NotificationService.initializationError}',
+            ),
+            backgroundColor: AppColors.primary,
+            duration: const Duration(seconds: 7),
+            action: SnackBarAction(
+              label: 'Details',
+              textColor: Colors.white,
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Diagnostics'),
+                    content: const Text(
+                      'The app failed to connect to the notification service. '
+                      'Check if your Google Play Services are up to date and '
+                      'that you have granted notification permissions in Settings.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    });
   }
 
   @override

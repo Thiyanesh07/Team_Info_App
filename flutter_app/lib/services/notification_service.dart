@@ -12,6 +12,7 @@ import 'package:team_info_app/screens/reports/report_review_hub.dart';
 import 'package:team_info_app/screens/reports/report_submission_screen.dart';
 import 'package:team_info_app/screens/tasks/task_detail_screen.dart';
 import 'package:team_info_app/services/api_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class NotificationRouteObserver extends NavigatorObserver {
   void _sync(Route<dynamic>? route) {
@@ -51,9 +52,17 @@ class NotificationService {
   static DateTime? _lastTapAt;
   static const Duration _duplicateTapWindow = Duration(milliseconds: 1200);
   static String? _currentRouteTargetKey;
+  static bool isInitialized = false;
+  static String? initializationError;
+
 
   static Future<void> initialize() async {
     // 1. Request permissions (required for iOS and Android 13+)
+    // Using permission_handler for Android 13+ support
+    if (!kIsWeb) {
+      await Permission.notification.request();
+    }
+
     NotificationSettings settings = await _fcm.requestPermission(
       alert: true,
       badge: true,
@@ -89,7 +98,11 @@ class NotificationService {
           print('Foreground message received: ${message.notification?.title}');
         }
       });
+      isInitialized = true;
+    } else {
+      initializationError = 'Notification permission denied by system.';
     }
+
   }
 
   static Future<void> _firebaseMessagingBackgroundHandler(
@@ -400,10 +413,17 @@ class NotificationService {
         return;
       }
 
+      if (kDebugMode) print('📡 Syncing FCM Token: ${token.substring(0, 10)}...');
+
       final response = await _api.put(
         ApiConstants.fcmToken,
         body: {'fcmToken': token},
       );
+      
+      if (kDebugMode) {
+        print('✅ FCM Sync Result: success=${response.success}, message=${response.message}');
+      }
+
       if (response.success) {
         _lastSyncedToken = token;
       }

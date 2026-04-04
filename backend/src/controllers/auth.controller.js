@@ -180,6 +180,8 @@ const getMe = async (req, res) => {
 const updateFcmToken = async (req, res) => {
   try {
     const { fcmToken } = req.body;
+    console.log(`📡 Updating FCM Token for user ${req.user.id}: ${fcmToken ? fcmToken.substring(0, 10) + '...' : 'NULL'}`);
+
     await prisma.user.update({
       where: { id: req.user.id },
       data: { fcmToken },

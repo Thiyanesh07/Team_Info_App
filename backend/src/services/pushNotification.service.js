@@ -18,14 +18,15 @@ function _resolveServiceAccount() {
   // Try individual environment variables
   if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
     try {
-      const rawKey = process.env.FIREBASE_PRIVATE_KEY;
-      const normalizedKey = rawKey.includes('\"') 
-        ? JSON.parse(rawKey) 
-        : rawKey
-            .replace(/\\n/g, '\n')
-            .replace(/\n/g, '\n')
-            .replace(/^["']|["']$/g, '')
-            .trim();
+      const rawKey = process.env.FIREBASE_PRIVATE_KEY || '';
+      // Step 1: Remove any surrounding quotes
+      let key = rawKey.trim().replace(/^["']|["']$/g, '');
+      
+      // Step 2: Unescape newlines (\n -> actual newline)
+      key = key.replace(/\\n/g, '\n');
+
+      // Step 3: Ensure it starts and ends cleanly
+      const normalizedKey = key.trim();
 
       return {
         projectId: process.env.FIREBASE_PROJECT_ID,
