@@ -403,14 +403,16 @@ class NotificationService {
     );
   }
 
-  static Future<void> syncFcmTokenIfNeeded({String? forceToken}) async {
+  static Future<bool> syncFcmTokenIfNeeded({String? forceToken}) async {
     try {
       final token = forceToken ?? await _fcm.getToken();
       if (token == null || token.isEmpty) {
-        return;
+        if (kDebugMode) print('⚠️ Cannot sync FCM token: Token is null or empty');
+        return false;
       }
-      if (_lastSyncedToken == token) {
-        return;
+
+      if (_lastSyncedToken == token && forceToken == null) {
+        return true;
       }
 
       if (kDebugMode) print('📡 Syncing FCM Token: ${token.substring(0, 10)}...');
@@ -421,16 +423,18 @@ class NotificationService {
       );
       
       if (kDebugMode) {
-        print('✅ FCM Sync Result: success=${response.success}, message=${response.message}');
+        print('✅ FCM Sync Result: success=${response.success}, status=${response.statusCode}, message=${response.message}');
       }
 
       if (response.success) {
         _lastSyncedToken = token;
+        return true;
+      } else {
+        return false;
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('FCM token sync failed: $e');
-      }
+      if (kDebugMode) print('❌ Exception during FCM sync: $e');
+      return false;
     }
   }
 }

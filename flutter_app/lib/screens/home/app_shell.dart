@@ -8,6 +8,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:team_info_app/screens/chat/chat_list_screen.dart';
 import 'package:team_info_app/screens/tasks/tasks_screen.dart';
 import 'package:team_info_app/screens/profile/profile_screen.dart';
+import 'package:team_info_app/services/notification_service.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -16,7 +17,7 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<AppShell> {
+class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver {
   int _currentIndex = 0;
 
   final _screens = const [
@@ -33,6 +34,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkInitialConnectivity();
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
       final isOffline = results.isEmpty || results.every((r) => r == ConnectivityResult.none);
@@ -50,8 +52,16 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _connectivitySubscription.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      NotificationService.syncFcmTokenIfNeeded();
+    }
   }
 
   @override

@@ -14,6 +14,8 @@ import 'package:team_info_app/screens/profile/certifications_screen.dart';
 import 'package:team_info_app/core/enums/user_role.dart';
 import 'package:team_info_app/screens/profile/college_sync_screen.dart';
 import 'package:team_info_app/providers/system_config_provider.dart';
+import 'package:team_info_app/services/notification_service.dart';
+import 'package:flutter/foundation.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -25,6 +27,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _api = ApiService();
   String? _lastPortalSyncedAt;
   String? _lastPortalDeltaText;
+  bool _isSyncingNotify = false;
 
   Future<void> _editPoints({
     required String fieldKey,
@@ -375,6 +378,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               const SizedBox(height: 24),
             ],
+
+            // Notifications Section
+            _InfoSection(
+              title: 'Connection Status',
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _isSyncingNotify 
+                      ? null 
+                      : () async {
+                          setState(() => _isSyncingNotify = true);
+                          final success = await NotificationService.syncFcmTokenIfNeeded();
+                          setState(() => _isSyncingNotify = false);
+                          
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(success 
+                                ? 'Notifications Synced Successfully' 
+                                : 'Failed to sync. Ensure you have allowed notifications in settings.'
+                              ),
+                              backgroundColor: success ? AppColors.primary : AppColors.error,
+                            ),
+                          );
+                        },
+                    icon: _isSyncingNotify 
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.notifications_active_rounded, size: 18),
+                    label: Text(_isSyncingNotify ? 'Syncing...' : 'Sync Notifications'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: BorderSide(color: AppColors.primary.withAlpha(50)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Click to ensure your device is registered for push notifications.',
+                  style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
 
             // Skills Portfolio
             _InfoSection(
