@@ -15,7 +15,6 @@ import 'package:team_info_app/core/enums/user_role.dart';
 import 'package:team_info_app/screens/profile/college_sync_screen.dart';
 import 'package:team_info_app/providers/system_config_provider.dart';
 import 'package:team_info_app/services/notification_service.dart';
-import 'package:flutter/foundation.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -389,12 +388,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     onPressed: _isSyncingNotify 
                       ? null 
                       : () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           setState(() => _isSyncingNotify = true);
                           final success = await NotificationService.syncFcmTokenIfNeeded();
                           setState(() => _isSyncingNotify = false);
                           
                           if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             SnackBar(
                               content: Text(success 
                                 ? 'Notifications Synced Successfully' 
@@ -498,6 +498,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // General Section
+        _sectionLabel('General Skills'),
+        const SizedBox(height: 8),
         if (user.primarySkills.isNotEmpty)
           _SkillRow('Primary', user.primarySkills, AppColors.primary),
         if (user.secondarySkills.isNotEmpty)
@@ -506,7 +509,97 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _SkillRow('Special', user.specialSkills, AppColors.accent),
         if (user.programmingLangs.isNotEmpty)
           _SkillRow('Langs', user.programmingLangs, AppColors.warning),
+        
+        const SizedBox(height: 16),
+        // P Skill Section
+        _sectionLabel('P Skill Assessments'),
+        const SizedBox(height: 8),
+        _PSkillCard(user: user),
       ],
+    );
+  }
+
+  Widget _sectionLabel(String label) {
+    return Text(
+      label.toUpperCase(),
+      style: GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
+        color: Colors.white54,
+        letterSpacing: 1.2,
+      ),
+    );
+  }
+}
+
+class _PSkillCard extends StatelessWidget {
+  final UserModel user;
+  const _PSkillCard({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SkillsScreen(targetUser: user.role == UserRole.admin ? null : user),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.cardDark,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary.withAlpha(40)),
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primary.withAlpha(10),
+              AppColors.background.withAlpha(0),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withAlpha(30),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.assessment_rounded, color: AppColors.primary, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'College Assessments',
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'View & Manage P-Skills results',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+          ],
+        ),
+      ),
     );
   }
 }

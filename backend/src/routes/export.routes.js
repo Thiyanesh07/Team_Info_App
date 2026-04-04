@@ -15,7 +15,7 @@ router.use(authenticate);
 router.get('/activities', exportController.exportActivities);
 router.get('/projects', exportController.exportProjects);
 router.get('/hackathons', exportController.exportHackathons);
-router.get('/skills', exportController.exportSkills);
+router.get('/p-skills', exportController.exportPSkills);
 router.get('/learning', exportController.exportLearning);
 router.get('/certifications', exportController.exportCertifications);
 

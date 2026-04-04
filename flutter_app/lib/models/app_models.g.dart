@@ -247,6 +247,8 @@ PsSkill _$PsSkillFromJson(Map<String, dynamic> json) => PsSkill(
       userId: json['userId'] as String,
       type: json['type'] as String,
       skillName: json['skillName'] as String,
+      level: json['level'] as String?,
+      completedDate: json['completedDate'] as String?,
       completed: json['completed'] as bool? ?? false,
       createdAt: json['createdAt'] as String?,
     );
@@ -256,6 +258,8 @@ Map<String, dynamic> _$PsSkillToJson(PsSkill instance) => <String, dynamic>{
       'userId': instance.userId,
       'type': instance.type,
       'skillName': instance.skillName,
+      'level': instance.level,
+      'completedDate': instance.completedDate,
       'completed': instance.completed,
       'createdAt': instance.createdAt,
     };

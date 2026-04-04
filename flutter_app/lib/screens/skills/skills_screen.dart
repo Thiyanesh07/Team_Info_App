@@ -11,6 +11,7 @@ import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:team_info_app/models/app_models.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/screens/shared/member_data_view_screen.dart';
+import 'package:team_info_app/core/enums/user_role.dart';
 
 class SkillsScreen extends ConsumerStatefulWidget {
   final UserModel? targetUser; // If null, manage own skills
@@ -50,11 +51,14 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
   @override
   Widget build(BuildContext context) {
     final isMe = widget.targetUser == null;
-    final user = ref.watch(authProvider).user;
-    final canViewOthers = user != null && user.role.canViewAllData;
+    final currentUser = ref.watch(authProvider).user;
+    final canViewOthers = currentUser != null && currentUser.role.canViewAllData;
     final title = isMe
-        ? 'Skills Portfolio'
-        : '${widget.targetUser!.name.split(' ').first}\'s Skills';
+        ? 'P Skills Portfolio'
+        : '${widget.targetUser!.name.split(' ').first}\'s P Skills';
+
+    final techSkills = _skills.where((s) => s.type == 'TECHNICAL').toList();
+    final nonTechSkills = _skills.where((s) => s.type == 'NON_TECHNICAL').toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -88,52 +92,95 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      floatingActionButton:
-          FloatingActionButton.extended(
-            onPressed: () => _showAddSkillDialog(),
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Add Skill Card'),
-            backgroundColor: AppColors.primary,
-          ).animate().scale(
-            delay: 500.ms,
-            duration: 400.ms,
-            curve: Curves.easeOutBack,
-          ),
+      floatingActionButton: (isMe || (currentUser?.role == UserRole.admin))
+          ? FloatingActionButton.extended(
+              onPressed: () => _showAddSkillDialog(),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Add Assessment'),
+              backgroundColor: AppColors.primary,
+            ).animate().scale(
+              delay: 500.ms,
+              duration: 400.ms,
+              curve: Curves.easeOutBack,
+            )
+          : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _skills.isEmpty
-          ? _emptyState()
-          : RefreshIndicator(
-              onRefresh: _loadSkills,
-              child: GridView.builder(
-                padding: const EdgeInsets.all(20),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 1.4,
+              ? _emptyState()
+              : RefreshIndicator(
+                  onRefresh: _loadSkills,
+                  child: ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      if (techSkills.isNotEmpty) ...[
+                        _sectionHeader('Technical Skills', AppColors.primary),
+                        const SizedBox(height: 12),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 1.1,
+                          ),
+                          itemCount: techSkills.length,
+                          itemBuilder: (_, i) => _SkillCard(
+                            skill: techSkills[i],
+                            onDelete: () => _deleteSkill(techSkills[i].id),
+                            onEdit: () => _showEditSkillDialog(techSkills[i]),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                      if (nonTechSkills.isNotEmpty) ...[
+                        _sectionHeader('Non-Technical Skills', AppColors.secondary),
+                        const SizedBox(height: 12),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 1.1,
+                          ),
+                          itemCount: nonTechSkills.length,
+                          itemBuilder: (_, i) => _SkillCard(
+                            skill: nonTechSkills[i],
+                            onDelete: () => _deleteSkill(nonTechSkills[i].id),
+                            onEdit: () => _showEditSkillDialog(nonTechSkills[i]),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                itemCount: _skills.length,
-                itemBuilder: (_, i) =>
-                    _SkillCard(
-                          skill: _skills[i],
-                          onDelete: () => _deleteSkill(_skills[i].id),
-                          onEdit: () => _showEditSkillDialog(_skills[i]),
-                          onTap: () async {
-                            final res = await ref
-                                .read(apiServiceProvider)
-                                .put(
-                                  '${ApiConstants.psSkills}/${_skills[i].id}',
-                                  body: {'completed': !_skills[i].completed},
-                                );
-                            if (res.success) _loadSkills();
-                          },
-                        )
-                        .animate()
-                        .fade(delay: (i * 50).ms, duration: 300.ms)
-                        .slideY(begin: 0.1, end: 0),
-              ),
-            ),
+    );
+  }
+
+  Widget _sectionHeader(String title, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 18,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: GoogleFonts.outfit(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+      ],
     );
   }
 
@@ -143,7 +190,7 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
     showDialog(
       context: context,
       builder: (_) => ExportSelectionDialog(
-        title: 'Export Skills',
+        title: 'Export P-Skills',
         onExport: (scope, selectedUserId, timeline, startDate, endDate) async {
           await _runExport(
             scope: scope,
@@ -171,15 +218,9 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
 
       await _excelService.downloadAndOpenReport(
         endpoint: ApiConstants.exportSkills,
-        filename:
-            'SkillsPortfolio_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+        filename: 'PSkillsReport_${DateTime.now().millisecondsSinceEpoch}.xlsx',
         queryParams: {
           'scope': scope,
-          'timeline': timeline.name.toUpperCase(),
-          if (startDate != null)
-            'startDate': startDate.toIso8601String().split('T')[0],
-          if (endDate != null)
-            'endDate': endDate.toIso8601String().split('T')[0],
           if (userId != null) 'userId': userId,
         },
       );
@@ -197,39 +238,37 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
 
   Widget _emptyState() {
     return Center(
-      child:
-          Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.bolt_outlined,
-                    size: 80,
-                    color: AppColors.textMuted.withAlpha(50),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Skills Added',
-                    style: GoogleFonts.outfit(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Build your dynamic portfolio now!',
-                    style: GoogleFonts.inter(color: AppColors.textMuted),
-                  ),
-                ],
-              )
-              .animate()
-              .fade(duration: 600.ms)
-              .scale(duration: 600.ms, curve: Curves.easeOutBack),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.assessment_outlined,
+            size: 80,
+            color: AppColors.textMuted.withAlpha(50),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No Assessments Added',
+            style: GoogleFonts.outfit(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add your college P Skill results here.',
+            style: GoogleFonts.inter(color: AppColors.textMuted),
+          ),
+        ],
+      ).animate().fade(duration: 600.ms).scale(duration: 600.ms, curve: Curves.easeOutBack),
     );
   }
 
   void _showAddSkillDialog() {
     final nameC = TextEditingController();
+    final levelC = TextEditingController();
+    DateTime selectedDate = DateTime.now();
     String type = 'TECHNICAL';
 
     showModalBottomSheet(
@@ -252,7 +291,7 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Add New Skill Card',
+                'Add P-Skill Assessment',
                 style: GoogleFonts.outfit(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -263,32 +302,81 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
               TextField(
                 controller: nameC,
                 decoration: const InputDecoration(
-                  hintText: 'Skill Name (e.g. Flutter, UX Design)',
+                  labelText: 'Assessment Name',
+                  hintText: 'e.g. Python Foundation, Aptitude',
                 ),
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Category',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+              TextField(
+                controller: levelC,
+                decoration: const InputDecoration(
+                  labelText: 'Level Achieved',
+                  hintText: 'e.g. A Grade, 85%, Expert',
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Row(
                 children: [
-                  _TypeChip(
-                    label: 'TECHNICAL',
-                    current: type,
-                    onTap: () => setModalState(() => type = 'TECHNICAL'),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Type', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          initialValue: type,
+                          dropdownColor: AppColors.cardDark,
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'TECHNICAL', child: Text('Technical')),
+                            DropdownMenuItem(value: 'NON_TECHNICAL', child: Text('Non-Technical')),
+                          ],
+                          onChanged: (v) => setModalState(() => type = v!),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 10),
-                  _TypeChip(
-                    label: 'NON_TECHNICAL',
-                    current: type,
-                    onTap: () => setModalState(() => type = 'NON_TECHNICAL'),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Completed Date', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: selectedDate,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime.now(),
+                              builder: (context, child) => Theme(
+                                data: Theme.of(context).copyWith(
+                                  colorScheme: const ColorScheme.dark(primary: AppColors.primary),
+                                ),
+                                child: child!,
+                              ),
+                            );
+                            if (picked != null) setModalState(() => selectedDate = picked);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.divider),
+                            ),
+                            child: Text(
+                              "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}",
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -299,15 +387,14 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (nameC.text.isEmpty) return;
-                    final res = await ref
-                        .read(apiServiceProvider)
-                        .post(
+                    final res = await ref.read(apiServiceProvider).post(
                           ApiConstants.psSkills,
                           body: {
                             'skillName': nameC.text,
                             'type': type,
-                            if (widget.targetUser != null)
-                              'userId': widget.targetUser!.id,
+                            'level': levelC.text,
+                            'completedDate': selectedDate.toIso8601String(),
+                            if (widget.targetUser != null) 'userId': widget.targetUser!.id,
                           },
                         );
                     if (!context.mounted) return;
@@ -316,7 +403,7 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
                       _loadSkills();
                     }
                   },
-                  child: const Text('Add Card'),
+                  child: const Text('Save Assessment'),
                 ),
               ),
             ],
@@ -328,6 +415,8 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
 
   void _showEditSkillDialog(PsSkill skill) {
     final nameC = TextEditingController(text: skill.skillName);
+    final levelC = TextEditingController(text: skill.level);
+    DateTime selectedDate = skill.completedDate != null ? DateTime.parse(skill.completedDate!) : DateTime.now();
     String type = skill.type;
 
     showModalBottomSheet(
@@ -350,7 +439,7 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Edit Skill Card',
+                'Edit Assessment',
                 style: GoogleFonts.outfit(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -360,33 +449,70 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
               const SizedBox(height: 20),
               TextField(
                 controller: nameC,
-                decoration: const InputDecoration(
-                  hintText: 'Skill Name (e.g. Flutter, UX Design)',
-                ),
+                decoration: const InputDecoration(labelText: 'Assessment Name'),
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Category',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
+              TextField(
+                controller: levelC,
+                decoration: const InputDecoration(labelText: 'Level Achieved'),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Row(
                 children: [
-                  _TypeChip(
-                    label: 'TECHNICAL',
-                    current: type,
-                    onTap: () => setModalState(() => type = 'TECHNICAL'),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Type', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          initialValue: type,
+                          dropdownColor: AppColors.cardDark,
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'TECHNICAL', child: Text('Technical')),
+                            DropdownMenuItem(value: 'NON_TECHNICAL', child: Text('Non-Technical')),
+                          ],
+                          onChanged: (v) => setModalState(() => type = v!),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 10),
-                  _TypeChip(
-                    label: 'NON_TECHNICAL',
-                    current: type,
-                    onTap: () => setModalState(() => type = 'NON_TECHNICAL'),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Completed Date', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: selectedDate,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime.now(),
+                            );
+                            if (picked != null) setModalState(() => selectedDate = picked);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.divider),
+                            ),
+                            child: Text(
+                              "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}",
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -397,11 +523,14 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (nameC.text.isEmpty) return;
-                    final res = await ref
-                        .read(apiServiceProvider)
-                        .put(
+                    final res = await ref.read(apiServiceProvider).put(
                           '${ApiConstants.psSkills}/${skill.id}',
-                          body: {'skillName': nameC.text, 'type': type},
+                          body: {
+                            'skillName': nameC.text,
+                            'type': type,
+                            'level': levelC.text,
+                            'completedDate': selectedDate.toIso8601String(),
+                          },
                         );
                     if (!context.mounted) return;
                     if (res.success) {
@@ -420,168 +549,120 @@ class _SkillsScreenState extends ConsumerState<SkillsScreen> {
   }
 
   Future<void> _deleteSkill(String id) async {
-    final res = await ref
-        .read(apiServiceProvider)
-        .delete('${ApiConstants.psSkills}/$id');
+    final res = await ref.read(apiServiceProvider).delete('${ApiConstants.psSkills}/$id');
     if (res.success) _loadSkills();
   }
 }
 
-class _TypeChip extends StatelessWidget {
-  final String label, current;
-  final VoidCallback onTap;
-  const _TypeChip({
-    required this.label,
-    required this.current,
-    required this.onTap,
-  });
 
-  @override
-  Widget build(BuildContext context) {
-    final isSelected = label == current;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withAlpha(40)
-              : AppColors.surfaceLight,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.divider,
-          ),
-        ),
-        child: Text(
-          label.replaceAll('_', ' '),
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? AppColors.primary : Colors.white60,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _SkillCard extends StatelessWidget {
   final PsSkill skill;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
-  final VoidCallback onTap;
 
   const _SkillCard({
     required this.skill,
     required this.onDelete,
     required this.onEdit,
-    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final isTech = skill.type == 'TECHNICAL';
     final color = isTech ? AppColors.primary : AppColors.secondary;
+    
+    // Parse date
+    String dateStr = 'N/A';
+    if (skill.completedDate != null) {
+      try {
+        final d = DateTime.parse(skill.completedDate!);
+        dateStr = "${d.day}/${d.month}/${d.year}";
+      } catch (_) {}
+    }
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: skill.completed ? AppColors.success : color.withAlpha(50),
-          ),
-          boxShadow: [
-            if (skill.completed)
-              BoxShadow(
-                color: AppColors.success.withAlpha(20),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color.withAlpha(30),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        isTech ? 'TECH' : 'SOFT',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: color,
-                        ),
-                      ),
-                    ),
-                    if (skill.completed)
-                      const Icon(
-                        Icons.check_circle_rounded,
-                        color: AppColors.success,
-                        size: 16,
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: Text(
-                    skill.skillName,
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      height: 1.2,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            Positioned(
-              bottom: -10,
-              right: -10,
-              child: Row(
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withAlpha(40)),
+      ),
+      child: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.edit_outlined,
-                      size: 16,
-                      color: AppColors.textMuted,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: color.withAlpha(30),
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                    onPressed: onEdit,
+                    child: Text(
+                      isTech ? 'TECH' : 'SOFT',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: color),
+                    ),
                   ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.delete_outline_rounded,
-                      size: 16,
-                      color: AppColors.textMuted,
-                    ),
-                    onPressed: onDelete,
+                  Row(
+                    children: [
+                      IconButton(
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.edit_outlined, size: 14, color: Colors.white60),
+                        onPressed: onEdit,
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.delete_outline_rounded, size: 14, color: AppColors.error),
+                        onPressed: onDelete,
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
+              const SizedBox(height: 6),
+              Text(
+                skill.skillName,
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  height: 1.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const Spacer(),
+              _cardDetail(Icons.bar_chart_rounded, skill.level ?? 'No Level', color),
+              const SizedBox(height: 2),
+              _cardDetail(Icons.history_toggle_off_rounded, dateStr, color),
+            ],
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _cardDetail(IconData icon, String label, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 12, color: color.withAlpha(200)),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.inter(fontSize: 11, color: Colors.white70),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

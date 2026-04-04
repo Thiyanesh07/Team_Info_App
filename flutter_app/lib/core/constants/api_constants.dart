@@ -71,7 +71,7 @@ class ApiConstants {
   static const String exportActivities = '/export/activities';
   static const String exportProjects = '/export/projects';
   static const String exportHackathons = '/export/hackathons';
-  static const String exportSkills = '/export/skills';
+  static const String exportSkills = '/export/p-skills';
   static const String exportLearning = '/export/learning';
   static const String exportCertifications = '/export/certifications';
 

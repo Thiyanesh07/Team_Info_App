@@ -258,6 +258,20 @@ class ApiService {
     });
   }
 
+  // ─── P Skill Export Helper ─────────────────
+  Future<String?> getPSkillsExportUrl({String? userId, String? scope}) async {
+    final token = await getToken();
+    if (token == null) return null;
+    
+    final baseUrl = ApiConstants.baseUrl;
+    final queryParams = <String, String>{'token': token};
+    if (userId != null) queryParams['userId'] = userId;
+    if (scope != null) queryParams['scope'] = scope;
+    
+    final uri = Uri.parse("$baseUrl/export/p-skills").replace(queryParameters: queryParams);
+    return uri.toString();
+  }
+
   // ─── Response Handler ──────────────────────
   ApiResponse _handleResponse(http.Response response) {
     try {

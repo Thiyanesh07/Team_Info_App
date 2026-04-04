@@ -217,43 +217,52 @@ const exportMethods = {
     }
   },
 
-  /** Export Skills */
-  async exportSkills(req, res) {
+  /** Export P Skills (College Assessments) */
+  async exportPSkills(req, res) {
     try {
       const userIds = await getTargetUserIds(req);
-      const dateRange = getTimelineRange(req);
-      const psSkills = await prisma.psSkill.findMany({
+      const data = await prisma.psSkill.findMany({
         where: {
           userId: { in: userIds },
-          ...(dateRange ? { createdAt: dateRange } : {}),
+          // Filter for completed skills in this section
+          completed: true
         },
-        include: { user: { select: { name: true, regNo: true } } }
+        include: { user: { select: { name: true, regNo: true, department: true } } },
+        orderBy: [
+          { userId: 'asc' },
+          { type: 'asc' },
+          { createdAt: 'desc' }
+        ]
       });
 
       const columns = [
-        { header: 'User', key: 'name', width: 25 },
-        { header: 'Reg No', key: 'regNo', width: 20 },
-        { header: 'Skill Name', key: 'skill', width: 30 },
+        { header: 'User Name', key: 'userName', width: 25 },
+        { header: 'Reg No', key: 'regNo', width: 15 },
+        { header: 'Dept', key: 'dept', width: 10 },
+        { header: 'Skill Name', key: 'skillName', width: 30 },
         { header: 'Type', key: 'type', width: 15 },
-        { header: 'Completed', key: 'status', width: 15 }
+        { header: 'Level', key: 'level', width: 15 },
+        { header: 'Completed Date', key: 'completedDate', width: 20 }
       ];
 
-      const formattedData = psSkills.map(s => ({
-        name: s.user.name,
+      const formattedData = data.map(s => ({
+        userName: s.user.name,
         regNo: s.user.regNo,
-        skill: s.skillName,
+        dept: s.user.department,
+        skillName: s.skillName,
         type: s.type,
-        status: s.completed ? 'YES' : 'NO'
+        level: s.level || 'N/A',
+        completedDate: s.completedDate ? s.completedDate.toISOString().split('T')[0] : 'N/A'
       }));
 
-      const buffer = await excelService.generateSimpleExcel('Skills Portfolio', columns, formattedData);
-
+      const buffer = await excelService.generateSimpleExcel('P-Skills Assessments', columns, formattedData);
+      
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', 'attachment; filename=SkillsPortfolio.xlsx');
+      res.setHeader('Content-Disposition', 'attachment; filename=PSkillsReport.xlsx');
       res.send(buffer);
     } catch (error) {
-       console.error('ExportSkills error:', error);
-       res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to export skills portfolio' });
+      console.error('ExportPSkills error:', error);
+      res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to export P-Skills' });
     }
   },
 

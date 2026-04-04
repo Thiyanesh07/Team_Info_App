@@ -29,14 +29,21 @@ const getUserPsSkills = async (req, res) => {
 /** POST /api/ps-skills */
 const createPsSkill = async (req, res) => {
   try {
-    const { type, skillName, userId } = req.body;
+    const { type, skillName, level, completedDate, userId } = req.body;
     if (!type || !skillName) return res.status(400).json({ success: false, message: 'Type and skillName are required' });
 
     // Allow Admin to create for others
     const targetUserId = (req.user.role === 'ADMIN' && userId) ? userId : req.user.id;
 
     const skill = await prisma.psSkill.create({
-      data: { userId: targetUserId, type, skillName },
+      data: { 
+        userId: targetUserId, 
+        type, 
+        skillName,
+        level,
+        completedDate: completedDate ? new Date(completedDate) : null,
+        completed: true // Assessments in this section are considered completed
+      },
     });
     res.status(201).json({ success: true, message: 'PS skill added', data: skill });
 
@@ -49,6 +56,7 @@ const createPsSkill = async (req, res) => {
       { skillId: skill.id }
     );
   } catch (error) {
+    console.error('CreatePsSkill error:', error);
     res.status(500).json({ success: false, message: 'Failed to create PS skill' });
   }
 };
@@ -64,11 +72,24 @@ const updatePsSkill = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    const skill = await prisma.psSkill.update({ where: { id: req.params.id }, data: req.body });
+    const { type, skillName, level, completedDate, completed } = req.body;
+    const data = {};
+    if (type) data.type = type;
+    if (skillName) data.skillName = skillName;
+    if (level !== undefined) data.level = level;
+    if (completedDate !== undefined) {
+      data.completedDate = completedDate ? new Date(completedDate) : null;
+    }
+    if (completed !== undefined) data.completed = completed;
+
+    const skill = await prisma.psSkill.update({ 
+      where: { id: req.params.id }, 
+      data 
+    });
     res.json({ success: true, message: 'PS skill updated', data: skill });
 
     // Log System Activity if completed
-    if (req.body.completed === true) {
+    if (req.body.completed === true && existing.completed !== true) {
       logSystemActivity(
         req.user.id,
         'Skill Achieved',

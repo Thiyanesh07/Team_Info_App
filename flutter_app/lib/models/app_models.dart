@@ -263,6 +263,8 @@ class PsSkill {
   final String userId;
   final String type;
   final String skillName;
+  final String? level;
+  final String? completedDate;
   final bool completed;
   final String? createdAt;
 
@@ -271,6 +273,8 @@ class PsSkill {
     required this.userId,
     required this.type,
     required this.skillName,
+    this.level,
+    this.completedDate,
     this.completed = false,
     this.createdAt,
   });
