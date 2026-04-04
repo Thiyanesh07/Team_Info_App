@@ -35,13 +35,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!NotificationService.isInitialized && 
           NotificationService.initializationError != null) {
+        
+        // Don't show if it's just a generic "needs permission" or similar expected case
+        if (NotificationService.initializationError!.contains('permission')) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              '⚠️ Notification Sync Issue: ${NotificationService.initializationError}',
-            ),
+            content: const Text('⚠️ Notification service currently unavailable.'),
             backgroundColor: AppColors.primary,
-            duration: const Duration(seconds: 7),
+            duration: const Duration(seconds: 5),
             action: SnackBarAction(
               label: 'Details',
               textColor: Colors.white,
@@ -50,10 +52,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text('Diagnostics'),
-                    content: const Text(
-                      'The app failed to connect to the notification service. '
-                      'Check if your Google Play Services are up to date and '
-                      'that you have granted notification permissions in Settings.',
+                    content: Text(
+                      'The app encountered an error connecting to notifications: \n\n'
+                      '${NotificationService.initializationError}\n\n'
+                      'You can still sign in and use other features.',
                     ),
                     actions: [
                       TextButton(

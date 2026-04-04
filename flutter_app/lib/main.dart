@@ -23,7 +23,22 @@ Future<void> main() async {
   // 1. Initialize Firebase & Notifications (Required for Google Sign-In)
   try {
     if (kDebugMode) print('🚀 Initializing Firebase...');
-    await Firebase.initializeApp();
+    
+    // Manual initialization for absolute stability on Android
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: 'AIzaSyBqonF754pOShvND-JWlszPFBzmA1Fh4lc',
+          appId: '1:19475909472:android:89db8a8218299837626c05',
+          messagingSenderId: '19475909472',
+          projectId: 'team-a74',
+          storageBucket: 'team-a74.firebasestorage.app',
+        ),
+      );
+    } else {
+      await Firebase.initializeApp();
+    }
+    
     if (kDebugMode) print('✅ Firebase App Initialized');
     
     await NotificationService.initialize();
