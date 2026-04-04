@@ -21,7 +21,11 @@ function _resolveServiceAccount() {
       const rawKey = process.env.FIREBASE_PRIVATE_KEY;
       const normalizedKey = rawKey.includes('\"') 
         ? JSON.parse(rawKey) 
-        : rawKey.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '');
+        : rawKey
+            .replace(/\\n/g, '\n')
+            .replace(/\n/g, '\n')
+            .replace(/^["']|["']$/g, '')
+            .trim();
 
       return {
         projectId: process.env.FIREBASE_PROJECT_ID,

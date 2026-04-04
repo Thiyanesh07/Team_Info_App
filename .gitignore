@@ -45,7 +45,12 @@ backend/.cache/
 # Secrets
 *firebase-adminsdk*.json
 team-app-74-*.json
+team-a74-*.json
 *.secret.json
 service-account*.json
 team-app-74-cb0ef0cb661c.json
-team-app-74-cb0ef0cb661c.json
+google-services*.json
+GoogleService-Info.plist
+flutter_app/android/app/google-services.json
+flutter_app/ios/Runner/GoogleService-Info.plist
+

@@ -212,11 +212,42 @@ exports.deleteSubmission = async (req, res) => {
  */
 exports.getManageableRequests = async (req, res) => {
   const userId = req.user.id;
+  const userRole = req.user.role;
 
   try {
+    let where = {};
+    
+    if (userRole !== 'ADMIN') {
+      where = {
+        OR: [
+          { assignedById: userId },
+          {
+            AND: [
+              { targetAudience: 'TEAM' }
+            ]
+          },
+          {
+            AND: [
+              { targetAudience: 'ROLE' },
+              { targetRoles: { has: userRole } }
+            ]
+          },
+          {
+            AND: [
+              { targetAudience: 'INDIVIDUAL' },
+              { targetUserIds: { has: userId } }
+            ]
+          }
+        ]
+      };
+    }
+
     const requests = await prisma.reportRequest.findMany({
-      where: req.user.role === 'ADMIN' ? {} : { assignedById: userId },
+      where,
       include: {
+        assignedBy: {
+          select: { name: true, profileImageUrl: true, role: true }
+        },
         _count: {
           select: { submissions: true }
         }
@@ -316,7 +347,7 @@ exports.deleteRequest = async (req, res) => {
       );
 
       if (!isTargetLeader) {
-        return res.status(403).json({ success: false, message: 'Unauthorized' });
+        return res.status(403).json({ success: false, message: 'Unauthorized: Only the creator, an admin, or an assigned leader can delete this request.' });
       }
     }
 
@@ -348,7 +379,7 @@ exports.updateRequest = async (req, res) => {
       );
 
       if (!isTargetLeader) {
-        return res.status(403).json({ success: false, message: 'Unauthorized' });
+        return res.status(403).json({ success: false, message: 'Unauthorized: Only the creator, an admin, or an assigned leader can update this request.' });
       }
     }
 
@@ -391,7 +422,7 @@ exports.reopenRequest = async (req, res) => {
       );
 
       if (!isTargetLeader) {
-        return res.status(403).json({ success: false, message: 'Unauthorized' });
+        return res.status(403).json({ success: false, message: 'Unauthorized: Only the creator, an admin, or an assigned leader can reopen this request.' });
       }
     }
 

@@ -7,12 +7,16 @@ const excelService = require('../services/excel.service');
  */
 const getTargetUserIds = async (req) => {
   const { userId, scope } = req.query; // scope: 'SELF', 'USER', 'TEAM'
-  const isLeaderOrAdmin = ['ADMIN', 'CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'].includes(req.user.role);
+  const role = req.user.role?.toUpperCase();
+  const leaderRoles = ['ADMIN', 'CAPTAIN', 'VICE_CAPTAIN', 'STRATEGIST', 'MANAGER'];
+  const isLeaderOrAdmin = leaderRoles.includes(role);
 
+  // CRITICAL: Non-leaders ALWAYS get only their own ID, regardless of requested scope or userId
   if (!isLeaderOrAdmin) {
-    return [req.user.id]; // Members only get themselves
+    return [req.user.id]; 
   }
 
+  // Leaders can choose scope
   if (scope === 'TEAM' || (!userId && scope !== 'SELF')) {
     const allUsers = await prisma.user.findMany({ select: { id: true } });
     return allUsers.map(u => u.id);

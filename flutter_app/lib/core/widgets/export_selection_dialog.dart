@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/models/user_model.dart';
 import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:team_info_app/services/api_service.dart';
+import 'package:team_info_app/providers/auth_provider.dart';
 
 enum ExportTimeline { today, range, all }
 
-class ExportSelectionDialog extends StatefulWidget {
+class ExportSelectionDialog extends ConsumerStatefulWidget {
   final Function(
     String scope,
     String? userId,
@@ -25,10 +27,10 @@ class ExportSelectionDialog extends StatefulWidget {
   });
 
   @override
-  State<ExportSelectionDialog> createState() => _ExportSelectionDialogState();
+  ConsumerState<ExportSelectionDialog> createState() => _ExportSelectionDialogState();
 }
 
-class _ExportSelectionDialogState extends State<ExportSelectionDialog> {
+class _ExportSelectionDialogState extends ConsumerState<ExportSelectionDialog> {
   final ApiService _api = ApiService();
   List<UserModel> _users = [];
   bool _isLoadingUsers = false;
@@ -41,7 +43,11 @@ class _ExportSelectionDialogState extends State<ExportSelectionDialog> {
   @override
   void initState() {
     super.initState();
-    _loadUsers();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.read(authProvider).user?.role.isLeader ?? false) {
+        _loadUsers();
+      }
+    });
   }
 
   Future<void> _selectDate(bool isStart) async {
@@ -103,6 +109,9 @@ class _ExportSelectionDialogState extends State<ExportSelectionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authProvider).user;
+    final isLeader = user?.role.isLeader ?? false;
+
     return AlertDialog(
       backgroundColor: AppColors.cardDark,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -119,15 +128,17 @@ class _ExportSelectionDialogState extends State<ExportSelectionDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildOption('My Data Only', 'SELF', Icons.person_outline),
-            const SizedBox(height: 12),
-            _buildOption('Entire Team Status', 'TEAM', Icons.groups_outlined),
-            const SizedBox(height: 12),
-            _buildOption(
-              'Specific Member',
-              'USER',
-              Icons.person_search_outlined,
-            ),
-            if (_currentScope == 'USER') ...[
+            if (isLeader) ...[
+              const SizedBox(height: 12),
+              _buildOption('Entire Team Status', 'TEAM', Icons.groups_outlined),
+              const SizedBox(height: 12),
+              _buildOption(
+                'Specific Member',
+                'USER',
+                Icons.person_search_outlined,
+              ),
+            ],
+            if (isLeader && _currentScope == 'USER') ...[
               const SizedBox(height: 16),
               if (_isLoadingUsers)
                 const Center(child: CircularProgressIndicator())

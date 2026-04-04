@@ -372,15 +372,14 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                                               );
                                               if (confirm == true) {
                                                 final res = await _api.delete("${ApiConstants.tasks}/${widget.taskId}/reports/${r.id}");
-                                                if (res.success) {
-                                                  _loadReports();
-                                                } else {
-                                                  if (mounted) {
+                                                  if (!context.mounted) return;
+                                                  if (!res.success) {
                                                     ScaffoldMessenger.of(context).showSnackBar(
                                                       SnackBar(content: Text(res.message ?? 'Failed to delete report'))
                                                     );
+                                                  } else {
+                                                    _loadReports();
                                                   }
-                                                }
                                               }
                                             },
                                             padding: EdgeInsets.zero,
