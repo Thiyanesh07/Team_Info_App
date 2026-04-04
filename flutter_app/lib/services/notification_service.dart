@@ -39,7 +39,7 @@ class NotificationRouteObserver extends NavigatorObserver {
 }
 
 class NotificationService {
-  static final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+  static late FirebaseMessaging _fcm;
   static final ApiService _api = ApiService();
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
@@ -57,6 +57,9 @@ class NotificationService {
 
 
   static Future<void> initialize() async {
+    // 0. Initialize FCM instance (now that Firebase is ready)
+    _fcm = FirebaseMessaging.instance;
+
     // 1. Initialize Firebase Messaging behavior
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageTap);
     final initialMessage = await _fcm.getInitialMessage();

@@ -20,14 +20,18 @@ Future<void> main() async {
   await Hive.openBox('api_cache');
   await dotenv.load(fileName: "assets/.env");
 
-  // 1. Initialize Firebase & Notifications (Optional/Safe)
+  // 1. Initialize Firebase & Notifications (Required for Google Sign-In)
   try {
+    if (kDebugMode) print('🚀 Initializing Firebase...');
     await Firebase.initializeApp();
+    if (kDebugMode) print('✅ Firebase App Initialized');
+    
     await NotificationService.initialize();
+    if (kDebugMode) print('✅ NotificationService Initialized');
   } catch (e) {
-    debugPrint(
-      'Firebase Initialization Failed (Possibly missing google-services.json): $e',
-    );
+    debugPrint('❌ FATAL: Firebase Initialization Failed: $e');
+    // We intentionally don't rethrow here so the app can still show the LoginScreen
+    // but the LoginScreen's diagnostic check (login_screen.dart) will pick up the failure.
   }
 
   // 1. Handle UI Exceptions (Widget build errors)
