@@ -30,8 +30,7 @@ Future<void> main() async {
     if (kDebugMode) print('✅ NotificationService Initialized');
   } catch (e) {
     debugPrint('❌ FATAL: Firebase Initialization Failed: $e');
-    // We intentionally don't rethrow here so the app can still show the LoginScreen
-    // but the LoginScreen's diagnostic check (login_screen.dart) will pick up the failure.
+    NotificationService.initializationError = e.toString();
   }
 
   // 1. Handle UI Exceptions (Widget build errors)

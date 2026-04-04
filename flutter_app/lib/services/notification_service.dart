@@ -13,6 +13,7 @@ import 'package:team_info_app/screens/reports/report_submission_screen.dart';
 import 'package:team_info_app/screens/tasks/task_detail_screen.dart';
 import 'package:team_info_app/services/api_service.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 class NotificationRouteObserver extends NavigatorObserver {
   void _sync(Route<dynamic>? route) {
@@ -39,7 +40,15 @@ class NotificationRouteObserver extends NavigatorObserver {
 }
 
 class NotificationService {
-  static late FirebaseMessaging _fcm;
+  static FirebaseMessaging? get _fcm {
+    try {
+      if (Firebase.apps.isEmpty) return null;
+      return FirebaseMessaging.instance;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static final ApiService _api = ApiService();
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
@@ -57,42 +66,51 @@ class NotificationService {
 
 
   static Future<void> initialize() async {
-    // 0. Initialize FCM instance (now that Firebase is ready)
-    _fcm = FirebaseMessaging.instance;
-
-    // 1. Initialize Firebase Messaging behavior
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageTap);
-    final initialMessage = await _fcm.getInitialMessage();
-    if (initialMessage != null) {
-      await _handleMessageTap(initialMessage);
+    final fcm = _fcm;
+    if (fcm == null) {
+      initializationError = 'Firebase not initialized. Check your configuration.';
+      return;
     }
 
-    // 2. Handle background messages
-    FirebaseMessaging.onBackgroundMessage(
-      _firebaseMessagingBackgroundHandler,
-    );
-
-    // 3. Handle foreground messages
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      if (kDebugMode) {
-        print('Foreground message received: ${message.notification?.title}');
+    try {
+      // 1. Initialize Firebase Messaging behavior
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageTap);
+      final initialMessage = await fcm.getInitialMessage();
+      if (initialMessage != null) {
+        await _handleMessageTap(initialMessage);
       }
-    });
 
-    // 4. Initial token fetch (non-blocking)
-    _fcm.onTokenRefresh.listen((newToken) async {
-      _lastSyncedToken = null;
-      await syncFcmTokenIfNeeded(forceToken: newToken);
-    });
+      // 2. Handle background messages
+      FirebaseMessaging.onBackgroundMessage(
+        _firebaseMessagingBackgroundHandler,
+      );
 
-    isInitialized = true;
-    if (kDebugMode) print('✅ NotificationService Core Initialized');
+      // 3. Handle foreground messages
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        if (kDebugMode) {
+          print('Foreground message received: ${message.notification?.title}');
+        }
+      });
+
+      // 4. Initial token refresh listener
+      fcm.onTokenRefresh.listen((newToken) async {
+        _lastSyncedToken = null;
+        await syncFcmTokenIfNeeded(forceToken: newToken);
+      });
+
+      isInitialized = true;
+      if (kDebugMode) print('✅ NotificationService Core Initialized');
+    } catch (e) {
+      initializationError = 'FCM Setup Error: $e';
+    }
   }
 
   /// Force a system permission request for Android 13+ and iOS.
   /// Returns the current permission status.
   static Future<bool> requestSystemPermission() async {
     if (kIsWeb) return true;
+    final fcm = _fcm;
+    if (fcm == null) return false;
 
     // 1. Use permission_handler first for the most reliable system dialog
     final status = await Permission.notification.request();
@@ -100,16 +118,20 @@ class NotificationService {
 
     // 2. Re-initialize Firebase bridge if granted
     if (status.isGranted) {
-      await _fcm.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-      
-      // Try to get token immediately
-      final token = await _fcm.getToken();
-      if (token != null) {
-        await syncFcmTokenIfNeeded(forceToken: token);
+      try {
+        await fcm.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        
+        // Try to get token immediately
+        final token = await fcm.getToken();
+        if (token != null) {
+          await syncFcmTokenIfNeeded(forceToken: token);
+        }
+      } catch (e) {
+        if (kDebugMode) print('Error during fcm requestPermission: $e');
       }
       return true;
     }
@@ -417,7 +439,10 @@ class NotificationService {
 
   static Future<bool> syncFcmTokenIfNeeded({String? forceToken}) async {
     try {
-      final token = forceToken ?? await _fcm.getToken();
+      final fcm = _fcm;
+      if (fcm == null) return false;
+
+      final token = forceToken ?? await fcm.getToken();
       if (token == null || token.isEmpty) {
         if (kDebugMode) print('⚠️ Cannot sync FCM token: Token is null or empty');
         return false;
