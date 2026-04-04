@@ -60,7 +60,9 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      NotificationService.syncFcmTokenIfNeeded();
+      NotificationService.requestSystemPermission().then((_) {
+        NotificationService.syncFcmTokenIfNeeded();
+      });
     }
   }
 

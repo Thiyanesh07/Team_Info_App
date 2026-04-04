@@ -181,6 +181,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           user: UserModel.fromJson(response.data['user']),
           token: response.data['token'],
         );
+        await NotificationService.requestSystemPermission();
         await NotificationService.syncFcmTokenIfNeeded();
       } else {
         state = state.copyWith(

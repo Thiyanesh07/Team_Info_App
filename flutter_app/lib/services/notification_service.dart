@@ -57,52 +57,61 @@ class NotificationService {
 
 
   static Future<void> initialize() async {
-    // 1. Request permissions (required for iOS and Android 13+)
-    // Using permission_handler for Android 13+ support
-    if (!kIsWeb) {
-      await Permission.notification.request();
+    // 1. Initialize Firebase Messaging behavior
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageTap);
+    final initialMessage = await _fcm.getInitialMessage();
+    if (initialMessage != null) {
+      await _handleMessageTap(initialMessage);
     }
 
-    NotificationSettings settings = await _fcm.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
+    // 2. Handle background messages
+    FirebaseMessaging.onBackgroundMessage(
+      _firebaseMessagingBackgroundHandler,
     );
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      if (kDebugMode) print('User granted notification permission');
-
-      // 2. Get device token (useful for targeted notifications)
-      String? token = await _fcm.getToken();
-      if (kDebugMode) print('Registration Token: $token');
-
-      _fcm.onTokenRefresh.listen((newToken) async {
-        _lastSyncedToken = null;
-        await syncFcmTokenIfNeeded(forceToken: newToken);
-      });
-
-      FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageTap);
-      final initialMessage = await _fcm.getInitialMessage();
-      if (initialMessage != null) {
-        await _handleMessageTap(initialMessage);
+    // 3. Handle foreground messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      if (kDebugMode) {
+        print('Foreground message received: ${message.notification?.title}');
       }
+    });
 
-      // 3. Handle background messages
-      FirebaseMessaging.onBackgroundMessage(
-        _firebaseMessagingBackgroundHandler,
+    // 4. Initial token fetch (non-blocking)
+    _fcm.onTokenRefresh.listen((newToken) async {
+      _lastSyncedToken = null;
+      await syncFcmTokenIfNeeded(forceToken: newToken);
+    });
+
+    isInitialized = true;
+    if (kDebugMode) print('✅ NotificationService Core Initialized');
+  }
+
+  /// Force a system permission request for Android 13+ and iOS.
+  /// Returns the current permission status.
+  static Future<bool> requestSystemPermission() async {
+    if (kIsWeb) return true;
+
+    // 1. Use permission_handler first for the most reliable system dialog
+    final status = await Permission.notification.request();
+    if (kDebugMode) print('System Notification Permission Status: $status');
+
+    // 2. Re-initialize Firebase bridge if granted
+    if (status.isGranted) {
+      await _fcm.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
       );
-
-      // 4. Handle foreground messages
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        if (kDebugMode) {
-          print('Foreground message received: ${message.notification?.title}');
-        }
-      });
-      isInitialized = true;
-    } else {
-      initializationError = 'Notification permission denied by system.';
+      
+      // Try to get token immediately
+      final token = await _fcm.getToken();
+      if (token != null) {
+        await syncFcmTokenIfNeeded(forceToken: token);
+      }
+      return true;
     }
-
+    
+    return status.isGranted;
   }
 
   static Future<void> _firebaseMessagingBackgroundHandler(
