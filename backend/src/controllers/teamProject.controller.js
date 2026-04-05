@@ -116,8 +116,8 @@ const createTeamProject = async (req, res) => {
 
     await sendPushToUsers({
       userIds: [...notificationTargets],
-      title: 'New Project Created',
-      body: projectName,
+      title: 'New Project 🚀',
+      body: `${req.user.name} launched project: ${projectName}`,
       data: {
         type: 'PROJECT_CREATED',
         projectId: project.id,
@@ -241,8 +241,8 @@ const assignMembers = async (req, res) => {
 
     await sendPushToUsers({
       userIds: memberIds.filter((id) => id && id !== req.user.id),
-      title: 'Project Members Updated',
-      body: `You were assigned to ${project.projectName}`,
+      title: 'Project Assignment 🏗️',
+      body: `${req.user.name} added you to: ${project.projectName}`,
       data: {
         type: 'PROJECT_MEMBERS_ASSIGNED',
         projectId: project.id,

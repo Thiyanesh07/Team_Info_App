@@ -1,4 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:team_info_app/core/constants/api_constants.dart';
@@ -64,6 +66,17 @@ class NotificationService {
   static bool isInitialized = false;
   static String? initializationError;
 
+  static final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
+  static const AndroidNotificationChannel _androidChannel =
+      AndroidNotificationChannel(
+    'default_channel', // id
+    'High Importance Notifications', // title
+    description: 'This channel is used for important notifications.',
+    importance: Importance.max,
+  );
+
 
   static Future<void> initialize() async {
     final fcm = _fcm;
@@ -90,9 +103,40 @@ class NotificationService {
         if (kDebugMode) {
           print('Foreground message received: ${message.notification?.title}');
         }
+        _showLocalNotification(message);
       });
 
-      // 4. Initial token refresh listener
+      // 4. Initialize Local Notifications for Foreground
+      const initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/launcher_icon');
+      const initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid,
+      );
+
+      await _localNotifications.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse response) {
+          final payloadStr = response.payload;
+          if (payloadStr != null && payloadStr.isNotEmpty) {
+            try {
+              // Assuming payload is a JSON string of the data map
+              final data = json.decode(payloadStr) as Map<String, dynamic>;
+              handleNotificationTap(data);
+            } catch (e) {
+              if (kDebugMode) print('Error decoding local notification payload: $e');
+            }
+          }
+        },
+      );
+
+      // 5. Create Android Notification Channel
+      final platform = _localNotifications.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (platform != null) {
+        await platform.createNotificationChannel(_androidChannel);
+      }
+
+      // 6. Initial token refresh listener
       fcm.onTokenRefresh.listen((newToken) async {
         _lastSyncedToken = null;
         await syncFcmTokenIfNeeded(forceToken: newToken);
@@ -473,5 +517,30 @@ class NotificationService {
       if (kDebugMode) print('❌ Exception during FCM sync: $e');
       return false;
     }
+  }
+
+  static Future<void> _showLocalNotification(RemoteMessage message) async {
+    final notification = message.notification;
+    if (notification == null) return;
+
+    // Use jsonEncode from dart:convert
+    final payload = json.encode(message.data);
+
+    await _localNotifications.show(
+      notification.hashCode,
+      notification.title,
+      notification.body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _androidChannel.id,
+          _androidChannel.name,
+          channelDescription: _androidChannel.description,
+          importance: _androidChannel.importance,
+          priority: Priority.high,
+          icon: '@mipmap/launcher_icon',
+        ),
+      ),
+      payload: payload,
+    );
   }
 }

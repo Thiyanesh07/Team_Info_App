@@ -102,8 +102,8 @@ const createTask = async (req, res) => {
 
     await sendPushToUsers({
       userIds: [assignedToId],
-      title: 'New Task Assigned',
-      body: title,
+      title: `[${priority || 'MEDIUM'}] New Task Assigned 📋`,
+      body: `${req.user.name} assigned you: ${title}`,
       data: {
         type: 'TASK_ASSIGNED',
         taskId: task.id,

@@ -50,8 +50,8 @@ exports.createRequest = async (req, res) => {
 
       await sendPushToUsers({
         userIds: targets.map((u) => u.id),
-        title: 'New Submission Task',
-        body: title,
+        title: 'Report Request 📊',
+        body: `${req.user.name} requested: ${title}`,
         data: {
           type: 'REPORT_REQUEST_CREATED',
           requestId: reportRequest.id,

@@ -74,11 +74,11 @@ class SchedulerService {
 
       // Proactive Reminders (24h, 2h, 0h)
       if (task.reminderStage === 0 && diffHrs <= 24 && diffHrs > 2) {
-        await this._sendDeadlinePush(task.assignedToId, 'Task Deadline Tomorrow', `"${task.title}" is due in 24 hours.`, task.id, 'TASK_ASSIGNED', 'reminderStage', 1);
+        await this._sendDeadlinePush(task.assignedToId, 'Task Due Tomorrow ⏰', `"${task.title}" is due in 24 hours.`, task.id, 'TASK_ASSIGNED', 'reminderStage', 1);
       } else if (task.reminderStage < 2 && diffHrs <= 2 && diffHrs > 0) {
-        await this._sendDeadlinePush(task.assignedToId, 'Task Deadline Approaching', `"${task.title}" is due in 2 hours.`, task.id, 'TASK_ASSIGNED', 'reminderStage', 2);
+        await this._sendDeadlinePush(task.assignedToId, 'Task Due Soon ⏰', `"${task.title}" is due in 2 hours.`, task.id, 'TASK_ASSIGNED', 'reminderStage', 2);
       } else if (task.reminderStage < 3 && diffHrs <= 0 && diffHrs > -1) {
-        await this._sendDeadlinePush(task.assignedToId, 'Task Deadline Reached', `"${task.title}" is due now. Submission is closing.`, task.id, 'TASK_ASSIGNED', 'reminderStage', 3);
+        await this._sendDeadlinePush(task.assignedToId, 'Task Due Now 🚀', `"${task.title}" is due now. Please submit!`, task.id, 'TASK_ASSIGNED', 'reminderStage', 3);
       }
 
       // Late Reminders (1h late, 3h late, 6h late)
@@ -121,11 +121,11 @@ class SchedulerService {
 
       // Proactive
       if (report.reminderStage === 0 && diffHrs <= 24 && diffHrs > 2) {
-        await this._sendReportPush(offenders, 'Report Deadline Tomorrow', `"${report.title}" is due in 24 hours.`, report.id, 'reminderStage', 1);
+        await this._sendReportPush(offenders, 'Report Due Tomorrow ⏰', `"${report.title}" is due in 24 hours.`, report.id, 'reminderStage', 1);
       } else if (report.reminderStage < 2 && diffHrs <= 2 && diffHrs > 0) {
-        await this._sendReportPush(offenders, 'Report Deadline Approaching', `"${report.title}" is due in 2 hours.`, report.id, 'reminderStage', 2);
+        await this._sendReportPush(offenders, 'Report Due Soon ⏰', `"${report.title}" is due in 2 hours.`, report.id, 'reminderStage', 2);
       } else if (report.reminderStage < 3 && diffHrs <= 0 && diffHrs > -1) {
-        await this._sendReportPush(offenders, 'Report Deadline Reached', `"${report.title}" is due now. Submission is closing.`, report.id, 'reminderStage', 3);
+        await this._sendReportPush(offenders, 'Report Due Now 🚀', `"${report.title}" is due now. Please submit!`, report.id, 'reminderStage', 3);
       }
 
       // Late

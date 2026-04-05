@@ -89,8 +89,8 @@ const setupSocketHandlers = (io, prisma) => {
           msg.message || (msg.fileType === 'VOICE' ? 'Voice message' : 'New attachment');
         await sendPushToUsers({
           userIds: members.map((u) => u.id),
-          title: `${msg.sender?.name || 'Team'} in Team Chat`,
-          body: bodyPreview,
+          title: `Team Chat 💬`,
+          body: `${msg.sender?.name || 'Someone'}: ${bodyPreview}`,
           data: {
             type: 'TEAM_CHAT_MESSAGE',
             messageId: msg.id,
@@ -169,8 +169,8 @@ const setupSocketHandlers = (io, prisma) => {
           msg.message || (msg.fileType === 'VOICE' ? 'Voice message' : 'New attachment');
         await sendPushToUsers({
           userIds: otherParticipants.map((p) => p.userId),
-          title: `${msg.sender?.name || 'New'} sent a message`,
-          body: bodyPreview,
+          title: `Chat Message ✉️`,
+          body: `${msg.sender?.name || 'Someone'}: ${bodyPreview}`,
           data: {
             type: 'PERSONAL_CHAT_MESSAGE',
             conversationId: data.conversationId,
