@@ -74,7 +74,7 @@ const getUserById = async (req, res) => {
 /** PUT /api/users/profile - Update own profile */
 const updateProfile = async (req, res) => {
   try {
-    const { name, regNo, department, year, mobile, cgpa, profileImageUrl,
+    const { name, regNo, enrollmentNo, department, year, mobile, cgpa, profileImageUrl,
       primarySkills, secondarySkills, specialSkills, programmingLangs,
       linkedinUrl, githubUrl, leetcodeUrl, twitterUrl,
       rewardPoints, activityPoints } = req.body;
@@ -111,6 +111,7 @@ const updateProfile = async (req, res) => {
         ...(twitterUrl !== undefined && { twitterUrl }),
         ...(rewardPoints !== undefined && { rewardPoints: parseInt(rewardPoints) }),
         ...(activityPoints !== undefined && { activityPoints: parseInt(activityPoints) }),
+        ...(enrollmentNo !== undefined && { enrollmentNo }),
       },
       select: userSelect,
     });

@@ -15,7 +15,7 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _api = ApiService();
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameC, _regNoC, _deptC, _yearC, _mobileC, _cgpaC;
+  late TextEditingController _nameC, _regNoC, _enrollmentNoC, _deptC, _yearC, _mobileC, _cgpaC;
   late TextEditingController _rewardPointsC, _activityPointsC;
   late TextEditingController _linkedinC, _githubC, _leetcodeC, _twitterC;
   late TextEditingController _primarySkill1C, _primarySkill2C;
@@ -34,6 +34,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final user = ref.read(authProvider).user!;
     _nameC = TextEditingController(text: user.name);
     _regNoC = TextEditingController(text: user.regNo ?? '');
+    _enrollmentNoC = TextEditingController(text: user.enrollmentNo ?? '');
     _deptC = TextEditingController(text: user.department ?? '');
     _yearC = TextEditingController(text: user.year ?? '');
     _mobileC = TextEditingController(text: user.mobile ?? '');
@@ -111,6 +112,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       body: {
         'name': _nameC.text,
         'regNo': _regNoC.text,
+        'enrollmentNo': _enrollmentNoC.text,
         'department': _deptC.text,
         'year': _yearC.text,
         'mobile': _mobileC.text,
@@ -189,7 +191,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 validator: (v) => v!.isEmpty ? 'Required' : null,
               ),
               _field(_regNoC, 'Register No.'),
-              _field(TextEditingController(text: ref.read(authProvider).user?.enrollmentNo ?? 'Not Linked'), 'Portal ID (Read-only)', enabled: false),
+              _field(_enrollmentNoC, 'Enrollment No. (Portal ID)'),
               _field(_deptC, 'Department'),
               _field(_mobileC, 'Mobile', keyboardType: TextInputType.phone),
               _field(_cgpaC, 'CGPA', keyboardType: TextInputType.number),
@@ -390,6 +392,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   void dispose() {
     _nameC.dispose();
     _regNoC.dispose();
+    _enrollmentNoC.dispose();
     _deptC.dispose();
     _yearC.dispose();
     _mobileC.dispose();

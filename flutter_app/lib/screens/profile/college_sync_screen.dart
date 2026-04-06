@@ -31,7 +31,6 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
   late final WebViewController _controller;
   final TextEditingController _manualPointsController = TextEditingController();
   bool _manualFallbackExpanded = false;
-  bool _isLoading = true;
   bool _isSyncing = false;
   bool _hasPortalError = false;
   bool _portalInitialized = false;
@@ -57,7 +56,6 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
         NavigationDelegate(
           onPageStarted: (String url) {
             setState(() {
-              _isLoading = !_portalInitialized;
               _hasPortalError = false;
               if (!_portalInitialized && !_isSyncing) {
                 _setStage(SyncStage.openingPortal);
@@ -66,7 +64,6 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
           },
           onPageFinished: (String url) async {
             setState(() {
-              _isLoading = false;
               _portalInitialized = true;
               if (!_isSyncing && _stage != SyncStage.synced) {
                 _setStage(SyncStage.waitingForLogin);
@@ -109,16 +106,16 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
     _stage = stage;
     switch (stage) {
       case SyncStage.openingPortal:
-        _statusMessage = 'Opening portal';
+        _statusMessage = 'Opening college portal...';
         break;
       case SyncStage.waitingForLogin:
-        _statusMessage = 'Waiting for login';
+        _statusMessage = 'Waiting for login...';
         break;
       case SyncStage.tokenCaptured:
-        _statusMessage = 'Token captured';
+        _statusMessage = 'Portal session captured ✅';
         break;
       case SyncStage.syncing:
-        _statusMessage = 'Syncing';
+        _statusMessage = 'Syncing activity points...';
         break;
       case SyncStage.synced:
         final deltaText = _delta == null
@@ -129,7 +126,7 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
         _statusMessage = 'Synced successfully$deltaText';
         break;
       case SyncStage.failed:
-        _statusMessage = 'Failed';
+        _statusMessage = 'Sync failed';
         break;
     }
   }
@@ -150,7 +147,6 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
       _manualFallbackExpanded = false;
       _errorMessage = null;
       _hasPortalError = false;
-      _isLoading = true;
       _setStage(SyncStage.openingPortal);
     });
 
@@ -221,9 +217,10 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
 
       final dynamic dataObj = _safeDecode(cleanResult);
       if (dataObj != null && dataObj['success'] == true && dataObj['data'] != null) {
-        // We found points! Now we can "verify" them with the backend.
-        // Or if we still have the token (for non-HttpOnly fallbacks), we use it.
-        // For now, let's just use the points.
+        if (mounted && _stage != SyncStage.tokenCaptured && _stage != SyncStage.syncing) {
+           setState(() => _setStage(SyncStage.tokenCaptured));
+        }
+
         final pointsArray = dataObj['data']['points'] as List?;
         if (pointsArray != null && pointsArray.isNotEmpty) {
            final activityPointsItem = pointsArray.firstWhere(
@@ -239,10 +236,14 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
         }
       }
 
-      // Fallback: If not synced yet, keep waiting
-      if (mounted && _stage != SyncStage.waitingForLogin) {
-        setState(() => _setStage(SyncStage.waitingForLogin));
+      // Explicit URL Detection: If we are on dashboard but no points yet, we are still waiting
+      final currentUrl = await _controller.currentUrl();
+      if (currentUrl != null && currentUrl.contains('/dashboard')) {
+        if (mounted && _stage == SyncStage.openingPortal) {
+          setState(() => _setStage(SyncStage.waitingForLogin));
+        }
       }
+
     } catch (e) {
       debugPrint('Sync monitor issue: $e');
     }
@@ -545,85 +546,159 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
     );
   }
 
+  Widget _buildStatusHeader() {
+    IconData icon;
+    Color color;
+    bool showLoading = false;
+
+    switch (_stage) {
+      case SyncStage.openingPortal:
+        icon = Icons.cloud_queue_rounded;
+        color = Colors.white70;
+        showLoading = true;
+        break;
+      case SyncStage.waitingForLogin:
+        icon = Icons.login_rounded;
+        color = AppColors.warning;
+        break;
+      case SyncStage.tokenCaptured:
+        icon = Icons.vpn_key_rounded;
+        color = AppColors.primary;
+        break;
+      case SyncStage.syncing:
+        icon = Icons.sync_rounded;
+        color = AppColors.primary;
+        showLoading = true;
+        break;
+      case SyncStage.synced:
+        icon = Icons.check_circle_rounded;
+        color = AppColors.success;
+        break;
+      case SyncStage.failed:
+        icon = Icons.error_outline_rounded;
+        color = AppColors.error;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+      ),
+      child: Row(
+        children: [
+          if (showLoading)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                ),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Icon(icon, color: color, size: 20),
+            ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _statusMessage,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                if (_stage == SyncStage.waitingForLogin)
+                  Text(
+                    'Please login to your portal to continue',
+                    style: GoogleFonts.inter(color: Colors.white54, fontSize: 11),
+                  ),
+              ],
+            ),
+          ),
+          if (_stage == SyncStage.waitingForLogin || _stage == SyncStage.failed)
+            TextButton(
+              onPressed: _retrySync,
+              child: Text(
+                'RETRY',
+                style: GoogleFonts.inter(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
-          'Connect Portal',
+          'Portal Synchronizer',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.cardDark,
         elevation: 0,
         actions: [
           IconButton(
-            onPressed: () => _retrySync(),
-            tooltip: 'Retry Sync',
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
-          ),
-          IconButton(
             onPressed: _openExternalBrowser,
-            tooltip: 'Open External Browser',
-            icon: const Icon(
-              Icons.open_in_browser_rounded,
-              color: AppColors.primary,
-            ),
+            tooltip: 'Open in Browser',
+            icon: const Icon(Icons.open_in_browser_outlined, color: AppColors.primary),
           ),
         ],
       ),
-      body: Stack(
+      body: Column(
         children: [
-          WebViewWidget(controller: _controller),
-          if ((_isLoading && !_portalInitialized) ||
-              _isSyncing ||
-              (_stage == SyncStage.openingPortal && !_portalInitialized) ||
-              _stage == SyncStage.tokenCaptured ||
-              _stage == SyncStage.syncing)
-            Container(
-              color: Colors.black.withValues(alpha: 0.7),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const CircularProgressIndicator(
-                      color: AppColors.primary,
-                      strokeWidth: 3,
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      _statusMessage,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                    if (_stage == SyncStage.waitingForLogin) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        'Login in portal, then sync runs automatically',
-                        style: GoogleFonts.inter(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+          _buildStatusHeader(),
+          Expanded(
+            child: Stack(
               children: [
-                if (_hasPortalError ||
-                    _stage == SyncStage.failed ||
-                    _stage == SyncStage.synced)
-                  _buildSyncActionPanel(),
-                _buildManualFallbackPanel(),
+                WebViewWidget(controller: _controller),
+                if (_isSyncing || _stage == SyncStage.tokenCaptured || _stage == SyncStage.syncing)
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(color: AppColors.primary),
+                          const SizedBox(height: 20),
+                          Text(
+                            'Finalizing Sync...',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_hasPortalError || _stage == SyncStage.failed || _stage == SyncStage.synced)
+                        _buildSyncActionPanel(),
+                      _buildManualFallbackPanel(),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
