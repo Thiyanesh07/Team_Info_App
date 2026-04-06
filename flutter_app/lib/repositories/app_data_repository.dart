@@ -117,9 +117,13 @@ class AppDataRepository extends BaseRepository {
     return paginatedFromResponse(response, ReportRequest.fromJson);
   }
 
-  Future<List<ReportRequest>> getManageableRequests() async {
-    final response = await api.get(ApiConstants.manageableReports, useCache: true);
-    return listFromResponse(response, ReportRequest.fromJson);
+  Future<PaginatedList<ReportRequest>> getManageableRequests({int page = 1, int limit = 20}) async {
+    final response = await api.get(
+      ApiConstants.manageableReports, 
+      queryParams: {'page': page.toString(), 'limit': limit.toString()},
+      useCache: page == 1,
+    );
+    return paginatedFromResponse(response, ReportRequest.fromJson);
   }
 
   Future<ApiResponse> createReportRequest(Map<String, dynamic> data) async {

@@ -5,7 +5,6 @@ import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/models/app_models.dart';
 import 'package:team_info_app/providers/auth_provider.dart';
 import 'package:team_info_app/repositories/app_data_repository.dart';
-import 'package:team_info_app/repositories/base_repository.dart';
 import 'package:team_info_app/screens/reports/create_report_request_screen.dart';
 import 'package:team_info_app/screens/reports/report_review_hub.dart';
 import 'package:team_info_app/screens/reports/report_submission_screen.dart';
@@ -46,9 +45,9 @@ class _ReportHubScreenState extends ConsumerState<ReportHubScreen>
 
       if (mounted) {
         setState(() {
-          _myPendingReports = (results[0] as PaginatedList<ReportRequest>).items;
+          _myPendingReports = results[0].items;
           if (results.length > 1) {
-            _manageableRequests = (results[1] as PaginatedList<ReportRequest>).items;
+            _manageableRequests = results[1].items;
           }
           _loading = false;
         });
