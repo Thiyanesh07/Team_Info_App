@@ -119,6 +119,12 @@ const updateProfile = async (req, res) => {
     res.json({ success: true, message: 'Profile updated', data: user });
   } catch (error) {
     console.error('UpdateProfile error:', error);
+    if (error.code === 'P2002' && error.meta?.target?.includes('enrollmentNo')) {
+      return res.status(409).json({
+        success: false,
+        message: 'This Enrollment Number is already in use by another student.'
+      });
+    }
     res.status(500).json({ success: false, message: 'Failed to update profile' });
   }
 };
@@ -316,6 +322,12 @@ const adminUpdateUser = async (req, res) => {
     res.json({ success: true, message: 'User updated successfully', data: user });
   } catch (error) {
     console.error('AdminUpdateUser error:', error);
+    if (error.code === 'P2002' && error.meta?.target?.includes('enrollmentNo')) {
+      return res.status(409).json({
+        success: false,
+        message: 'This Enrollment Number is already in use by another student.'
+      });
+    }
     res.status(500).json({ success: false, message: 'Failed to update user' });
   }
 };
