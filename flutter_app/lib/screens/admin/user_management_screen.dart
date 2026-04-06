@@ -153,6 +153,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   void _showAddUserDialog() {
     final nameC = TextEditingController();
     final emailC = TextEditingController();
+    final enrollmentNoC = TextEditingController();
     final rewardPointsC = TextEditingController(text: '0');
     final activityPointsC = TextEditingController(text: '0');
     String selectedRole = 'MEMBER';
@@ -188,6 +189,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               _formField(nameC, 'Full Name', Icons.person_outline),
               const SizedBox(height: 12),
               _formField(emailC, 'Google Email', Icons.email_outlined),
+              const SizedBox(height: 12),
+              _formField(enrollmentNoC, 'Portal ID (Enrollment No)', Icons.badge_outlined),
               const SizedBox(height: 12),
               if (selectedRole != 'ADMIN') ...[
                 _formField(
@@ -251,6 +254,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       body: {
                         'name': nameC.text,
                         'email': emailC.text,
+                        'enrollmentNo': enrollmentNoC.text,
                         'role': selectedRole,
                         'rewardPoints':
                             int.tryParse(rewardPointsC.text.trim()) ?? 0,
@@ -285,6 +289,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   void _showEditUserDialog(UserModel user) {
     final nameC = TextEditingController(text: user.name);
     final regNoC = TextEditingController(text: user.regNo ?? '');
+    final enrollNoC = TextEditingController(text: user.enrollmentNo ?? '');
     final deptC = TextEditingController(text: user.department ?? '');
     final rewardPointsC = TextEditingController(
       text: user.rewardPoints.toString(),
@@ -325,6 +330,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             if (user.role != UserRole.admin) ...[
               _formField(regNoC, 'Register No', Icons.badge_outlined),
               const SizedBox(height: 12),
+              _formField(enrollNoC, 'Portal ID (Enrollment No)', Icons.fingerprint_rounded),
+              const SizedBox(height: 12),
               _formField(deptC, 'Department', Icons.business_outlined),
               const SizedBox(height: 12),
               _formField(
@@ -352,6 +359,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     body: {
                       'name': nameC.text,
                       'regNo': regNoC.text,
+                      'enrollmentNo': enrollNoC.text,
                       'department': deptC.text,
                       'rewardPoints':
                           int.tryParse(rewardPointsC.text.trim()) ?? 0,

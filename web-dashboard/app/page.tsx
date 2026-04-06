@@ -16,7 +16,8 @@ import {
   Target,
   Trophy,
   History,
-  FileSpreadsheet
+  FileSpreadsheet,
+  AlertCircle
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -31,9 +32,13 @@ import {
   Cell
 } from 'recharts';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const COLORS = ['#EFD395', '#A4A4A4', '#777674', '#4B4A48', '#262625'];
+
+const X = ({ size }: { size: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+);
 
 export default function Dashboard() {
   const [data, setData] = useState<any>(null);
@@ -43,6 +48,8 @@ export default function Dashboard() {
   const [health, setHealth] = useState<any>({ status: 'ok', database: 'connected' });
   const [syncStatus, setSyncStatus] = useState<any>(null);
   const [showSyncModal, setShowSyncModal] = useState(false);
+  const [showPortalModal, setShowPortalModal] = useState(false);
+  const [psToken, setPsToken] = useState('');
   const [manualTargets, setManualTargets] = useState<any>([]);
 
   useEffect(() => {
@@ -95,15 +102,37 @@ export default function Dashboard() {
       const res = await api.post('/admin/sync/rewards');
       if (res.data.success) {
         toast.success('Sync Complete', {
-          description: `Successfully synchronized ${res.data.summary?.updatedCount || 0} teammates via HF Hub.`,
+          description: `Successfully synchronized ${res.data.summary?.updatedCount || 0} teammates via HF Hub.`
         });
         fetchOverview();
       }
     } catch (err: any) {
-      console.error('Sync error:', err);
       toast.error('Sync Failed', {
         description: err.response?.data?.message || 'Check connection to Hugging Face Hub.'
       });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handlePortalSync = async () => {
+    if (!psToken.trim()) {
+      toast.error('Token Required');
+      return;
+    }
+    try {
+      setSyncing(true);
+      const res = await api.post('/admin/sync-team-activity', { psToken });
+      if (res.data.success) {
+        toast.success('Portal Sync Complete', {
+          description: `Updated ${res.data.updatedCount} members via PS Portal breakdown summation.`
+        });
+        setShowPortalModal(false);
+        setPsToken('');
+        fetchOverview();
+      }
+    } catch (err: any) {
+      toast.error('Portal Sync Failed');
     } finally {
       setSyncing(false);
     }
@@ -130,7 +159,7 @@ export default function Dashboard() {
 
   if (!data) return (
     <div className="flex h-screen bg-[#131313] items-center justify-center">
-       <div className="text-center p-8 bg-[#262625] border border-[#4B4A48] rounded shadow-2xl max-w-sm">
+       <div className="text-center p-8 bg-[#262625] border border-[#4B4A48] rounded shadow-2xl max-sm">
           <Activity size={32} className="text-[#777674] mx-auto mb-6" />
           <h2 className="text-xl font-black text-[#FFFFFF] uppercase tracking-tighter italic">Sync Failed</h2>
           <p className="text-xs text-[#A4A4A4] mt-2 underline decoration-[#4B4A48]">Administrative core disconnected.</p>
@@ -148,26 +177,65 @@ export default function Dashboard() {
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#131313] text-[#FFFFFF]">
       <Sidebar />
 
-      {/* SYNC MODAL */}
-      {showSyncModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
-          <motion.div 
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-lg bg-[#262625] border border-[#4B4A48] rounded p-10 shadow-2xl text-center"
-          >
-            <ShieldCheck size={32} className="text-[#EFD395] mx-auto mb-6" />
-            <h2 className="text-2xl font-black uppercase italic tracking-tighter mb-2 text-[#FFFFFF]">Sync Interrupted</h2>
-            <p className="text-[#A4A4A4] text-xs leading-relaxed mb-8">Manual override required for system benchmarks.</p>
-            
-            <div className="flex gap-4">
-              <button onClick={() => setShowSyncModal(false)} className="flex-1 py-4 bg-[#EFD395] text-[#131313] text-[10px] font-black uppercase tracking-widest active:scale-95">
-                Acknowledge
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+      <AnimatePresence>
+        {/* SYNC INTERRUPTED MODAL */}
+        {showSyncModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-lg bg-[#262625] border border-[#4B4A48] rounded p-10 shadow-2xl text-center"
+            >
+              <ShieldCheck size={32} className="text-[#EFD395] mx-auto mb-6" />
+              <h2 className="text-2xl font-black uppercase italic tracking-tighter mb-2 text-[#FFFFFF]">Sync Interrupted</h2>
+              <p className="text-[#A4A4A4] text-xs leading-relaxed mb-8">Manual override required for system benchmarks.</p>
+              
+              <div className="flex gap-4">
+                <button onClick={() => setShowSyncModal(false)} className="flex-1 py-4 bg-[#EFD395] text-[#131313] text-[10px] font-black uppercase tracking-widest active:scale-95">
+                  Acknowledge
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* PORTAL SYNC MODAL */}
+        {showPortalModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-lg bg-[#262625] border border-[#4B4A48] rounded p-10 shadow-2xl"
+            >
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-2xl font-black uppercase italic tracking-tighter text-[#FFFFFF]">Activity Sync</h2>
+                <button onClick={() => setShowPortalModal(false)} className="text-[#777674] hover:text-white transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <p className="text-[#A4A4A4] text-xs leading-relaxed mb-6">Authorize batch summation of activity points from the college portal.</p>
+              
+              <div className="space-y-4">
+                <textarea 
+                  className="w-full bg-[#131313] border border-[#4B4A48] rounded px-4 py-3.5 text-xs text-white focus:border-[#EFD395] outline-none min-h-[100px] font-mono"
+                  placeholder="Paste PS Token here..."
+                  value={psToken}
+                  onChange={(e) => setPsToken(e.target.value)}
+                />
+                <button 
+                  onClick={handlePortalSync}
+                  disabled={syncing}
+                  className="w-full py-4 bg-[#EFD395] text-[#131313] text-[10px] font-black uppercase tracking-widest active:scale-95 disabled:opacity-50"
+                >
+                  {syncing ? 'Processing...' : 'Run Global AP Sync'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       
       <main className="flex-1 p-6 md:p-10 overflow-y-auto mt-16 lg:mt-0 custom-scrollbar no-scrollbar">
         <header className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-[#4B4A48] pb-8 gap-6 md:gap-0">
@@ -183,14 +251,24 @@ export default function Dashboard() {
                 <FileSpreadsheet size={14} />
                 Export
              </button>
-             <button 
+              <button 
                 onClick={handleSyncRewards}
                 disabled={syncing}
                 className="flex-1 md:flex-none px-4 py-2 bg-[#EFD395] text-[#131313] rounded flex items-center justify-center gap-2 hover:bg-white transition-all font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
-             >
-                <Zap size={14} className={cn(syncing && "animate-spin")} />
-                {syncing ? 'Syncing...' : 'Sync'}
-             </button>
+                title="Sync Reward Points via HF Hub"
+              >
+                <Trophy size={14} className={cn(syncing && "animate-spin")} />
+                Sync RP
+              </button>
+              <button 
+                onClick={() => setShowPortalModal(true)}
+                disabled={syncing}
+                className="flex-1 md:flex-none px-4 py-2 bg-white text-[#131313] rounded flex items-center justify-center gap-2 hover:bg-[#EFD395] transition-all font-black text-[10px] uppercase tracking-widest disabled:opacity-50"
+                title="Sync Activity Points via PS Portal"
+              >
+                <Zap size={14} />
+                Sync AP
+              </button>
           </div>
         </header>
 

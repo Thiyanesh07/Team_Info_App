@@ -20,7 +20,8 @@ enum SyncStage {
 }
 
 class CollegeSyncScreen extends ConsumerStatefulWidget {
-  const CollegeSyncScreen({super.key});
+  final bool isAdminMode;
+  const CollegeSyncScreen({super.key, this.isAdminMode = false});
 
   @override
   ConsumerState<CollegeSyncScreen> createState() => _CollegeSyncScreenState();
@@ -162,10 +163,44 @@ class _CollegeSyncScreenState extends ConsumerState<CollegeSyncScreen> {
 
   Future<void> _extractCookieAndSync() async {
     if (_isSyncing || _stage == SyncStage.synced) return;
+
+    // --- ADMIN MODE: Extract PS Cookie for Team Sync ---
+    if (widget.isAdminMode) {
+      try {
+        final jsCookies = await _controller.runJavaScriptReturningResult('document.cookie');
+        String cookieStr = jsCookies.toString();
+        // Clean up JS result (might be double-quoted)
+        if (cookieStr.startsWith('"') && cookieStr.endsWith('"')) {
+          cookieStr = cookieStr.substring(1, cookieStr.length - 1);
+        }
+
+        final cookiesMap = <String, String>{};
+        for (final pair in cookieStr.split(';')) {
+          final parts = pair.split('=');
+          if (parts.length >= 2) {
+            cookiesMap[parts[0].trim()] = parts[1].trim();
+          }
+        }
+
+        final psToken = cookiesMap['PS'];
+        if (psToken != null && psToken.isNotEmpty) {
+          if (mounted) {
+            setState(() {
+              _isSyncing = false;
+              _setStage(SyncStage.synced);
+            });
+            Navigator.pop(context, {'psToken': psToken});
+          }
+          return;
+        }
+      } catch (e) {
+        debugPrint('Admin Cookie JS Error: $e');
+      }
+      return; // Keep waiting in Admin mode
+    }
+
+    // --- INDIVIDUAL MODE (Existing) ---
     try {
-      // 1. We NO LONGER only look for the PS cookie in document.cookie (since it's HttpOnly)
-      // 2. We inject a FECHT call into the page context. 
-      // 3. The browser will automatically attach the HttpOnly PS cookie.
       final jsResult = await _controller.runJavaScriptReturningResult('''
         (async function() {
           try {

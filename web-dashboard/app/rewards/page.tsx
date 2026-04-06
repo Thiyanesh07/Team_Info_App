@@ -22,6 +22,9 @@ export default function RewardsStatus() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'ALL' | 'ELIGIBLE' | 'BELOW'>('ALL');
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [psToken, setPsToken] = useState('');
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -47,6 +50,34 @@ export default function RewardsStatus() {
     }
   };
 
+  const handleTeamSync = async () => {
+    if (!psToken.trim()) {
+      toast.error('Token Required', { description: 'Please enter your PS Portal session token.' });
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      const res = await api.post('/admin/sync-team-activity', { psToken });
+      
+      if (res.data.success) {
+        toast.success('Batch Sync Successful', {
+          description: `Updated ${res.data.updatedCount} members out of ${res.data.total}.`
+        });
+        setShowSyncModal(false);
+        setPsToken('');
+        fetchStatus();
+      }
+    } catch (err: any) {
+      console.error('Batch sync error:', err);
+      toast.error('Sync Failed', {
+        description: err.response?.data?.message || 'Check your portal token and connection.'
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) return (
     <div className="flex h-screen bg-[#131313] items-center justify-center">
       <div className="flex flex-col items-center gap-6">
@@ -60,7 +91,8 @@ export default function RewardsStatus() {
 
   const filteredMembers = teamStatus.filter((m: any) => {
     const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         m.regNo.toLowerCase().includes(searchQuery.toLowerCase());
+                         (m.regNo && m.regNo.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                         (m.enrollmentNo && m.enrollmentNo.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesFilter = filter === 'ALL' || 
                          (filter === 'ELIGIBLE' && m.isEligible) || 
                          (filter === 'BELOW' && !m.isEligible);
@@ -79,11 +111,18 @@ export default function RewardsStatus() {
           </motion.div>
           <div className="flex gap-2">
             <button 
+              onClick={() => setShowSyncModal(true)}
+              className="px-8 py-3 bg-white text-[#131313] rounded flex items-center justify-center gap-2 hover:bg-[#EFD395] transition-all font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95"
+            >
+              <RefreshCcw size={14} />
+              Global Activity Sync
+            </button>
+            <button 
               onClick={() => fetchStatus()}
               className="px-8 py-3 bg-[#EFD395] text-[#131313] rounded flex items-center justify-center gap-2 hover:bg-white transition-all font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95"
             >
-              <RefreshCcw size={14} />
-              Sync Metrics
+              <ArrowUpRight size={14} />
+              Refresh Analytics
             </button>
           </div>
         </header>
@@ -188,7 +227,9 @@ export default function RewardsStatus() {
                                    </div>
                                    <div>
                                       <p className="text-sm font-black text-white uppercase italic tracking-tight">{m.name}</p>
-                                      <p className="text-[10px] font-black text-[#777674] uppercase tracking-[0.2em] italic">{m.regNo}</p>
+                                      <p className="text-[10px] font-black text-[#777674] uppercase tracking-[0.2em] italic">
+                                         {m.regNo || '---'} • {m.enrollmentNo ? `ID: ${m.enrollmentNo}` : 'NO ID'}
+                                      </p>
                                    </div>
                                 </div>
                              </td>
@@ -229,10 +270,67 @@ export default function RewardsStatus() {
               </table>
            </div>
         </div>
+
+        {/* Sync Modal */}
+        <AnimatePresence>
+          {showSyncModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="relative w-full max-w-md bg-[#262625] border border-[#4B4A48] rounded p-10 shadow-2xl"
+              >
+                <div className="flex justify-between items-start mb-8">
+                  <div>
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Batch Portal Sync</h3>
+                    <p className="text-[10px] font-black text-[#777674] uppercase tracking-widest mt-1">Sync entire team activity points via PS Portal.</p>
+                  </div>
+                  <button onClick={() => setShowSyncModal(false)} className="p-2 text-[#777674] hover:text-white transition-colors">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="p-4 bg-[#131313] border border-blue-500/20 rounded">
+                    <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest mb-1.5 flex items-center gap-2">
+                       <AlertCircle size={12} /> Authentication Required
+                    </p>
+                    <p className="text-[11px] text-[#A4A4A4] leading-relaxed">
+                      Enter your <span className="text-white italic">PS Portal session token</span> to authorize the batch summation. You can find this in your browser cookies as 'PS'.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase font-black tracking-widest text-[#777674] ml-1">Portal Session Token</label>
+                    <textarea 
+                      className="w-full bg-[#131313] border border-[#4B4A48] rounded px-4 py-3.5 text-xs focus:outline-none focus:border-[#EFD395] transition-all font-black text-[#FFFFFF] shadow-inner min-h-[100px]"
+                      placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      value={psToken}
+                      onChange={(e) => setPsToken(e.target.value)}
+                    />
+                  </div>
+
+                  <button 
+                    disabled={syncing}
+                    onClick={handleTeamSync}
+                    className="w-full py-4 bg-[#EFD395] hover:bg-white text-[#131313] rounded font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                  >
+                    {syncing ? 'Processing Core Sync...' : 'Initiate Global Sync'}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );
 }
+
+const X = ({ size }: { size: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+);
 
 function SummaryCard({ label, value, icon, color }: { label: string, value: any, icon: React.ReactNode, color: string }) {
   const colors: any = {

@@ -21,6 +21,7 @@ export default function MembersPage() {
     email: '',
     role: 'MEMBER',
     regNo: '',
+    enrollmentNo: '',
     department: '',
     rewardPoints: 0,
     activityPoints: 0
@@ -79,6 +80,7 @@ export default function MembersPage() {
       email: '',
       role: 'MEMBER',
       regNo: '',
+      enrollmentNo: '',
       department: '',
       rewardPoints: 0,
       activityPoints: 0
@@ -93,10 +95,11 @@ export default function MembersPage() {
 
   const openEditModal = (user: any) => {
     setFormData({
-      name: user.name,
-      email: user.email,
-      role: user.role,
+      name: user.name || '',
+      email: user.email || '',
+      role: user.role || 'MEMBER',
       regNo: user.regNo || '',
+      enrollmentNo: user.enrollmentNo || '',
       department: user.department || '',
       rewardPoints: user.rewardPoints || 0,
       activityPoints: user.activityPoints || 0
@@ -296,7 +299,9 @@ export default function MembersPage() {
                             <span className="text-[10px] font-black text-[#A4A4A4]">{user.activityPoints} APT</span>
                           </div>
                         </div>
-                        <span className="text-[9px] text-[#777674] font-black uppercase tracking-widest ml-1 leading-none">{user.department || 'UNCATEGORIZED'}</span>
+                        <span className="text-[9px] text-[#777674] font-black uppercase tracking-widest ml-1 leading-none">
+                          {user.department || 'UNCATEGORIZED'} • {user.enrollmentNo ? `ID: ${user.enrollmentNo}` : 'NO PORTAL ID'}
+                        </span>
                       </div>
                     </td>
                     <td className="px-8 py-6 text-right">
@@ -381,18 +386,20 @@ export default function MembersPage() {
                     />
                   </div>
                   
-                  {showModal === 'create' && (
-                    <div className="space-y-2 col-span-2">
-                      <label className="text-[10px] uppercase font-black tracking-widest text-[#777674] ml-1 leading-none">Google Email Anchor</label>
-                      <input 
-                        type="email" required
-                        className="w-full bg-[#131313] border border-[#4B4A48] rounded px-4 py-3.5 text-sm focus:outline-none focus:border-[#EFD395] transition-all font-black text-[#FFFFFF] italic shadow-inner"
-                        placeholder="alex@team.com"
-                        value={formData.email}
-                        onChange={e => setFormData({...formData, email: e.target.value})}
-                      />
-                    </div>
-                  )}
+                  <div className="space-y-2 col-span-2">
+                    <label className="text-[10px] uppercase font-black tracking-widest text-[#777674] ml-1 leading-none">Google Email Anchor</label>
+                    <input 
+                      type="email" required
+                      readOnly={showModal === 'edit'}
+                      className={cn(
+                        "w-full bg-[#131313] border border-[#4B4A48] rounded px-4 py-3.5 text-sm focus:outline-none focus:border-[#EFD395] transition-all font-black text-[#FFFFFF] italic shadow-inner",
+                        showModal === 'edit' && "opacity-50 cursor-not-allowed"
+                      )}
+                      placeholder="alex@team.com"
+                      value={formData.email}
+                      onChange={e => setFormData({...formData, email: e.target.value})}
+                    />
+                  </div>
 
                   <div className="space-y-2">
                     <label className="text-[10px] uppercase font-black tracking-widest text-[#777674] ml-1 leading-none">Assigned Rank</label>
@@ -428,6 +435,17 @@ export default function MembersPage() {
                       className="w-full bg-[#131313] border border-[#4B4A48] rounded px-4 py-3.5 text-sm focus:outline-none focus:border-[#EFD395] transition-all font-black text-[#EFD395] shadow-inner"
                       value={formData.rewardPoints}
                       onChange={e => setFormData({...formData, rewardPoints: parseInt(e.target.value) || 0})}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase font-black tracking-widest text-[#777674] ml-1 leading-none">Enrollment No (PS Portal)</label>
+                    <input 
+                      type="text"
+                      className="w-full bg-[#131313] border border-[#4B4A48] rounded px-4 py-3.5 text-sm focus:outline-none focus:border-[#EFD395] transition-all font-black text-[#FFFFFF] italic shadow-inner"
+                      placeholder="e.g. 21AD123"
+                      value={formData.enrollmentNo}
+                      onChange={e => setFormData({...formData, enrollmentNo: e.target.value})}
                     />
                   </div>
 

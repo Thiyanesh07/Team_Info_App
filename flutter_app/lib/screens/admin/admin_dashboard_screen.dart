@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/core/constants/api_constants.dart';
-import 'package:team_info_app/services/api_service.dart';
 import 'package:team_info_app/models/user_model.dart';
 import 'package:team_info_app/screens/admin/user_management_screen.dart';
 import 'package:team_info_app/screens/admin/audit_log_screen.dart';
 import 'package:team_info_app/screens/admin/admin_user_detail_screen.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:team_info_app/providers/system_config_provider.dart';
+import 'package:team_info_app/screens/profile/college_sync_screen.dart';
+import 'package:team_info_app/core/widgets/shimmer_loading.dart';
+import 'package:team_info_app/services/api_service.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -110,7 +113,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
 
   Widget _buildDashboardTab() {
     if (_loadingOverview) {
-      return const Center(child: CircularProgressIndicator());
+      return ListView(
+        padding: const EdgeInsets.all(20),
+        children: List.generate(4, (_) => const ShimmerStatsCard()),
+      );
     }
     if (_overviewData == null) {
       return const Center(child: Text('Failed to load stats'));
@@ -324,48 +330,183 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.primary.withAlpha(80)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.sync_rounded, color: AppColors.primary),
-              const SizedBox(width: 12),
-              Text(
-                'Data Synchronization',
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+      child: RepaintBoundary(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.sync_rounded, color: AppColors.primary),
+                const SizedBox(width: 12),
+                Text(
+                  'Data Synchronization',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Fetch reward points for all teammates using each member\'s roll number from Hugging Face.',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 13),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _showSyncConfirmation,
-              icon: const Icon(Icons.cloud_download_outlined, size: 18),
-              label: const Text('Sync Reward Points (All Teammates)'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Fetch reward points for all teammates using each member\'s roll number from Hugging Face.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _showSyncConfirmation,
+                icon: const Icon(Icons.stars_rounded, size: 18),
+                label: const Text('Sync Reward Points (All Teammates)'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _showActivitySyncDialog,
+                icon: const Icon(Icons.local_fire_department_outlined, size: 18),
+                label: const Text('Sync Team Activity Points (Portal)'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.secondary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(delay: 200.ms).scale(begin: const Offset(0.95, 0.95));
+  }
+
+  void _showActivitySyncDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        title: Text(
+          'Sync Team Points',
+          style: GoogleFonts.outfit(color: Colors.white),
+        ),
+        content: const Text(
+          'We will open the portal login. Once you log in, we will automatically sync activity points for the entire team.',
+          style: TextStyle(color: Colors.white70, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const CollegeSyncScreen(isAdminMode: true),
+                ),
+              );
+
+              if (result != null && result['psToken'] != null) {
+                _syncTeamActivityPoints(result['psToken']);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+            child: const Text('Login & Sync'),
           ),
         ],
       ),
-    ).animate().fadeIn(delay: 200.ms).scale(begin: const Offset(0.95, 0.95));
+    );
+  }
+
+  Future<void> _syncTeamActivityPoints(String psToken) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final res = await _api.post(
+      ApiConstants.syncTeamActivity,
+      body: {'psToken': psToken},
+    );
+
+    if (!mounted) return;
+    Navigator.pop(context); // Close loading
+
+    if (res.success) {
+      final data = res.data as Map;
+      _showActivitySyncSummary(data);
+      _loadOverview();
+      _loadAllUsers();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res.message ?? 'Batch sync failed'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  void _showActivitySyncSummary(Map data) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.green),
+            const SizedBox(width: 12),
+            Text(
+              'Batch Sync Completed',
+              style: GoogleFonts.outfit(color: Colors.white),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _summaryItem(
+              'Members Updated',
+              (data['updatedCount'] ?? 0).toString(),
+              Colors.green,
+            ),
+            _summaryItem(
+              'Failed / Partial',
+              (data['failedCount'] ?? 0).toString(),
+              Colors.orange,
+            ),
+            _summaryItem(
+              'Total Members',
+              (data['total'] ?? 0).toString(),
+              Colors.blue,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSyncConfirmation() {
@@ -512,7 +653,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
             leading: CircleAvatar(
               backgroundColor: AppColors.surfaceLight,
               backgroundImage: activity['user']?['profileImageUrl'] != null
-                  ? NetworkImage(activity['user']['profileImageUrl'])
+                  ? CachedNetworkImageProvider(activity['user']['profileImageUrl'])
                   : null,
               child: activity['user']?['profileImageUrl'] == null
                   ? const Icon(Icons.person, size: 20, color: AppColors.primary)
@@ -567,7 +708,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
                   leading: CircleAvatar(
                     backgroundColor: AppColors.surfaceLight,
                     backgroundImage: user.profileImageUrl != null
-                        ? NetworkImage(user.profileImageUrl!)
+                        ? CachedNetworkImageProvider(user.profileImageUrl!)
                         : null,
                     child: user.profileImageUrl == null
                         ? Text(user.name[0].toUpperCase())

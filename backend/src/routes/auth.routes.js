@@ -1,10 +1,14 @@
 const express = require('express');
-const router = express.Router();
-const { googleSignIn, getMe, updateFcmToken } = require('../controllers/auth.controller');
+const authController = require('../controllers/auth.controller');
 const { authenticate } = require('../middleware/auth.middleware');
+const { validate } = require('../utils/validation.utils');
+const { loginSchema, registerSchema, googleLoginSchema } = require('../validations/auth.validation');
 
-router.post('/google', googleSignIn);
-router.get('/me', authenticate, getMe);
-router.put('/fcm-token', authenticate, updateFcmToken);
+const router = express.Router();
+
+router.post('/google-login', validate(googleLoginSchema), authController.googleSignIn);
+router.get('/me', authenticate, authController.getMe);
+router.put('/fcm-token', authenticate, authController.updateFcmToken);
+router.post('/refresh-token', authController.refreshAccessToken);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
@@ -194,7 +195,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               radius: 48,
               backgroundColor: AppColors.surfaceLight,
               backgroundImage: user.profileImageUrl != null
-                  ? NetworkImage(user.profileImageUrl!)
+                  ? CachedNetworkImageProvider(user.profileImageUrl!)
                   : null,
               child: user.profileImageUrl == null
                   ? Text(
@@ -248,6 +249,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 title: 'Basic Info',
                 children: [
                   if (user.regNo != null) _InfoTile('Reg No', user.regNo!),
+                  if (user.enrollmentNo != null) _InfoTile('Portal ID', user.enrollmentNo!),
                   if (user.department != null)
                     _InfoTile('Department', user.department!),
                   if (user.year != null) _InfoTile('Year', user.year!),
@@ -427,7 +429,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             _InfoSection(
               title: 'Skills Portfolio',
               children: [
-                _buildSkillsPreview(context, user),
+                RepaintBoundary(child: _buildSkillsPreview(context, user)),
                 const SizedBox(height: 12),
                 Row(
                   children: [

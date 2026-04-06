@@ -165,14 +165,16 @@ const getAdminUserDetail = async (req, res) => {
  */
 const updateUser = async (req, res) => {
   const { id } = req.params;
-  const { role, rewardPoints } = req.body;
+  const { role, rewardPoints, activityPoints, enrollmentNo } = req.body;
 
   try {
     const updatedUser = await prisma.user.update({
       where: { id },
       data: {
         ...(role && { role }),
-        ...(rewardPoints !== undefined && { rewardPoints: Number(rewardPoints) })
+        ...(enrollmentNo !== undefined && { enrollmentNo }),
+        ...(rewardPoints !== undefined && { rewardPoints: Number(rewardPoints) }),
+        ...(activityPoints !== undefined && { activityPoints: Number(activityPoints) })
       }
     });
 
@@ -325,6 +327,74 @@ const getSyncStatus = async (req, res) => {
   }
 };
 
+/**
+ * Administrative: Sync Activity Points for all members via Portal using stored enrollment numbers.
+ * This is the "Global Activity Sync" feature.
+ */
+const syncTeamActivityPoints = async (req, res) => {
+  const { psToken } = req.body;
+
+  if (!psToken) {
+    return res.status(400).json({ success: false, message: 'PS Portal Token (Cookie) is required' });
+  }
+
+  try {
+    // Fetch only users who have an enrollmentNo mapped in the DB
+    const users = await prisma.user.findMany({
+      where: { 
+        enrollmentNo: { not: null },
+        role: { not: 'ADMIN' }
+      },
+      select: { id: true, enrollmentNo: true, activityPoints: true }
+    });
+
+    console.log(`[ADMIN_SYNC] Starting portal sync for ${users.length} users...`);
+    
+    let updatedCount = 0;
+    let failedCount = 0;
+
+    const portalService = require('../services/portal.service');
+
+    for (const user of users) {
+      try {
+        const { total } = await portalService.fetchActivityPointsBreakdown(psToken, user.enrollmentNo);
+        
+        if (total !== user.activityPoints) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { activityPoints: total }
+          });
+          updatedCount++;
+        }
+      } catch (err) {
+        console.error(`[ADMIN_SYNC] Failed for ${user.enrollmentNo}:`, err.message);
+        failedCount++;
+      }
+    }
+
+    // Record activity
+    await prisma.systemActivity.create({
+      data: {
+        userId: req.user.id,
+        title: 'Global Activity Sync',
+        content: `Portal-based activity points synced for ${updatedCount} members. ${failedCount} failures.`,
+        type: 'SYNC',
+        metadata: { updatedCount, failedCount, source: 'PS_PORTAL' }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Global portal sync complete',
+      data: { updatedCount, failedCount, total: users.length }
+    });
+
+  } catch (error) {
+    console.error('syncTeamActivityPoints error:', error);
+    res.status(500).json({ success: false, message: 'Global portal sync failed: ' + error.message });
+  }
+};
+
 module.exports = {
   getAdminOverview,
   getAdminUserDetail,
@@ -332,6 +402,7 @@ module.exports = {
   updateProject,
   deleteProject,
   syncRewardsFromSheets: syncRewards,
+  syncTeamActivityPoints,
   updateYearlyTargets,
   getSyncStatus
 };

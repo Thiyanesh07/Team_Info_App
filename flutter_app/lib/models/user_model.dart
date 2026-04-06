@@ -9,6 +9,7 @@ class UserModel {
   final String email;
   final String name;
   final String? regNo;
+  final String? enrollmentNo;
   final String? department;
   final String? year;
   final String? mobile;
@@ -35,6 +36,7 @@ class UserModel {
     required this.email,
     required this.name,
     this.regNo,
+    this.enrollmentNo,
     this.department,
     this.year,
     this.mobile,
@@ -62,7 +64,7 @@ class UserModel {
   Map<String, dynamic> toJson() => _$UserModelToJson(this);
 
   UserModel copyWith({
-    String? name, String? regNo, String? department, String? year,
+    String? name, String? regNo, String? enrollmentNo, String? department, String? year,
     String? mobile, double? cgpa, String? profileImageUrl, UserRole? role,
     List<String>? primarySkills, List<String>? secondarySkills,
     List<String>? specialSkills, List<String>? programmingLangs,
@@ -72,6 +74,7 @@ class UserModel {
     return UserModel(
       id: id, email: email,
       name: name ?? this.name, regNo: regNo ?? this.regNo,
+      enrollmentNo: enrollmentNo ?? this.enrollmentNo,
       department: department ?? this.department, year: year ?? this.year,
       mobile: mobile ?? this.mobile, cgpa: cgpa ?? this.cgpa,
       rewardPoints: rewardPoints ?? this.rewardPoints, 

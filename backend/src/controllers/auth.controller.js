@@ -33,12 +33,18 @@ const isValidDomain = (email) => {
 };
 
 /**
- * Generate JWT token
+ * Generate Access and Refresh JWT tokens
  */
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+const generateTokens = (userId) => {
+  const accessToken = jwt.sign({ userId }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
   });
+  
+  const refreshToken = jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET || 'refresh_secret_key', {
+    expiresIn: '7d',
+  });
+  
+  return { accessToken, refreshToken };
 };
 
 /**
@@ -110,7 +116,13 @@ const googleSignIn = async (req, res) => {
       });
     }
 
-    const token = generateToken(user.id);
+    const { accessToken, refreshToken } = generateTokens(user.id);
+
+    // Save refresh token to database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken },
+    });
 
     // Return user without password
     const { password: _, ...userWithoutPassword } = user;
@@ -118,7 +130,12 @@ const googleSignIn = async (req, res) => {
     res.json({
       success: true,
       message: 'Login successful',
-      data: { user: userWithoutPassword, token },
+      data: { 
+        user: userWithoutPassword, 
+        token: accessToken, // for backward compatibility in some places
+        accessToken,
+        refreshToken 
+      },
     });
   } catch (error) {
     console.error('Google Sign-In error:', error);
@@ -200,4 +217,56 @@ const updateFcmToken = async (req, res) => {
   }
 };
 
-module.exports = { googleSignIn, getMe, updateFcmToken };
+/**
+ * POST /api/auth/refresh-token
+ * Renew access token using refresh token
+ */
+const refreshAccessToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(400).json({ success: false, message: 'Refresh token is required' });
+    }
+
+    // Verify refresh token
+    let payload;
+    try {
+      payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'refresh_secret_key');
+    } catch (error) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
+    }
+
+    // Check if user exists and token matches
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true, refreshToken: true }
+    });
+
+    if (!user || user.refreshToken !== refreshToken) {
+      return res.status(401).json({ success: false, message: 'Token is no longer valid' });
+    }
+
+    // Generate new tokens
+    const tokens = generateTokens(user.id);
+
+    // Update refresh token in DB
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: tokens.refreshToken },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      }
+    });
+  } catch (error) {
+    console.error('Refresh Token error:', error);
+    res.status(500).json({ success: false, message: 'Failed to refresh token' });
+  }
+};
+
+module.exports = { googleSignIn, getMe, updateFcmToken, refreshAccessToken };

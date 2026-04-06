@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/models/user_model.dart';
@@ -25,7 +26,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   }
 
   Future<void> _loadLeaderboard() async {
-    final users = await ref.read(appDataRepositoryProvider).getTeamMembers();
+    final paginated = await ref.read(appDataRepositoryProvider).getTeamMembers(limit: 100);
+    final users = paginated.items;
     if (mounted) {
       final ap = List<UserModel>.from(users)..sort(
         (a, b) => b.activityPoints.compareTo(a.activityPoints)
@@ -116,7 +118,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 32),
-                child: _Podium(top3: usersList.take(3).toList(), isAP: isAP),
+                child: RepaintBoundary(
+                  child: _Podium(top3: usersList.take(3).toList(), isAP: isAP),
+                ),
               ),
             ),
           SliverPadding(
@@ -261,8 +265,9 @@ class _PodiumSpot extends StatelessWidget {
             child: CircleAvatar(
               radius: isCenter ? 36 : 28,
               backgroundImage: user.profileImageUrl != null
-                  ? NetworkImage(user.profileImageUrl!)
+                  ? CachedNetworkImageProvider(user.profileImageUrl!)
                   : null,
+              backgroundColor: AppColors.cardDark,
               child: user.profileImageUrl == null
                   ? Text(
                       user.name[0],
@@ -372,8 +377,9 @@ class _LeaderboardItem extends StatelessWidget {
           CircleAvatar(
             radius: 20,
             backgroundImage: user.profileImageUrl != null
-                ? NetworkImage(user.profileImageUrl!)
+                ? CachedNetworkImageProvider(user.profileImageUrl!)
                 : null,
+            backgroundColor: AppColors.cardDark,
             child: user.profileImageUrl == null ? Text(user.name[0]) : null,
           ),
           const SizedBox(width: 12),

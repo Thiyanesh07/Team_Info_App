@@ -526,6 +526,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
+  flutter_jailbreak_detection:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: add-namespace
+      resolved-ref: b0e4bbbf7b1d83c5f44243566fb2355461e2bf25
+      url: "https://github.com/pdurasie-ecovery/flutter_jailbreak_detection.git"
+    source: git
+    version: "1.10.0"
   flutter_launcher_icons:
     dependency: "direct dev"
     description:

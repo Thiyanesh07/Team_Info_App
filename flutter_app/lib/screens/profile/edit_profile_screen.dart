@@ -189,8 +189,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 validator: (v) => v!.isEmpty ? 'Required' : null,
               ),
               _field(_regNoC, 'Register No.'),
+              _field(TextEditingController(text: ref.read(authProvider).user?.enrollmentNo ?? 'Not Linked'), 'Portal ID (Read-only)', enabled: false),
               _field(_deptC, 'Department'),
-              _field(_yearC, 'Year'),
               _field(_mobileC, 'Mobile', keyboardType: TextInputType.phone),
               _field(_cgpaC, 'CGPA', keyboardType: TextInputType.number),
               _field(_rewardPointsC, 'Reward Points', keyboardType: TextInputType.number),
@@ -251,12 +251,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     String hint, {
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    bool enabled = true,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: TextFormField(
       controller: c,
       keyboardType: keyboardType,
       validator: validator,
+      enabled: enabled,
       decoration: InputDecoration(hintText: hint),
       style: const TextStyle(color: Colors.white),
     ),

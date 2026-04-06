@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, UserSearch, LogOut, ShieldCheck, Rocket, CheckSquare, Trophy, FileText, Activity, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, UserSearch, LogOut, ShieldCheck, Rocket, CheckSquare, Trophy, FileText, Activity, Menu, X, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -13,7 +13,7 @@ const navItems = [
   { name: 'Hackathons', icon: Trophy, href: '/hackathons' },
   { name: 'Tasks', icon: CheckSquare, href: '/tasks' },
   { name: 'Reports', icon: FileText, href: '/reports' },
-  { name: 'Rewards', icon: Trophy, href: '/rewards' },
+  { name: 'Rewards', icon: Zap, href: '/rewards' },
   { name: 'Admin Support', icon: ShieldCheck, href: '/chat' },
   { name: 'Inspection', icon: UserSearch, href: '/inspection' },
   { name: 'Security Audit', icon: Activity, href: '/audit' },

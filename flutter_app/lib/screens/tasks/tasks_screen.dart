@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
-import 'package:team_info_app/core/constants/api_constants.dart';
-import 'package:team_info_app/services/api_service.dart';
 import 'package:team_info_app/models/app_models.dart';
+import 'package:team_info_app/repositories/app_data_repository.dart';
 import 'package:team_info_app/providers/auth_provider.dart';
 import 'package:team_info_app/screens/tasks/create_task_screen.dart';
 import 'package:team_info_app/screens/tasks/task_detail_screen.dart';
@@ -19,7 +18,6 @@ class TasksScreen extends ConsumerStatefulWidget {
 
 class _TasksScreenState extends ConsumerState<TasksScreen>
     with SingleTickerProviderStateMixin {
-  final _api = ApiService();
   List<TaskAssignment> _myTasks = [];
   List<TaskAssignment> _assignedTasks = [];
   bool _loading = true;
@@ -45,20 +43,14 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
     final user = ref.read(authProvider).user;
     final isLeader = user?.role.name.toUpperCase() != 'MEMBER';
 
-    final resMy = await _api.get(ApiConstants.myTasks);
-    if (resMy.success) {
-      _myTasks = (resMy.data as List)
-          .map((e) => TaskAssignment.fromJson(e))
-          .toList();
-    }
+    final repo = ref.read(appDataRepositoryProvider);
+
+    final resMy = await repo.getMyTasks();
+    _myTasks = resMy.items;
 
     if (isLeader) {
-      final resAssigned = await _api.get(ApiConstants.assignedTasks);
-      if (resAssigned.success) {
-        _assignedTasks = (resAssigned.data as List)
-            .map((e) => TaskAssignment.fromJson(e))
-            .toList();
-      }
+      final resAssigned = await repo.getAssignedTasks();
+      _assignedTasks = resAssigned.items;
     }
 
     if (mounted) {
@@ -103,10 +95,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
         ),
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.file_download_outlined,
-              color: AppColors.primary,
-            ),
+            icon: const Icon(Icons.download),
             onPressed: () {
               showDialog(
                 context: context,
@@ -165,10 +154,10 @@ class _TasksScreenState extends ConsumerState<TasksScreen>
             Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.task_alt,
                       size: 64,
-                      color: AppColors.textMuted.withAlpha(100),
+                      color: Color(0x64B0B0B0), // Manual color for const
                     ),
                     const SizedBox(height: 16),
                     Text(

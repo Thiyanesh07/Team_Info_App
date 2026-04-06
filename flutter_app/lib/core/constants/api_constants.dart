@@ -66,6 +66,7 @@ class ApiConstants {
   static const String adminOverview = '/admin/overview';
   static const String adminUserDetail = '/admin/users';
   static const String syncRewards = '/admin/sync/rewards';
+  static const String syncTeamActivity = '/admin/sync-team-activity';
 
   // Export
   static const String exportActivities = '/export/activities';

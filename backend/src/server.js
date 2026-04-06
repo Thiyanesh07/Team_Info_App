@@ -3,6 +3,7 @@ const express = require('express');
 require('express-async-errors'); // Automatically catches unhandled promise rejections
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const http = require('http');
@@ -63,23 +64,28 @@ app.set('io', io);
 // 1. Security Headers (Protects against XSS, clickjacking, etc.)
 app.use(helmet());
 
+// 2. Response Compression (Optimizes payload size for mobile/slow networks)
+app.use(compression());
+
 // 2. HTTP Request Logger (Replaces basic console.log)
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // 3. API Rate Limiting (Protects Database from Spam & DDoS)
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes window
-  max: 1000, // Increased to 1000 for development to prevent Network Errors on dashboard reloads
-  message: { success: false, message: 'Too many requests from this IP, please try again later.' },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  max: 500, // Reduced from 1000 to be safer for Free Tier resources
+  message: { success: false, message: 'Too many requests, please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 app.use(cors({
   origin: [
     'https://team-info-app.vercel.app', 
     'http://localhost:3000', 
-    'http://localhost:5173'
+    'http://localhost:5173',
+    'http://10.0.2.2:3000', // Android Emulator
+    'http://192.168.1.100:3000' // Example LAN IP for physical device testing
   ],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],

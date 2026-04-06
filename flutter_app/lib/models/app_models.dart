@@ -643,3 +643,27 @@ class ReportSubmission {
       _$ReportSubmissionFromJson(json);
   Map<String, dynamic> toJson() => _$ReportSubmissionToJson(this);
 }
+
+@JsonSerializable()
+class PaginationMetadata {
+  final int total;
+  final int page;
+  final int limit;
+  final int totalPages;
+  final bool hasNext;
+  final bool hasPrev;
+
+  PaginationMetadata({
+    required this.total,
+    required this.page,
+    required this.limit,
+    required this.totalPages,
+    required this.hasNext,
+    required this.hasPrev,
+  });
+
+  factory PaginationMetadata.fromJson(Map<String, dynamic> json) =>
+      _$PaginationMetadataFromJson(json);
+
+  Map<String, dynamic> toJson() => _$PaginationMetadataToJson(this);
+}

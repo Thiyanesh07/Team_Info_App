@@ -41,7 +41,7 @@ class _CreateReportRequestScreenState extends ConsumerState<CreateReportRequestS
     try {
       final members = await ref.read(appDataRepositoryProvider).getTeamMembers();
       setState(() {
-        _teamMembers = members;
+        _teamMembers = members.items;
         _loadingMembers = false;
       });
     } catch (e) {

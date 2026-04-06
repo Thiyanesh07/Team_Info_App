@@ -10,9 +10,13 @@ final appDataRepositoryProvider = Provider<AppDataRepository>(
 );
 
 class AppDataRepository extends BaseRepository {
-  Future<List<UserModel>> getTeamMembers() async {
-    final response = await api.get(ApiConstants.users, useCache: true);
-    return listFromResponse(response, UserModel.fromJson);
+  Future<PaginatedList<UserModel>> getTeamMembers({int page = 1, int limit = 20}) async {
+    final response = await api.get(
+      ApiConstants.users,
+      queryParams: {'page': page.toString(), 'limit': limit.toString()},
+      useCache: page == 1,
+    );
+    return paginatedFromResponse(response, UserModel.fromJson);
   }
 
   Future<WeeklyAnalytics?> getWeeklyAnalytics({String? userId}) async {
@@ -33,14 +37,22 @@ class AppDataRepository extends BaseRepository {
     return data.cast<Map<String, dynamic>>();
   }
 
-  Future<List<TaskAssignment>> getMyTasks() async {
-    final response = await api.get(ApiConstants.myTasks, useCache: true);
-    return listFromResponse(response, TaskAssignment.fromJson);
+  Future<PaginatedList<TaskAssignment>> getMyTasks({int page = 1, int limit = 20}) async {
+    final response = await api.get(
+      ApiConstants.myTasks,
+      queryParams: {'page': page.toString(), 'limit': limit.toString()},
+      useCache: page == 1,
+    );
+    return paginatedFromResponse(response, TaskAssignment.fromJson);
   }
 
-  Future<List<TaskAssignment>> getAssignedTasks() async {
-    final response = await api.get(ApiConstants.assignedTasks, useCache: true);
-    return listFromResponse(response, TaskAssignment.fromJson);
+  Future<PaginatedList<TaskAssignment>> getAssignedTasks({int page = 1, int limit = 20}) async {
+    final response = await api.get(
+      ApiConstants.assignedTasks,
+      queryParams: {'page': page.toString(), 'limit': limit.toString()},
+      useCache: page == 1,
+    );
+    return paginatedFromResponse(response, TaskAssignment.fromJson);
   }
 
   Future<List<PersonalProject>> getPersonalProjects() async {
@@ -96,9 +108,13 @@ class AppDataRepository extends BaseRepository {
 
   // ─── Reports ───────────────────────────────
 
-  Future<List<ReportRequest>> getMyPendingReports() async {
-    final response = await api.get(ApiConstants.myPendingReports, useCache: true);
-    return listFromResponse(response, ReportRequest.fromJson);
+  Future<PaginatedList<ReportRequest>> getMyPendingReports({int page = 1, int limit = 20}) async {
+    final response = await api.get(
+      ApiConstants.myPendingReports,
+      queryParams: {'page': page.toString(), 'limit': limit.toString()},
+      useCache: page == 1,
+    );
+    return paginatedFromResponse(response, ReportRequest.fromJson);
   }
 
   Future<List<ReportRequest>> getManageableRequests() async {

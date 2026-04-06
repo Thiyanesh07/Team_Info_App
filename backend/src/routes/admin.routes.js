@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAdminOverview, getAdminUserDetail, updateUser, updateProject, deleteProject, syncRewardsFromSheets, getSyncStatus, updateYearlyTargets } = require('../controllers/admin.controller');
+const { getAdminOverview, getAdminUserDetail, updateUser, updateProject, deleteProject, syncRewardsFromSheets, getSyncStatus, updateYearlyTargets, syncTeamActivityPoints } = require('../controllers/admin.controller');
 const { authenticate, isAdmin } = require('../middleware/auth.middleware');
 
 // Protect all admin routes
@@ -55,5 +55,7 @@ router.get('/sync-status', getSyncStatus);
 router.patch('/manage/yearly-targets', updateYearlyTargets);
 
 router.delete('/manage/projects/:id', deleteProject);
+
+router.post('/sync-team-activity', syncTeamActivityPoints);
 
 module.exports = router;

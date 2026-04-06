@@ -2,6 +2,7 @@ const prisma = require('../lib/prisma');
 const { sendPushToUsers } = require('../services/pushNotification.service');
 
 const { logSystemActivity } = require('./systemActivity.controller');
+const { getPagination, getPaginationMetadata } = require('../utils/pagination.utils');
 
 const taskInclude = {
   assignedBy: { select: { id: true, name: true, profileImageUrl: true } },
@@ -16,12 +17,24 @@ const getMyTasks = async (req, res) => {
     const where = { assignedToId: req.user.id };
     if (status) where.status = status;
 
-    const tasks = await prisma.taskAssignment.findMany({
-      where,
-      include: taskInclude,
-      orderBy: { createdAt: 'desc' },
+    const { skip, take, page, limit } = getPagination(req.query);
+    
+    const [tasks, totalCount] = await Promise.all([
+      prisma.taskAssignment.findMany({
+        where,
+        include: taskInclude,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.taskAssignment.count({ where })
+    ]);
+
+    res.json({ 
+      success: true, 
+      data: tasks,
+      pagination: getPaginationMetadata(totalCount, page, limit)
     });
-    res.json({ success: true, data: tasks });
   } catch (error) {
     console.error('GetMyTasks error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch tasks' });
@@ -35,12 +48,24 @@ const getAssignedTasks = async (req, res) => {
     const where = { assignedById: req.user.id };
     if (status) where.status = status;
 
-    const tasks = await prisma.taskAssignment.findMany({
-      where,
-      include: taskInclude,
-      orderBy: { createdAt: 'desc' },
+    const { skip, take, page, limit } = getPagination(req.query);
+
+    const [tasks, totalCount] = await Promise.all([
+      prisma.taskAssignment.findMany({
+        where,
+        include: taskInclude,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.taskAssignment.count({ where })
+    ]);
+
+    res.json({ 
+      success: true, 
+      data: tasks,
+      pagination: getPaginationMetadata(totalCount, page, limit)
     });
-    res.json({ success: true, data: tasks });
   } catch (error) {
     console.error('GetAssignedTasks error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch tasks' });
@@ -50,11 +75,23 @@ const getAssignedTasks = async (req, res) => {
 /** GET /api/tasks/all - Admin: get all tasks */
 const getAllTasks = async (req, res) => {
   try {
-    const tasks = await prisma.taskAssignment.findMany({
-      include: taskInclude,
-      orderBy: { createdAt: 'desc' },
+    const { skip, take, page, limit } = getPagination(req.query);
+
+    const [tasks, totalCount] = await Promise.all([
+      prisma.taskAssignment.findMany({
+        include: taskInclude,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.taskAssignment.count()
+    ]);
+
+    res.json({ 
+      success: true, 
+      data: tasks,
+      pagination: getPaginationMetadata(totalCount, page, limit)
     });
-    res.json({ success: true, data: tasks });
   } catch (error) {
     console.error('GetAllTasks error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch tasks' });

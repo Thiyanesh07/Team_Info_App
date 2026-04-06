@@ -1,5 +1,7 @@
 const prisma = require('../lib/prisma');
 const { validateAndNormalizeUrl } = require('../lib/urlValidation');
+const { getPagination, getPaginationMetadata } = require('../utils/pagination.utils');
+const portalService = require('../services/portal.service');
 
 
 const PS_SYNC_COOLDOWN_MS = Number(process.env.PS_SYNC_COOLDOWN_MS || 45000);
@@ -30,12 +32,24 @@ const getAllUsers = async (req, res) => {
       where.role = { not: 'ADMIN' };
     }
 
-    const users = await prisma.user.findMany({
-      where,
-      select: userSelect,
-      orderBy: { name: 'asc' },
+    const { skip, take, page, limit } = getPagination(req.query);
+
+    const [users, totalCount] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: userSelect,
+        orderBy: { name: 'asc' },
+        skip,
+        take,
+      }),
+      prisma.user.count({ where })
+    ]);
+
+    res.json({ 
+      success: true, 
+      data: users,
+      pagination: getPaginationMetadata(totalCount, page, limit)
     });
-    res.json({ success: true, data: users });
   } catch (error) {
     console.error('GetAllUsers error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch users' });
@@ -247,6 +261,7 @@ const adminUpdateUser = async (req, res) => {
     const {
       name,
       regNo,
+      enrollmentNo,
       department,
       year,
       mobile,
@@ -269,6 +284,7 @@ const adminUpdateUser = async (req, res) => {
       data: {
         ...(name && { name }),
         ...(regNo !== undefined && { regNo }),
+        ...(enrollmentNo !== undefined && { enrollmentNo }),
         ...(department !== undefined && { department }),
         ...(year !== undefined && { year }),
         ...(mobile !== undefined && { mobile }),
@@ -313,6 +329,7 @@ const syncPsPoints = async (req, res) => {
     const manualActivityPoints = hasManualPoints
       ? Number(req.body.manualActivityPoints)
       : null;
+    
     console.info(
       `[PS_SYNC] user=${req.user.id} tokenPresent=${tokenPresent} tokenLength=${psToken.length} manualPoints=${manualActivityPoints ?? 'none'}`
     );
@@ -321,6 +338,8 @@ const syncPsPoints = async (req, res) => {
       where: { id: req.user.id },
       select: {
         activityPoints: true,
+        enrollmentNo: true,
+        regNo: true,
       },
     });
 
@@ -335,7 +354,6 @@ const syncPsPoints = async (req, res) => {
           oldPoints,
           newPoints: oldPoints,
           delta: 0,
-          syncedAt: new Date(Date.now() - (PS_SYNC_COOLDOWN_MS - cooldownRemainingMs)).toISOString(),
           retryAfterSeconds,
           idempotent: true,
         },
@@ -350,67 +368,49 @@ const syncPsPoints = async (req, res) => {
     }
 
     let activityPoints = 0;
+    let enrollmentNo = existingUser.enrollmentNo;
 
     if (manualActivityPoints !== null) {
       activityPoints = Math.max(0, Math.floor(manualActivityPoints));
     } else {
-      // Call the external API
-      const response = await fetch('https://ps.bitsathy.ac.in/api/ps_v2/dashboard/user-points?filter=overall', {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json, text/plain, */*',
-          'Cookie': `PS=${psToken}`,
-          'User-Agent': 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Mobile Safari/537.36'
+      // 1. Discovery Phase: If enrollmentNo is missing from our DB, fetch user info from portal
+      if (!enrollmentNo) {
+        console.info(`[PS_SYNC] Discovering enrollmentNo for user ${req.user.id}...`);
+        const profile = await portalService.getProfileInfo(psToken);
+        if (profile) {
+          // The portal ID is often in user_id or enroll property (based on test mapping)
+          enrollmentNo = profile.user_id || profile.enroll || profile.id;
         }
-      });
-      console.info(`[PS_SYNC] user=${req.user.id} portalStatus=${response.status}`);
+        
+        // If discovery failed, try using regNo as a best guess
+        if (!enrollmentNo) {
+          enrollmentNo = existingUser.regNo;
+        }
+      }
 
-      if (!response.ok) {
-        return res.status(response.status).json({
+      if (!enrollmentNo) {
+        return res.status(400).json({
           success: false,
-          message: 'Failed to authenticate with PS portal. Please login again and retry.',
+          message: 'Unable to determine enrollment number for portal sync. Please contact admin.',
         });
       }
 
-      const dataObj = await response.json();
-      if (!dataObj.success || !dataObj.data || !Array.isArray(dataObj.data.points)) {
-        return res.status(400).json({ success: false, message: 'Invalid response from PS portal' });
-      }
-
-      // Robust extraction: Search for the object with point_type === 'Activity Points'
-      const activityPointObj = dataObj.data.points.find(
-        (p) => p.point_type === 'Activity Points'
-      );
-      
-      if (!activityPointObj) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Activity Points not found in portal response' 
-        });
-      }
-
-      activityPoints = Number(activityPointObj.total_points || 0);
+      // 2. Fetch breakdown and sum points (Verified Logic)
+      console.info(`[PS_SYNC] Fetching breakdown for ${enrollmentNo}...`);
+      const { total } = await portalService.fetchActivityPointsBreakdown(psToken, enrollmentNo);
+      activityPoints = total;
     }
 
     const delta = activityPoints - oldPoints;
     const syncedAt = new Date().toISOString();
 
-    // Update user points first, then compute total contribution from all members.
-    const updatedUser = await prisma.user.update({
-      where: { id: req.user.id },
-      data: {
-        ...(tokenPresent && { psToken }),
-        activityPoints,
-      },
-      select: userSelect,
-    });
-
+    // 3. Calculation & Update (Optimized to a single call)
     const totals = await prisma.user.aggregate({
       where: { role: { not: 'ADMIN' } },
       _sum: { activityPoints: true },
     });
 
-    const totalActivityPoints = Number(totals._sum.activityPoints || 0);
+    const totalActivityPoints = Number(totals._sum.activityPoints || 0) + delta;
     const contributionPercent = totalActivityPoints > 0
       ? Number(((activityPoints / totalActivityPoints) * 100).toFixed(2))
       : 0;
@@ -418,11 +418,15 @@ const syncPsPoints = async (req, res) => {
     const user = await prisma.user.update({
       where: { id: req.user.id },
       data: {
+        ...(tokenPresent && { psToken }),
+        ...(enrollmentNo && { enrollmentNo }),
+        activityPoints,
         groupPoints: totalActivityPoints,
         contributionPercent
       },
       select: userSelect,
     });
+
     psSyncCooldownByUser.set(req.user.id, Date.now());
 
     res.json({
@@ -438,7 +442,10 @@ const syncPsPoints = async (req, res) => {
     });
   } catch (error) {
     console.error('SyncPsPoints error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error while syncing points' });
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error while syncing points'
+    });
   }
 };
 

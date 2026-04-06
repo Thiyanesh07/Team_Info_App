@@ -1,38 +1,36 @@
 const express = require('express');
-const router = express.Router();
-const {
-  getMyTasks, getAssignedTasks, getAllTasks,
-  createTask, updateTask, updateTaskStatus,
-  addReport, getTaskReports, exportReports, deleteTask,
-  reopenTask, deleteTaskReport, updateTaskReport,
-} = require('../controllers/task.controller');
+const taskController = require('../controllers/task.controller');
 const { authenticate, isLeader, isAdmin } = require('../middleware/auth.middleware');
+const { validate } = require('../utils/validation.utils');
+const { createTaskSchema, updateTaskStatusSchema, taskReportSchema } = require('../validations/task.validation');
+
+const router = express.Router();
 
 router.use(authenticate);
 
 // Member routes
-router.get('/my', getMyTasks);
+router.get('/my', taskController.getMyTasks);
 
 // Leader routes
-router.get('/assigned', isLeader, getAssignedTasks);
-router.post('/', isLeader, createTask);
-router.put('/:id', updateTask);
-router.patch('/:id/status', updateTaskStatus);
+router.get('/assigned', isLeader, taskController.getAssignedTasks);
+router.post('/', isLeader, validate(createTaskSchema), taskController.createTask);
+router.put('/:id', taskController.updateTask);
+router.patch('/:id/status', validate(updateTaskStatusSchema), taskController.updateTaskStatus);
 
 // Reports
-router.get('/reports/export', exportReports);
-router.post('/:id/reports', addReport);
-router.get('/:id/reports', getTaskReports);
-router.put('/:id/reports/:reportId', updateTaskReport);
+router.get('/reports/export', taskController.exportReports);
+router.post('/:id/reports', validate(taskReportSchema), taskController.addReport);
+router.get('/:id/reports', taskController.getTaskReports);
+router.put('/:id/reports/:reportId', validate(taskReportSchema), taskController.updateTaskReport);
 
 // Admin routes
-router.get('/all', isAdmin, getAllTasks);
+router.get('/all', isAdmin, taskController.getAllTasks);
 
 // Reopen
-router.post('/:id/reopen', isLeader, reopenTask);
+router.post('/:id/reopen', isLeader, taskController.reopenTask);
 
 // Delete
-router.delete('/:id', deleteTask);
-router.delete('/:id/reports/:reportId', deleteTaskReport);
+router.delete('/:id', taskController.deleteTask);
+router.delete('/:id/reports/:reportId', taskController.deleteTaskReport);
 
 module.exports = router;

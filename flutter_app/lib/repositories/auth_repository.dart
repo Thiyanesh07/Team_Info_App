@@ -71,6 +71,11 @@ class AuthRepository extends BaseRepository {
   Future<ApiResponse> healthCheck() => api.get('/health');
 
   Future<String?> getToken() => api.getToken();
-  Future<void> saveToken(String token) => api.saveToken(token);
-  Future<void> deleteToken() => api.deleteToken();
+  Future<String?> getRefreshToken() => api.getRefreshToken();
+  Future<void> saveTokens({required String accessToken, required String refreshToken}) => 
+    api.saveTokens(accessToken: accessToken, refreshToken: refreshToken);
+  Future<void> deleteTokens() => api.deleteTokens();
+  
+  // Legacy support for single token delete if needed
+  Future<void> deleteToken() => api.deleteTokens();
 }

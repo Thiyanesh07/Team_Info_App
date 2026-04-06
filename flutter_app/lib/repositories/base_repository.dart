@@ -1,4 +1,12 @@
+import 'package:team_info_app/models/app_models.dart';
 import 'package:team_info_app/services/api_service.dart';
+
+class PaginatedList<T> {
+  final List<T> items;
+  final PaginationMetadata? metadata;
+
+  PaginatedList({required this.items, this.metadata});
+}
 
 abstract class BaseRepository {
   final ApiService api = ApiService();
@@ -9,18 +17,33 @@ abstract class BaseRepository {
     ApiResponse response,
     T Function(Map<String, dynamic>) fromJson,
   ) async {
+    final list = await paginatedFromResponse(response, fromJson);
+    return list.items;
+  }
+
+  Future<PaginatedList<T>> paginatedFromResponse<T>(
+    ApiResponse response,
+    T Function(Map<String, dynamic>) fromJson,
+  ) async {
     if (response.success && response.data is List) {
       final parsed = <T>[];
       for (final item in (response.data as List)) {
         try {
           parsed.add(fromJson(item as Map<String, dynamic>));
         } catch (_) {
-          // Skip malformed records so one bad item cannot crash the screen.
+          // Skip malformed records
         }
       }
-      return parsed;
+
+      PaginationMetadata? metadata;
+      if (response.pagination != null) {
+        try {
+          metadata = PaginationMetadata.fromJson(response.pagination as Map<String, dynamic>);
+        } catch (_) {}
+      }
+      return PaginatedList(items: parsed, metadata: metadata); 
     }
-    return [];
+    return PaginatedList(items: [], metadata: null);
   }
 
   Future<T?> itemFromResponse<T>(

@@ -1,6 +1,7 @@
 const prisma = require('../lib/prisma');
 const { sendPushToUsers } = require('../services/pushNotification.service');
 const { validateAndNormalizeUrl } = require('../lib/urlValidation');
+const { getPagination, getPaginationMetadata } = require('../utils/pagination.utils');
 
 
 /**
@@ -72,37 +73,49 @@ exports.getMyReports = async (req, res) => {
   const userRole = req.user.role;
 
   try {
-    // 1. Fetch all requests that might apply to this user
-    const requests = await prisma.reportRequest.findMany({
-      where: {
-        OR: [
-          { targetAudience: 'TEAM' },
-          { 
-            AND: [
-              { targetAudience: 'ROLE' },
-              { targetRoles: { has: userRole } }
-            ]
-          },
-          {
-            AND: [
-              { targetAudience: 'INDIVIDUAL' },
-              { targetUserIds: { has: userId } }
-            ]
-          }
-        ]
-      },
-      include: {
-        assignedBy: {
-          select: { name: true, profileImageUrl: true, role: true }
+    const where = {
+      OR: [
+        { targetAudience: 'TEAM' },
+        { 
+          AND: [
+            { targetAudience: 'ROLE' },
+            { targetRoles: { has: userRole } }
+          ]
         },
-        submissions: {
-          where: { userId }
+        {
+          AND: [
+            { targetAudience: 'INDIVIDUAL' },
+            { targetUserIds: { has: userId } }
+          ]
         }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+      ]
+    };
 
-    res.json({ success: true, data: requests });
+    const { skip, take, page, limit } = getPagination(req.query);
+
+    const [requests, totalCount] = await Promise.all([
+      prisma.reportRequest.findMany({
+        where,
+        include: {
+          assignedBy: {
+            select: { name: true, profileImageUrl: true, role: true }
+          },
+          submissions: {
+            where: { userId }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.reportRequest.count({ where })
+    ]);
+
+    res.json({ 
+      success: true, 
+      data: requests,
+      pagination: getPaginationMetadata(totalCount, page, limit)
+    });
   } catch (error) {
     console.error('getMyReports error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch your reports' });
@@ -242,20 +255,31 @@ exports.getManageableRequests = async (req, res) => {
       };
     }
 
-    const requests = await prisma.reportRequest.findMany({
-      where,
-      include: {
-        assignedBy: {
-          select: { name: true, profileImageUrl: true, role: true }
-        },
-        _count: {
-          select: { submissions: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    const { skip, take, page, limit } = getPagination(req.query);
 
-    res.json({ success: true, data: requests });
+    const [requests, totalCount] = await Promise.all([
+      prisma.reportRequest.findMany({
+        where,
+        include: {
+          assignedBy: {
+            select: { name: true, profileImageUrl: true, role: true }
+          },
+          _count: {
+            select: { submissions: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.reportRequest.count({ where })
+    ]);
+
+    res.json({ 
+      success: true, 
+      data: requests,
+      pagination: getPaginationMetadata(totalCount, page, limit)
+    });
   } catch (error) {
     console.error('getManageableRequests error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch manageable requests' });

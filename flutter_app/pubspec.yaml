@@ -26,6 +26,10 @@ dependencies:
   firebase_core: ^3.10.1
   firebase_messaging: ^15.2.10
   flutter_local_notifications: ^17.2.1
+  flutter_jailbreak_detection:
+    git:
+      url: https://github.com/pdurasie-ecovery/flutter_jailbreak_detection.git
+      ref: add-namespace
   permission_handler: ^11.3.1
 
   # Storage & Persistence

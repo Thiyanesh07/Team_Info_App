@@ -175,11 +175,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final response = await _repo.loginWithGoogle(auth.idToken!);
 
       if (response.success && response.data != null) {
-        await _repo.saveToken(response.data['token']);
+        final accessToken = response.data['token'];
+        final refreshToken = response.data['refreshToken'];
+        
+        await _repo.saveTokens(
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+        );
+        
         state = state.copyWith(
           status: AuthStatus.authenticated,
           user: UserModel.fromJson(response.data['user']),
-          token: response.data['token'],
+          token: accessToken,
         );
         await NotificationService.requestSystemPermission();
         await NotificationService.syncFcmTokenIfNeeded();
@@ -206,7 +213,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
-    await _repo.deleteToken();
+    await _repo.deleteTokens();
     try {
       await GoogleSignIn.instance.signOut();
     } catch (_) {}

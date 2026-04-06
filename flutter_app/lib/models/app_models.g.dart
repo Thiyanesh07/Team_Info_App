@@ -606,3 +606,23 @@ const _$ReportSubmissionStatusEnumMap = {
   ReportSubmissionStatus.COMPLETED: 'COMPLETED',
   ReportSubmissionStatus.REDO: 'REDO',
 };
+
+PaginationMetadata _$PaginationMetadataFromJson(Map<String, dynamic> json) =>
+    PaginationMetadata(
+      total: (json['total'] as num).toInt(),
+      page: (json['page'] as num).toInt(),
+      limit: (json['limit'] as num).toInt(),
+      totalPages: (json['totalPages'] as num).toInt(),
+      hasNext: json['hasNext'] as bool,
+      hasPrev: json['hasPrev'] as bool,
+    );
+
+Map<String, dynamic> _$PaginationMetadataToJson(PaginationMetadata instance) =>
+    <String, dynamic>{
+      'total': instance.total,
+      'page': instance.page,
+      'limit': instance.limit,
+      'totalPages': instance.totalPages,
+      'hasNext': instance.hasNext,
+      'hasPrev': instance.hasPrev,
+    };

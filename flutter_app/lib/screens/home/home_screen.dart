@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:team_info_app/core/theme/app_theme.dart';
 import 'package:team_info_app/providers/auth_provider.dart';
@@ -100,18 +101,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final repo = ref.read(appDataRepositoryProvider);
 
     final tasks = await repo.getMyTasks();
-    _pendingMyTasks = tasks.where((t) => t.status != 'COMPLETED').toList();
+    _pendingMyTasks = tasks.items.where((t) => t.status != 'COMPLETED').toList();
 
     if (isLeader) {
       final assigned = await repo.getAssignedTasks();
-      _pendingAssignedTasks = assigned
+      _pendingAssignedTasks = assigned.items
           .where((t) => t.status != 'COMPLETED')
           .toList();
     }
 
     // Load Redo Reports
     final reports = await repo.getMyPendingReports();
-    _redoReports = reports.where((r) => 
+    _redoReports = reports.items.where((r) => 
       r.submissions.isNotEmpty && 
       r.submissions.any((s) => s.status == ReportSubmissionStatus.REDO)
     ).toList();
@@ -312,7 +313,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final members = await ref.read(appDataRepositoryProvider).getTeamMembers();
     if (mounted) {
       setState(() {
-        _teamMembers = members;
+        _teamMembers = members.items;
       });
     }
   }
@@ -348,7 +349,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (url.isEmpty) return null;
     final uri = Uri.tryParse(url);
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) return null;
-    return NetworkImage(url);
+    return CachedNetworkImageProvider(url);
   }
 
   Widget _safeSection(String label, Widget Function() builder) {
@@ -384,21 +385,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // Background Gradient Orbs
+          // Background Gradient Orbs - Isolated with RepaintBoundary
           Positioned(
             top: -100,
             right: -100,
-            child: _GradientOrb(
-              color: AppColors.primary.withAlpha(40),
-              size: 300,
+            child: RepaintBoundary(
+              child: _GradientOrb(
+                color: AppColors.primary.withAlpha(40),
+                size: 300,
+              ),
             ),
           ),
           Positioned(
             bottom: -50,
             left: -100,
-            child: _GradientOrb(
-              color: AppColors.secondary.withAlpha(30),
-              size: 400,
+            child: RepaintBoundary(
+              child: _GradientOrb(
+                color: AppColors.secondary.withAlpha(30),
+                size: 400,
+              ),
             ),
           ),
 
@@ -800,15 +805,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         crossAxisCount: 2,
-        mainAxisSpacing: 16,
         crossAxisSpacing: 16,
-        childAspectRatio: 1.1,
-        children: const [
-          ShimmerStatsCard(),
-          ShimmerStatsCard(),
-          ShimmerStatsCard(),
-          ShimmerStatsCard(),
-        ],
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.5,
+        children: List.generate(4, (_) => const ShimmerStatsCard()),
       );
     }
 

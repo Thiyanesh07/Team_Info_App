@@ -11,11 +11,64 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:team_info_app/services/notification_service.dart';
+import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart';
+import 'package:flutter/services.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 0. Initialize Storage & Environment
+  // 1. Security Check: Jailbreak/Root Detection
+  bool isCompromised = false;
+  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+    try {
+      isCompromised = await FlutterJailbreakDetection.jailbroken;
+      // Also check for Developer Mode on Android if desired, but for now we focus on Root
+      if (kDebugMode) print('🛡️ Security Check: isCompromised=$isCompromised');
+    } catch (e) {
+      debugPrint('🛡️ Security Check Error: $e');
+    }
+  }
+
+  if (isCompromised && !kDebugMode) {
+    runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark(),
+      home: Scaffold(
+        backgroundColor: const Color(0xFF0F172A),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.security_rounded, color: Colors.redAccent, size: 80),
+                const SizedBox(height: 24),
+                const Text(
+                  'Security Violation',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'This application cannot run on a rooted or jailbroken device for security reasons. Please use a secure device to continue.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: Colors.white70),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () => SystemNavigator.pop(),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                  child: const Text('Exit Application'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+    return;
+  }
+
+  // 2. Initialize Storage & Environment
   await Hive.initFlutter();
   await Hive.openBox('api_cache');
   await dotenv.load(fileName: "assets/.env");

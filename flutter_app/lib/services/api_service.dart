@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:team_info_app/core/constants/api_constants.dart';
 import 'package:team_info_app/services/cache_service.dart';
@@ -13,9 +14,12 @@ class ApiService {
   ApiService._internal();
 
   final _storage = const FlutterSecureStorage();
-  static const _tokenKey = 'auth_token';
+  static const _tokenKey = 'auth_token'; // Actually the accessToken
+  static const _refreshTokenKey = 'refresh_token';
   String? _inMemoryToken;
+  String? _inMemoryRefreshToken;
   static const Duration _requestTimeout = Duration(seconds: 30);
+  bool _isRefreshing = false;
 
   // ─── Token Management ──────────────────────
   Future<String?> getToken() async {
@@ -27,14 +31,32 @@ class ApiService {
     return token;
   }
 
+  Future<String?> getRefreshToken() async {
+    if (_inMemoryRefreshToken != null && _inMemoryRefreshToken!.isNotEmpty) {
+      return _inMemoryRefreshToken;
+    }
+    final token = await _storage.read(key: _refreshTokenKey);
+    _inMemoryRefreshToken = token;
+    return token;
+  }
+
+  Future<void> saveTokens({required String accessToken, required String refreshToken}) async {
+    _inMemoryToken = accessToken;
+    _inMemoryRefreshToken = refreshToken;
+    await _storage.write(key: _tokenKey, value: accessToken);
+    await _storage.write(key: _refreshTokenKey, value: refreshToken);
+  }
+
   Future<void> saveToken(String token) async {
     _inMemoryToken = token;
     await _storage.write(key: _tokenKey, value: token);
   }
 
-  Future<void> deleteToken() async {
+  Future<void> deleteTokens() async {
     _inMemoryToken = null;
+    _inMemoryRefreshToken = null;
     await _storage.delete(key: _tokenKey);
+    await _storage.delete(key: _refreshTokenKey);
   }
 
   // ─── Headers ───────────────────────────────
@@ -56,16 +78,52 @@ class ApiService {
     var headers = await _headers(withAuth: withAuth);
     var response = await sender(headers).timeout(_requestTimeout);
 
-    if (withAuth && response.statusCode == 401) {
-      final fresh = (await _storage.read(key: _tokenKey))?.trim();
-      if (fresh != null && fresh.isNotEmpty && fresh != _inMemoryToken) {
-        _inMemoryToken = fresh;
-        headers = await _headers(withAuth: withAuth);
-        response = await sender(headers).timeout(_requestTimeout);
+    if (withAuth && response.statusCode == 401 && !_isRefreshing) {
+      _isRefreshing = true;
+      try {
+        final success = await _refreshAccessToken();
+        if (success) {
+          // Retry original request with NEW headers
+          headers = await _headers(withAuth: withAuth);
+          response = await sender(headers).timeout(_requestTimeout);
+        }
+      } finally {
+        _isRefreshing = false;
       }
     }
 
     return response;
+  }
+
+  Future<bool> _refreshAccessToken() async {
+    final refreshToken = await getRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/auth/refresh-token'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refreshToken': refreshToken}),
+      ).timeout(_requestTimeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final newAccessToken = data['data']['accessToken'];
+          final newRefreshToken = data['data']['refreshToken'];
+          await saveTokens(accessToken: newAccessToken, refreshToken: newRefreshToken);
+          return true;
+        }
+      }
+      
+      // If refresh fails, we might want to clear tokens to force login
+      if (response.statusCode == 401) {
+        await deleteTokens();
+      }
+    } catch (e) {
+      debugPrint('Token refresh failed: $e');
+    }
+    return false;
   }
 
   // ─── HTTP Methods ──────────────────────────
@@ -286,6 +344,7 @@ class ApiService {
         return ApiResponse(
           success: body['success'] ?? true,
           data: body['data'],
+          pagination: body['pagination'],
           message: body['message'],
         );
       } else if (response.statusCode == 401) {
@@ -310,12 +369,14 @@ class ApiService {
 class ApiResponse {
   final bool success;
   final dynamic data;
+  final dynamic pagination; // New field for pagination metadata
   final String? message;
   final int? statusCode;
 
   ApiResponse({
     required this.success,
     this.data,
+    this.pagination,
     this.message,
     this.statusCode,
   });
