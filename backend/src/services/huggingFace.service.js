@@ -104,26 +104,19 @@ class HuggingFaceService {
     try {
       const users = await prisma.user.findMany({
         where: { 
-          OR: [
-            { regNo: { not: null, not: '' } },
-            { enrollmentNo: { not: null, not: '' } }
-          ],
+          regNo: { not: null, not: '' },
           role: { not: 'ADMIN' }
         },
-        select: { id: true, regNo: true, enrollmentNo: true, rewardPoints: true }
+        select: { id: true, regNo: true, rewardPoints: true }
       });
 
-      console.log(`🔄 Starting dynamic batch sync for ${users.length} users from Hugging Face...`);
+      console.log(`🔄 Starting batch sync for ${users.length} users with Register Numbers...`);
       
       let updatedCount = 0;
       let failedCount = 0;
 
       for (const user of users) {
-        // Dynamic lookup: prefer regNo, fallback to enrollmentNo
-        const lookupId = user.regNo || user.enrollmentNo;
-        if (!lookupId) continue;
-
-        const newPoints = await this.syncUserByRollNo(lookupId);
+        const newPoints = await this.syncUserByRollNo(user.regNo);
         
         if (newPoints !== null && Math.floor(newPoints) !== user.rewardPoints) {
           await prisma.user.update({
