@@ -16,7 +16,7 @@ const getSyncCooldownRemainingMs = (userId) => {
 
 
 const userSelect = {
-  id: true, email: true, name: true, regNo: true, department: true,
+  id: true, email: true, name: true, regNo: true, enrollmentNo: true, department: true,
   year: true, mobile: true, cgpa: true, rewardPoints: true, activityPoints: true,
   psToken: true, groupPoints: true, contributionPercent: true,
   profileImageUrl: true, role: true, primarySkills: true, secondarySkills: true,
