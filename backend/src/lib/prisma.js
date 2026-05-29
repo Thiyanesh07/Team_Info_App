@@ -1,49 +1,33 @@
 const { PrismaClient } = require('@prisma/client');
 
-const getNormalizedDatabaseUrl = () => {
-  const raw = process.env.DATABASE_URL;
-  if (!raw) return raw;
-
-  try {
-    const parsed = new URL(raw);
-    if (parsed.hostname.includes('supabase.com') && !parsed.searchParams.get('sslmode')) {
-      parsed.searchParams.set('sslmode', 'require');
-      return parsed.toString();
-    }
-  } catch (_err) {
-    return raw;
-  }
-
-  return raw;
-};
-
-const getNormalizedDirectUrl = () => {
-  const raw = process.env.DIRECT_URL;
-  if (!raw) return raw;
-
-  try {
-    const parsed = new URL(raw);
-    if (parsed.hostname.includes('supabase.co') && !parsed.searchParams.get('sslmode')) {
-      parsed.searchParams.set('sslmode', 'require');
-      return parsed.toString();
-    }
-  } catch (_err) {
-    return raw;
-  }
-
-  return raw;
-};
-
 const getRuntimeDatabaseUrl = () => {
-  const normalizedDbUrl = getNormalizedDatabaseUrl();
-  const normalizedDirectUrl = getNormalizedDirectUrl();
+  // Always prioritize PRISMA_RUNTIME_URL if present
+  if (process.env.PRISMA_RUNTIME_URL) return process.env.PRISMA_RUNTIME_URL;
+  
+  // Prefer DATABASE_URL, fallback to DIRECT_URL
+  const rawUrl = process.env.DATABASE_URL || process.env.DIRECT_URL;
+  if (!rawUrl) return rawUrl;
 
-  if (process.env.PRISMA_RUNTIME_URL) {
-    return process.env.PRISMA_RUNTIME_URL;
+  try {
+    const parsed = new URL(rawUrl);
+    
+    // Log the masked URL to verify exactly what Prisma is trying to use on Render
+    const maskedPassword = parsed.password ? '***MASKED***' : 'NONE';
+    const maskedUrl = `${parsed.protocol}//${parsed.username}:${maskedPassword}@${parsed.host}${parsed.pathname}${parsed.search}`;
+    console.log(`[PRISMA CONFIG] Connecting to: ${maskedUrl}`);
+    
+    // Auto-append sslmode=require for Supabase if missing
+    if (parsed.hostname.includes('supabase.com') || parsed.hostname.includes('supabase.co')) {
+      if (!parsed.searchParams.get('sslmode')) {
+        parsed.searchParams.set('sslmode', 'require');
+      }
+    }
+    
+    return parsed.toString();
+  } catch (err) {
+    console.error(`[PRISMA CONFIG ERROR] Failed to parse URL: ${err.message}`);
+    return rawUrl;
   }
-  // Runtime should prefer DATABASE_URL (typically Supabase pooler).
-  // DIRECT_URL is intended for migrations/introspection.
-  return normalizedDbUrl || normalizedDirectUrl;
 };
 
 /**

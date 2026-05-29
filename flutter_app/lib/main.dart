@@ -28,7 +28,7 @@ Future<void> main() async {
       debugPrint('🛡️ Security Check Error: $e');
     }
   }
-
+  
   if (isCompromised && !kDebugMode) {
     runApp(MaterialApp(
       debugShowCheckedModeBanner: false,

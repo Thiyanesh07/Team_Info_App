@@ -22,6 +22,10 @@ ALTER TABLE "public"."chat_conversations" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."chat_participants" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."chat_messages" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."system_activities" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."report_requests" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."report_submissions" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."system_config" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."yearly_targets" ENABLE ROW LEVEL SECURITY;
 
 -- 2. Create a "Full Access" policy for the database owner (Prisma)
 -- Note: Prisma usually connects as the postgres user which bypasses RLS,
